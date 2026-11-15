@@ -110,6 +110,8 @@
   .seg-op button.on[data-v="sem_operacao"] { background: var(--erro); border-color: var(--erro); }
   .seg-op button.on[data-v="operacao"] { background: var(--ok); border-color: var(--ok); }
   .paralisadas-lista { font-size: 14px; margin-bottom: 6px; }
+  .acoes-par { display: flex; gap: 6px; margin-top: 6px; }
+  .acoes-par button { margin: 0; padding: 4px 10px; font-size: 13px; }
   .paralisada-item { border-left: 3px solid var(--erro); padding: 6px 10px; margin-bottom: 6px; background: var(--fundo); border-radius: 6px; }
   .fotos-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 8px; }
   .fotos-lista img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--borda); }
@@ -1908,6 +1910,22 @@
       const m = document.createElement('span');
       m.textContent = det ? ' · ' + det : '';
       item.append(t, m);
+      const acoes = document.createElement('div');
+      acoes.className = 'acoes-par';
+      const lapis = botao('✏️ Editar', () => {
+        d.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        d.querySelector('.pm-motivo').focus();
+      });
+      lapis.setAttribute('aria-label', 'Editar atividade paralisada');
+      const lixeira = botao('🗑️ Excluir', () => {
+        if (!confirm('Excluir esta atividade paralisada do RDO?')) return;
+        d.remove();
+        atualizarParalisadas();
+      });
+      lixeira.classList.add('perigo');
+      lixeira.setAttribute('aria-label', 'Excluir atividade paralisada');
+      acoes.append(lapis, lixeira);
+      item.appendChild(acoes);
       box.appendChild(item);
     }
     for (const d of linhas) {
