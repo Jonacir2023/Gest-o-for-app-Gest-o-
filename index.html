@@ -653,6 +653,7 @@
     <select id="cr-cat" required></select>
     <label for="cr-terc">Empresa</label>
     <input id="cr-terc" placeholder="Vazio = empresa própria · Ex.: Terceirizada XYZ">
+    <label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="cr-apto" style="width:auto"> Apto a responsável pelo local e criador do RDO</label>
     <div class="acoes-modal">
       <button type="submit">Salvar</button>
       <button type="button" id="cr-cancelar" class="sec">Cancelar</button>
@@ -1871,7 +1872,7 @@
     const box = $('efetivo-blocos');
     const [cats, cols] = await Promise.all([
       sb.from('categorias_efetivo').select('nome').order('nome'),
-      sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em'),
+      sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em, apto_rdo'),
     ]);
     const erro = cats.error || cols.error;
     if (erro) {
@@ -1967,7 +1968,7 @@
 
   function refreshSelectFuncao(sel, regex, atual, rotulo) {
     const pares = rdoColab
-      .filter((c) => regex.test(c.funcao || ''))
+      .filter((c) => regex.test(c.funcao || '') || c.apto_rdo)
       .map((c) => [c.nome, c.nome + (c.funcao ? ' · ' + c.funcao : '')]);
     if (atual && !pares.some((p) => p[0] === atual)) pares.push([atual, atual]);
     opcoes(sel, pares, rotulo, atual);
@@ -1990,7 +1991,7 @@
       return;
     }
     if (mapa) efetivoEstado = { ...mapa };
-    const { data, error } = await sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em');
+    const { data, error } = await sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em, apto_rdo');
     if (error) {
       box.textContent = 'Erro: ' + error.message;
       return;
@@ -2223,6 +2224,7 @@
       funcao: $('cr-funcao').value || null,
       categoria,
       grupo_terceiro: $('cr-terc').value.trim() || null,
+      apto_rdo: $('cr-apto').checked,
     };
     // Matrícula já existente: se estiver com baixa, reativa em vez de duplicar
     const { data: iguais, error: eBusca } = await sb.from('colaboradores').select('id, inativo_em').eq('matricula', mat);
