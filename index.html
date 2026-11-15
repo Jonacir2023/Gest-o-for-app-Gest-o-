@@ -359,6 +359,10 @@
                 <button type="button" data-v="operacao">✅ Operação</button>
                 <button type="button" data-v="sem_operacao">⛔ Sem operação</button>
               </div>
+              <div class="mm-bloco oculto">
+                <label>Chuva (mm) *</label>
+                <input class="mm-input" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Ex.: 12,5">
+              </div>
               <div class="motivo-bloco oculto">
                 <label>Motivo da paralisação</label>
                 <select class="motivo-sel"></select>
@@ -374,6 +378,10 @@
               <div class="seg seg-op">
                 <button type="button" data-v="operacao">✅ Operação</button>
                 <button type="button" data-v="sem_operacao">⛔ Sem operação</button>
+              </div>
+              <div class="mm-bloco oculto">
+                <label>Chuva (mm) *</label>
+                <input class="mm-input" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Ex.: 12,5">
               </div>
               <div class="motivo-bloco oculto">
                 <label>Motivo da paralisação</label>
@@ -1728,6 +1736,7 @@
     codigo_equipamento_obrigatorio: 'Informe o código em todas as linhas de equipamento.',
     atividade_obrigatoria: 'Informe a atividade em todas as linhas.',
     sem_permissao: 'Seu perfil não pode lançar RDO.',
+    chuva_mm_obrigatorio: 'Informe os milímetros de chuva do período em que choveu.',
   };
 
   $('r-proj').addEventListener('change', carregarLocaisRdo);
@@ -1757,6 +1766,10 @@
     if (equipamentos.some((x) => !x.codigo)) return setMsg(msg, ERROS_RDO.codigo_equipamento_obrigatorio, 'erro');
     if (atividades.some((x) => !x.atividade)) return setMsg(msg, ERROS_RDO.atividade_obrigatoria, 'erro');
 
+    if ((climaEstado.manha.clima === 'chuva' && climaEstado.manha.mm == null) ||
+        (climaEstado.tarde.clima === 'chuva' && climaEstado.tarde.mm == null)) {
+      return setMsg(msg, ERROS_RDO.chuva_mm_obrigatorio, 'erro');
+    }
     const eventos = coletarEventos();
     if (eventos.some((x) => !x.descricao)) return setMsg(msg, 'Descreva todos os eventos de SST e MA.', 'erro');
 
@@ -1769,6 +1782,8 @@
       clima_tarde: climaEstado.tarde.clima,
       operacao_tarde: climaEstado.tarde.op,
       motivo_tarde_id: climaEstado.tarde.op === 'sem_operacao' ? climaEstado.tarde.motivo : null,
+      chuva_mm_manha: climaEstado.manha.clima === 'chuva' ? climaEstado.manha.mm : null,
+      chuva_mm_tarde: climaEstado.tarde.clima === 'chuva' ? climaEstado.tarde.mm : null,
       observacoes: $('r-obs').value.trim() || null,
     };
     const { data: novoId, error } = await sb.rpc('rdo_salvar', { p: payload });
@@ -1828,6 +1843,9 @@
       box.querySelectorAll('.seg-clima button').forEach((b) => b.classList.toggle('on', b.dataset.v === est.clima));
       box.querySelectorAll('.seg-op button').forEach((b) => b.classList.toggle('on', b.dataset.v === est.op));
       box.querySelector('.motivo-bloco').classList.toggle('oculto', est.op !== 'sem_operacao');
+      box.querySelector('.mm-bloco').classList.toggle('oculto', est.clima !== 'chuva');
+      const mmInput = box.querySelector('.mm-input');
+      if (document.activeElement !== mmInput) mmInput.value = est.mm ?? '';
       box.querySelector('.motivo-sel').value = est.motivo || '';
     }
     const resumo = (per, nome) => {
@@ -1835,6 +1853,7 @@
       if (!e.clima && !e.op) return nome + ': não informado';
       let s = nome + ': ' + (e.clima ? ROTULO_CLIMA[e.clima] : '—') + ' · ' +
         (e.op === 'sem_operacao' ? 'Sem operação' : e.op === 'operacao' ? 'Operação' : '—');
+      if (e.clima === 'chuva' && e.mm != null) s += ' · ' + String(e.mm).replace('.', ',') + ' mm';
       if (e.op === 'sem_operacao' && e.motivo) {
         const m = rdoMotivosDia.find((x) => x.id === e.motivo);
         if (m) s += ' (' + m.descricao + ')';
@@ -1845,8 +1864,8 @@
   }
 
   function aplicarClima(det) {
-    climaEstado.manha = { clima: det.clima_manha || null, op: det.operacao_manha || null, motivo: det.motivo_manha_id || null };
-    climaEstado.tarde = { clima: det.clima_tarde || null, op: det.operacao_tarde || null, motivo: det.motivo_tarde_id || null };
+    climaEstado.manha = { clima: det.clima_manha || null, op: det.operacao_manha || null, motivo: det.motivo_manha_id || null, mm: det.chuva_mm_manha != null ? Number(det.chuva_mm_manha) : null };
+    climaEstado.tarde = { clima: det.clima_tarde || null, op: det.operacao_tarde || null, motivo: det.motivo_tarde_id || null, mm: det.chuva_mm_tarde != null ? Number(det.chuva_mm_tarde) : null };
     renderClima();
   }
 
@@ -1855,6 +1874,7 @@
       const per = box.dataset.periodo;
       box.querySelectorAll('.seg-clima button').forEach((b) => b.addEventListener('click', () => {
         climaEstado[per].clima = climaEstado[per].clima === b.dataset.v ? null : b.dataset.v;
+        if (climaEstado[per].clima !== 'chuva') climaEstado[per].mm = null;
         renderClima();
       }));
       box.querySelectorAll('.seg-op button').forEach((b) => b.addEventListener('click', () => {
@@ -1862,6 +1882,10 @@
         if (climaEstado[per].op !== 'sem_operacao') climaEstado[per].motivo = null;
         renderClima();
       }));
+      box.querySelector('.mm-input').addEventListener('input', (ev) => {
+        climaEstado[per].mm = ev.target.value === '' ? null : Number(ev.target.value);
+        renderClima();
+      });
       box.querySelector('.motivo-sel').addEventListener('change', (ev) => {
         climaEstado[per].motivo = ev.target.value || null;
         renderClima();
