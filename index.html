@@ -123,6 +123,13 @@
   .efetivo-row { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--borda); }
   @media (min-width: 700px) { .efetivo-row { grid-template-columns: 1fr 190px; align-items: center; } }
   .efetivo-row select { margin: 0; }
+  .bloco-cat { margin-bottom: 12px; }
+  .cat-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--borda); }
+  .pill { background: var(--fundo); color: var(--azul); border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
+  .colab-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--borda); }
+  .colab-row button { margin: 0; padding: 6px 10px; font-size: 13px; }
+  .btn-dash { width: 100%; margin: 10px 0 0; padding: 10px; background: var(--branco); color: #1C94C4; border: 1px dashed #1C94C4; border-radius: 8px; font-weight: 600; cursor: pointer; }
+  .btn-dash:hover { background: #D5E4E6; }
   .modal { position: fixed; inset: 0; background: rgba(36, 55, 75, .45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
   .caixa-modal { background: var(--branco); border-radius: 12px; padding: 18px; width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0, 0, 0, .2); }
   .acoes-modal { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -360,41 +367,12 @@
         </div>
       </section>
 
-      <section id="cad-efetivo" class="card oculto">
-        <h1>Efetivo</h1>
-        <p class="texto-apoio">Cadastro de quem pode ser marcado no RDO. Dar baixa tira a pessoa dos RDOs a partir de hoje; os RDOs anteriores continuam com ela.</p>
-        <div class="tabela-wrap">
-          <table>
-            <thead><tr><th>Nome</th><th>Matrícula</th><th>Função</th><th>Categoria</th><th>Situação</th><th></th></tr></thead>
-            <tbody id="lista-colab"></tbody>
-          </table>
+      <section id="cad-efetivo" class="oculto">
+        <div class="card">
+          <h1>Efetivo</h1>
+          <p class="texto-apoio">Colaboradores por categoria. Use <strong>+ Colaborador</strong> dentro de cada categoria. Dar baixa tira a pessoa dos RDOs a partir de hoje; os RDOs anteriores continuam com ela.</p>
         </div>
-        <form id="form-colab">
-          <div class="grid">
-            <div>
-              <label for="c-nome">Nome *</label>
-              <input id="c-nome" required>
-            </div>
-            <div>
-              <label for="c-mat">Matrícula</label>
-              <input id="c-mat">
-            </div>
-            <div>
-              <label for="c-funcao">Função</label>
-              <select id="c-funcao"></select>
-            </div>
-            <div>
-              <label for="c-cat">Categoria *</label>
-              <select id="c-cat" required></select>
-            </div>
-            <div class="full">
-              <label for="c-terc">Grupo terceiro (opcional: nome da empresa)</label>
-              <input id="c-terc" placeholder="Ex.: GEONOR - TERCEIRO">
-            </div>
-          </div>
-          <button type="submit">Acrescentar colaborador</button>
-          <div id="msg-colab" class="msg"></div>
-        </form>
+        <div id="efetivo-blocos"></div>
       </section>
     </div>
 
@@ -647,17 +625,17 @@
 
 <div id="modal-colab" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="colab-titulo">
   <form id="form-colab-rapido" class="caixa-modal">
-    <h2 id="colab-titulo">Novo colaborador</h2>
+    <h2 id="colab-titulo">Novo Colaborador</h2>
+    <label for="cr-mat">Matrícula *</label>
+    <input id="cr-mat" required>
     <label for="cr-nome">Nome *</label>
     <input id="cr-nome" required>
-    <label for="cr-mat">Matrícula</label>
-    <input id="cr-mat">
     <label for="cr-funcao">Função</label>
     <select id="cr-funcao"></select>
     <label for="cr-cat">Categoria *</label>
     <select id="cr-cat" required></select>
-    <label for="cr-terc">Grupo terceiro (opcional)</label>
-    <input id="cr-terc" placeholder="Ex.: GEONOR - TERCEIRO">
+    <label for="cr-terc">Empresa</label>
+    <input id="cr-terc" placeholder="Vazio = empresa própria · Ex.: Terceirizada XYZ">
     <div class="acoes-modal">
       <button type="submit">Salvar</button>
       <button type="button" id="cr-cancelar" class="sec">Cancelar</button>
@@ -1869,34 +1847,83 @@
   // Vigente no dia: sem baixa, ou dia anterior à baixa (a baixa vale a partir do dia dela)
   const vigenteNoDia = (c, dia) => !c.inativo_em || dia < c.inativo_em;
 
+  // Cadastro por categoria (padrão do BP): um bloco por categoria, com + Colaborador
   async function carregarColaboradores() {
-    const tb = $('lista-colab');
-    const { data, error } = await sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em');
-    if (error) return mostrarErroTabela(tb, 6, error.message);
-    const lista = data.slice().sort((a, b) => collator.compare(a.categoria + ' ' + a.nome, b.categoria + ' ' + b.nome));
-    tb.innerHTML = '';
-    if (!lista.length) {
-      tb.innerHTML = '<tr><td colspan="6">Nenhum colaborador cadastrado.</td></tr>';
+    const box = $('efetivo-blocos');
+    const [cats, cols] = await Promise.all([
+      sb.from('categorias_efetivo').select('nome').order('nome'),
+      sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em'),
+    ]);
+    const erro = cats.error || cols.error;
+    if (erro) {
+      box.textContent = 'Erro: ' + erro.message;
       return;
     }
-    for (const c of lista) {
-      const tr = document.createElement('tr');
-      const celulas = [c.nome, c.matricula || '', c.funcao || '',
-        c.categoria + (c.grupo_terceiro ? ' · ' + c.grupo_terceiro : ''),
-        c.inativo_em ? 'Baixa em ' + dataBr(c.inativo_em) : 'Ativo'];
-      for (const t of celulas) {
-        const td = document.createElement('td');
-        td.textContent = t;
-        tr.appendChild(td);
+    const nomesCat = new Set(cats.data.map((c) => c.nome));
+    for (const c of cols.data) if (c.categoria) nomesCat.add(c.categoria);
+    box.innerHTML = '';
+    const ordem = [...nomesCat].sort((a, b) => collator.compare(a, b));
+    if (!ordem.length) {
+      const p = document.createElement('div');
+      p.className = 'card';
+      p.innerHTML = '<p class="texto-apoio">Nenhuma categoria cadastrada. Crie em Categorias e funções.</p>';
+      box.appendChild(p);
+      return;
+    }
+    for (const cat of ordem) {
+      const membros = cols.data.filter((c) => c.categoria === cat).sort((a, b) => collator.compare(a.nome, b.nome));
+      const ativos = membros.filter((c) => !c.inativo_em);
+      const baixados = membros.length - ativos.length;
+
+      const bloco = document.createElement('div');
+      bloco.className = 'card bloco-cat';
+
+      const cab = document.createElement('div');
+      cab.className = 'cat-cab';
+      const nomeCat = document.createElement('strong');
+      nomeCat.textContent = cat;
+      const pill = document.createElement('span');
+      pill.className = 'pill';
+      pill.textContent = ativos.length;
+      cab.append(nomeCat, pill);
+      bloco.appendChild(cab);
+
+      if (!ativos.length) {
+        const vazio = document.createElement('p');
+        vazio.className = 'texto-apoio';
+        vazio.textContent = 'Sem colaboradores';
+        bloco.appendChild(vazio);
       }
-      const acao = document.createElement('td');
-      if (!c.inativo_em) {
+      for (const c of ativos) {
+        const row = document.createElement('div');
+        row.className = 'colab-row';
+        const info = document.createElement('div');
+        const linha = document.createElement('strong');
+        linha.textContent = [c.matricula, c.nome].filter(Boolean).join(' · ');
+        const meta = document.createElement('div');
+        meta.className = 'texto-apoio';
+        meta.textContent = [c.funcao, c.grupo_terceiro || 'Empresa própria'].filter(Boolean).join(' · ');
+        info.append(linha, meta);
         const b = botao('Dar baixa', () => darBaixaColab(c));
         b.classList.add('perigo');
-        acao.appendChild(b);
+        row.append(info, b);
+        bloco.appendChild(row);
       }
-      tr.appendChild(acao);
-      tb.appendChild(tr);
+      if (baixados) {
+        const nota = document.createElement('div');
+        nota.className = 'texto-apoio';
+        nota.style.marginTop = '6px';
+        nota.textContent = 'Com baixa: ' + baixados;
+        bloco.appendChild(nota);
+      }
+
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'btn-dash';
+      add.textContent = '+ Colaborador';
+      add.addEventListener('click', () => abrirModalColab(cat));
+      bloco.appendChild(add);
+      box.appendChild(bloco);
     }
   }
 
@@ -1906,27 +1933,6 @@
     if (error) return alert('Erro: ' + error.message);
     carregarColaboradores();
   }
-
-  $('form-colab').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const msg = $('msg-colab');
-    const nome = $('c-nome').value.trim();
-    const categoria = $('c-cat').value.trim();
-    if (!nome || !categoria) return setMsg(msg, 'Informe nome e categoria.', 'erro');
-    setMsg(msg, 'Salvando…');
-    const dados = {
-      nome,
-      matricula: $('c-mat').value.trim() || null,
-      funcao: $('c-funcao').value.trim() || null,
-      categoria,
-      grupo_terceiro: $('c-terc').value.trim() || null,
-    };
-    const { error } = await sb.from('colaboradores').insert(dados);
-    if (error) return setMsg(msg, error.message, 'erro');
-    ['c-nome', 'c-mat', 'c-funcao', 'c-cat', 'c-terc'].forEach((id) => { $(id).value = ''; });
-    setMsg(msg, 'Colaborador acrescentado.', 'ok');
-    carregarColaboradores();
-  });
 
   function statusEfetivoAtual() {
     const map = {};
@@ -2071,9 +2077,7 @@
     };
     preencherTabela($('lista-categorias'), nomesCat, 'Nenhuma categoria cadastrada.');
     preencherTabela($('lista-funcoes'), nomesFun, 'Nenhuma função cadastrada.');
-    preencherSelectLista($('c-cat'), nomesCat, 'Selecione a categoria', $('c-cat').value);
     preencherSelectLista($('cr-cat'), nomesCat, 'Selecione a categoria', $('cr-cat').value);
-    preencherSelectLista($('c-funcao'), nomesFun, 'Sem função', $('c-funcao').value);
     preencherSelectLista($('cr-funcao'), nomesFun, 'Sem função', $('cr-funcao').value);
   }
 
@@ -2102,31 +2106,47 @@
     carregarListasEfetivo();
   });
 
-  $('r-add-colab').addEventListener('click', () => {
+  function abrirModalColab(categoria) {
     $('form-colab-rapido').reset();
-    carregarListasEfetivo();
+    carregarListasEfetivo().then(() => {
+      if (categoria) $('cr-cat').value = categoria;
+    });
     setMsg($('msg-colab-rapido'), '');
     $('modal-colab').classList.remove('oculto');
-    $('cr-nome').focus();
-  });
+    $('cr-mat').focus();
+  }
+
+  $('r-add-colab').addEventListener('click', () => abrirModalColab(null));
   $('cr-cancelar').addEventListener('click', () => $('modal-colab').classList.add('oculto'));
   $('modal-colab').addEventListener('click', (ev) => { if (ev.target.id === 'modal-colab') $('modal-colab').classList.add('oculto'); });
   $('form-colab-rapido').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = $('msg-colab-rapido');
+    const mat = $('cr-mat').value.trim();
     const nome = $('cr-nome').value.trim();
-    const categoria = $('cr-cat').value.trim();
-    if (!nome || !categoria) return setMsg(msg, 'Informe nome e categoria.', 'erro');
+    const categoria = $('cr-cat').value;
+    if (!mat || !nome) return setMsg(msg, 'Matrícula e nome são obrigatórios.', 'erro');
+    if (!categoria) return setMsg(msg, 'Escolha a categoria.', 'erro');
     setMsg(msg, 'Salvando…');
-    const { error } = await sb.from('colaboradores').insert({
+    const dados = {
       nome,
-      matricula: $('cr-mat').value.trim() || null,
-      funcao: $('cr-funcao').value.trim() || null,
+      matricula: mat,
+      funcao: $('cr-funcao').value || null,
       categoria,
       grupo_terceiro: $('cr-terc').value.trim() || null,
-    });
+    };
+    // Matrícula já existente: se estiver com baixa, reativa em vez de duplicar
+    const { data: iguais, error: eBusca } = await sb.from('colaboradores').select('id, inativo_em').eq('matricula', mat);
+    if (eBusca) return setMsg(msg, eBusca.message, 'erro');
+    const ativo = (iguais || []).find((x) => !x.inativo_em);
+    if (ativo) return setMsg(msg, 'Já existe um colaborador ativo com essa matrícula.', 'erro');
+    const baixado = (iguais || [])[0];
+    const { error } = baixado
+      ? await sb.from('colaboradores').update({ ...dados, inativo_em: null }).eq('id', baixado.id)
+      : await sb.from('colaboradores').insert(dados);
     if (error) return setMsg(msg, error.message, 'erro');
     $('modal-colab').classList.add('oculto');
+    carregarColaboradores();
     carregarEfetivoRDO(statusEfetivoAtual());
   });
 
