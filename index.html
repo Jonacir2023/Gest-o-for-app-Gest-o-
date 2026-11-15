@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestão · CESBE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --azul: #24374B;
+    --branco: #ffffff;
+    --fundo: #f3f5f8;
+    --texto: #1d2530;
+    --muted: #5b6777;
+    --borda: #d7dde6;
+    --erro: #b3261e;
+    --ok: #1e7b4a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+    font-family: Poppins, Arial, sans-serif; background: var(--fundo); color: var(--texto);
+  }
+  header {
+    background: var(--azul); color: var(--branco); padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .marca { font-weight: 700; letter-spacing: .08em; }
+  main { flex: 1; width: 100%; max-width: 960px; margin: 0 auto; padding: 16px; }
+  .card {
+    background: var(--branco); border: 1px solid var(--borda); border-radius: 10px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  h1 { font-size: 20px; color: var(--azul); margin: 4px 0 12px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea {
+    width: 100%; padding: 10px; border: 1px solid var(--borda); border-radius: 8px;
+    font: inherit; color: var(--texto); background: var(--branco);
+  }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+  @media (min-width: 640px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+    .grid .full { grid-column: 1 / -1; }
+  }
+  button {
+    background: var(--azul); color: var(--branco); border: 0; border-radius: 8px;
+    padding: 11px 16px; font: inherit; font-weight: 600; cursor: pointer; margin-top: 14px;
+  }
+  button.sec { background: transparent; color: var(--azul); border: 1px solid var(--azul); }
+  button.topo { margin: 0; background: transparent; color: var(--branco); border: 1px solid var(--branco); padding: 7px 12px; font-size: 13px; }
+  .msg { font-size: 14px; margin-top: 10px; }
+  .erro { color: var(--erro); }
+  .ok { color: var(--ok); }
+  .tabela-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--borda); white-space: nowrap; }
+  td:first-child { white-space: normal; }
+  footer {
+    background: var(--azul); color: var(--branco); font-size: 12px;
+    padding: 10px 16px; text-align: center;
+  }
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="marca">CESBE · GESTÃO</span>
+  <button id="sair" class="topo oculto">Sair</button>
+</header>
+
+<main>
+  <!-- Login -->
+  <section id="tela-login" class="card oculto" style="max-width:420px;margin:24px auto;">
+    <h1>Entrar</h1>
+    <form id="form-login">
+      <label for="l-email">Email</label>
+      <input id="l-email" type="email" autocomplete="username" required>
+      <label for="l-senha">Senha</label>
+      <input id="l-senha" type="password" autocomplete="current-password" required>
+      <button type="submit">Entrar</button>
+      <div id="msg-login" class="msg erro"></div>
+    </form>
+  </section>
+
+  <!-- App -->
+  <section id="tela-app" class="oculto">
+    <div class="card">
+      <strong id="usuario"></strong>
+      <span style="color:var(--muted)"> · perfil: <span id="perfil"></span></span>
+    </div>
+
+    <div id="sem-acesso" class="card oculto">
+      <p>Seu perfil não tem acesso ao cadastro de obras.</p>
+    </div>
+
+    <div id="area-obra" class="oculto">
+      <div class="card">
+        <h1>Obras</h1>
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr><th>Nome</th><th>Cliente</th><th>Início</th><th>Término</th><th></th></tr>
+            </thead>
+            <tbody id="lista-obras"></tbody>
+          </table>
+        </div>
+        <button id="nova" type="button" class="sec">Nova obra</button>
+      </div>
+
+      <form id="form-obra" class="card oculto">
+        <h1 id="titulo-form">Nova obra</h1>
+        <input type="hidden" id="o-id">
+        <div class="grid">
+          <div class="full">
+            <label for="o-nome">Nome da obra *</label>
+            <input id="o-nome" required>
+          </div>
+          <div class="full">
+            <label for="o-desc">Descrição</label>
+            <textarea id="o-desc" rows="3"></textarea>
+          </div>
+          <div>
+            <label for="o-valor">Valor do contrato (R$)</label>
+            <input id="o-valor" inputmode="decimal" placeholder="1.234.567,89">
+          </div>
+          <div>
+            <label for="o-cliente">Cliente</label>
+            <input id="o-cliente">
+          </div>
+          <div>
+            <label for="o-ini">Início</label>
+            <input id="o-ini" type="date">
+          </div>
+          <div>
+            <label for="o-fim">Término</label>
+            <input id="o-fim" type="date">
+          </div>
+          <div class="full">
+            <label for="o-exec">Empresa executante</label>
+            <input id="o-exec">
+          </div>
+        </div>
+        <button type="submit">Salvar obra</button>
+        <button type="button" id="cancelar" class="sec">Cancelar</button>
+        <div id="msg-obra" class="msg"></div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>Cesbe S.A. · Gestão de obras</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+  const SUPABASE_URL = 'https://lphyuamltspbczsutwyq.supabase.co';
+  // Chave pública (anon). Segurança fica nas políticas RLS e nas funções do banco.
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaHl1YW1sdHNwYmN6c3V0d3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2OTMyNzIsImV4cCI6MjExMDI2OTI3Mn0.13f07Xps9_E57TcnSE2PlbaW4eEld55TRSym3CUlsD8';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  const ERROS = {
+    sem_permissao: 'Seu perfil não pode alterar obras.',
+    nome_obrigatorio: 'Informe o nome da obra.',
+    termino_anterior_ao_inicio: 'O término não pode ser anterior ao início.',
+    valor_negativo: 'O valor do contrato não pode ser negativo.',
+    obra_nao_encontrada: 'Obra não encontrada. Atualize a lista.',
+    valor_invalido: 'Valor do contrato inválido.',
+  };
+  const traduzErro = (m) => ERROS[m] || m;
+
+  const fmtData = (d) => (d ? d.split('-').reverse().join('/') : '');
+
+  // Aceita "1.234.567,89" (padrão BR) ou "1234.56"
+  function parseValor(s) {
+    s = (s || '').trim();
+    if (!s) return null;
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    const n = Number(s);
+    return Number.isNaN(n) ? NaN : n;
+  }
+
+  function mostrarLogin() {
+    $('tela-login').classList.remove('oculto');
+    $('tela-app').classList.add('oculto');
+    $('sair').classList.add('oculto');
+  }
+
+  async function mostrarApp(user) {
+    $('tela-login').classList.add('oculto');
+    $('tela-app').classList.remove('oculto');
+    $('sair').classList.remove('oculto');
+    $('usuario').textContent = user.email;
+
+    const { data: perfil, error } = await sb.rpc('meu_perfil');
+    $('perfil').textContent = error ? 'erro ao ler perfil' : (perfil || 'sem cadastro de pessoa');
+
+    const ok = !error && perfil === 'acesso_total';
+    $('area-obra').classList.toggle('oculto', !ok);
+    $('sem-acesso').classList.toggle('oculto', ok);
+    if (ok) carregarObras();
+  }
+
+  async function carregarObras() {
+    const tb = $('lista-obras');
+    tb.innerHTML = '';
+    const { data, error } = await sb
+      .from('projetos')
+      .select('id, nome, cliente, inicio, termino, descricao, valor_contrato, empresa_executante')
+      .order('nome');
+
+    if (error) {
+      tb.innerHTML = '<tr><td colspan="5" class="erro"></td></tr>';
+      tb.querySelector('td').textContent = 'Erro ao carregar: ' + error.message;
+      return;
+    }
+    if (!data.length) {
+      tb.innerHTML = '<tr><td colspan="5">Nenhuma obra cadastrada.</td></tr>';
+      return;
+    }
+    for (const o of data) {
+      const tr = document.createElement('tr');
+      const tdNome = document.createElement('td');
+      tdNome.textContent = o.nome;
+      const tdCliente = document.createElement('td');
+      tdCliente.textContent = o.cliente || '';
+      const tdIni = document.createElement('td');
+      tdIni.textContent = fmtData(o.inicio);
+      const tdFim = document.createElement('td');
+      tdFim.textContent = fmtData(o.termino);
+      const tdAcao = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sec';
+      btn.style.marginTop = '0';
+      btn.textContent = 'Editar';
+      btn.onclick = () => editarObra(o);
+      tdAcao.appendChild(btn);
+      tr.append(tdNome, tdCliente, tdIni, tdFim, tdAcao);
+      tb.appendChild(tr);
+    }
+  }
+
+  function abrirForm(o) {
+    $('form-obra').classList.remove('oculto');
+    $('msg-obra').textContent = '';
+    $('msg-obra').className = 'msg';
+    $('titulo-form').textContent = o ? 'Editar obra' : 'Nova obra';
+    $('o-id').value = o ? o.id : '';
+    $('o-nome').value = o ? o.nome : '';
+    $('o-desc').value = o?.descricao || '';
+    $('o-valor').value = o?.valor_contrato != null
+      ? Number(o.valor_contrato).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '';
+    $('o-cliente').value = o?.cliente || '';
+    $('o-ini').value = o?.inicio || '';
+    $('o-fim').value = o?.termino || '';
+    $('o-exec').value = o?.empresa_executante || '';
+    $('o-nome').focus();
+    $('form-obra').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  const editarObra = (o) => abrirForm(o);
+
+  $('form-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('msg-login').textContent = '';
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: $('l-email').value.trim(),
+      password: $('l-senha').value,
+    });
+    if (error) {
+      const credencial = /invalid login credentials/i.test(error.message);
+      $('msg-login').textContent = credencial
+        ? 'Email ou senha inválidos.'
+        : 'Não foi possível conectar ao servidor (' + error.message + '). Abra o app pelo endereço publicado, não por arquivo.';
+      return;
+    }
+    await mostrarApp(data.user);
+  });
+
+  $('sair').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    mostrarLogin();
+  });
+
+  $('nova').addEventListener('click', () => abrirForm(null));
+  $('cancelar').addEventListener('click', () => $('form-obra').classList.add('oculto'));
+
+  $('form-obra').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-obra');
+    msg.className = 'msg';
+    msg.textContent = 'Salvando…';
+
+    const valor = parseValor($('o-valor').value);
+    if (valor !== null && Number.isNaN(valor)) {
+      msg.className = 'msg erro';
+      msg.textContent = traduzErro('valor_invalido');
+      return;
+    }
+
+    const { error } = await sb.rpc('obra_salvar', {
+      p_id: $('o-id').value || null,
+      p_nome: $('o-nome').value.trim(),
+      p_descricao: $('o-desc').value.trim() || null,
+      p_valor_contrato: valor,
+      p_inicio: $('o-ini').value || null,
+      p_termino: $('o-fim').value || null,
+      p_cliente: $('o-cliente').value.trim() || null,
+      p_empresa_executante: $('o-exec').value.trim() || null,
+    });
+
+    if (error) {
+      msg.className = 'msg erro';
+      msg.textContent = traduzErro(error.message);
+      return;
+    }
+    msg.className = 'msg ok';
+    msg.textContent = 'Obra salva.';
+    $('form-obra').classList.add('oculto');
+    carregarObras();
+  });
+
+  (async function iniciar() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await mostrarApp(session.user);
+    else mostrarLogin();
+  })();
+</script>
+</body>
+</html>
