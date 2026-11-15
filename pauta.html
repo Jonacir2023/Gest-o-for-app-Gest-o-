@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pauta · CESBE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --azul: #24374B;
+    --branco: #ffffff;
+    --fundo: #f3f5f8;
+    --texto: #1d2530;
+    --muted: #5b6777;
+    --borda: #d7dde6;
+    --erro: #b3261e;
+    --ok: #1e7b4a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; font-family: Poppins, Arial, sans-serif; background: var(--fundo); color: var(--texto); }
+  header { background: var(--azul); color: var(--branco); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .marca { font-weight: 700; letter-spacing: .08em; }
+  main { flex: 1; width: 100%; max-width: 960px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--branco); border: 1px solid var(--borda); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  h1 { font-size: 20px; color: var(--azul); margin: 4px 0 12px; }
+  h2 { font-size: 16px; color: var(--azul); margin: 0 0 8px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea, select { width: 100%; padding: 10px; border: 1px solid var(--borda); border-radius: 8px; font: inherit; color: var(--texto); background: var(--branco); }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+  @media (min-width: 640px) { .grid { grid-template-columns: 1fr 1fr; } .grid .full { grid-column: 1 / -1; } }
+  button { background: var(--azul); color: var(--branco); border: 0; border-radius: 8px; padding: 11px 16px; font: inherit; font-weight: 600; cursor: pointer; margin-top: 14px; }
+  button.sec { background: transparent; color: var(--azul); border: 1px solid var(--azul); }
+  button.pequeno { margin: 0; padding: 6px 10px; font-size: 13px; }
+  button.topo { margin: 0; background: transparent; color: var(--branco); border: 1px solid var(--branco); padding: 7px 12px; font-size: 13px; }
+  .msg { font-size: 14px; margin-top: 10px; }
+  .erro { color: var(--erro); }
+  .ok { color: var(--ok); }
+  .tabela-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+  .acoes { white-space: nowrap; }
+  .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--borda); color: var(--muted); }
+  footer { background: var(--azul); color: var(--branco); font-size: 12px; padding: 10px 16px; text-align: center; }
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="marca">CESBE · PAUTA</span>
+  <button id="sair" class="topo oculto" type="button">Sair</button>
+</header>
+
+<main>
+  <!-- Entrada do líder -->
+  <section id="tela-entrar" class="card" style="max-width:460px;margin:24px auto;">
+    <h1 id="titulo-entrar">Entrar na Pauta</h1>
+    <form id="form-entrar">
+      <label for="e-lider">Seu nome</label>
+      <select id="e-lider" required></select>
+
+      <div id="bloco-primeiro" class="oculto">
+        <p class="msg" style="color:var(--muted)">Primeiro acesso: crie sua senha (mínimo 6 caracteres).</p>
+        <label for="e-nova">Nova senha</label>
+        <input id="e-nova" type="password" autocomplete="new-password">
+        <label for="e-conf">Confirmar senha</label>
+        <input id="e-conf" type="password" autocomplete="new-password">
+      </div>
+
+      <div id="bloco-senha">
+        <label for="e-senha">Senha</label>
+        <input id="e-senha" type="password" autocomplete="current-password">
+      </div>
+
+      <button type="submit" id="btn-entrar">Entrar</button>
+      <div id="msg-entrar" class="msg erro"></div>
+    </form>
+  </section>
+
+  <!-- Pauta -->
+  <section id="tela-pauta" class="oculto">
+    <div class="card">
+      <strong id="nome-lider"></strong>
+      <span style="color:var(--muted)"> · sincroniza a cada 5 min</span>
+    </div>
+
+    <div class="card">
+      <h1>Itens da Pauta</h1>
+      <div class="tabela-wrap">
+        <table>
+          <thead>
+            <tr><th>Assunto</th><th>Área</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="lista-itens"></tbody>
+        </table>
+      </div>
+      <button id="novo" type="button" class="sec">Novo item</button>
+    </div>
+
+    <form id="form-item" class="card oculto">
+      <h1 id="titulo-item">Novo item</h1>
+      <input type="hidden" id="i-id">
+      <div class="grid">
+        <div>
+          <label for="i-resp">Responsável *</label>
+          <select id="i-resp" required></select>
+        </div>
+        <div>
+          <label for="i-area">Área *</label>
+          <input id="i-area" required>
+        </div>
+        <div class="full">
+          <label for="i-assunto">Assunto *</label>
+          <input id="i-assunto" required>
+        </div>
+        <div class="full">
+          <label for="i-desc">Descrição</label>
+          <textarea id="i-desc" rows="3"></textarea>
+        </div>
+        <div>
+          <label for="i-prio">Prioridade</label>
+          <select id="i-prio">
+            <option value="alta">Alta</option>
+            <option value="media" selected>Média</option>
+            <option value="baixa">Baixa</option>
+          </select>
+        </div>
+        <div>
+          <label for="i-prazo">Prazo</label>
+          <input id="i-prazo" type="date">
+        </div>
+        <div>
+          <label for="i-status">Status</label>
+          <select id="i-status">
+            <option value="a_fazer">A fazer</option>
+            <option value="fazendo">Fazendo</option>
+            <option value="concluido">Concluído</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit">Salvar item</button>
+      <button type="button" id="cancelar" class="sec">Cancelar</button>
+      <div id="msg-item" class="msg"></div>
+    </form>
+  </section>
+</main>
+
+<footer>Cesbe S.A. · Pauta de obra</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+  const SUPABASE_URL = 'https://lphyuamltspbczsutwyq.supabase.co';
+  // Chave pública (anon). A segurança fica nas funções do banco.
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaHl1YW1sdHNwYmN6c3V0d3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2OTMyNzIsImV4cCI6MjExMDI2OTI3Mn0.13f07Xps9_E57TcnSE2PlbaW4eEld55TRSym3CUlsD8';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = (id) => document.getElementById(id);
+  const collator = new Intl.Collator('pt-BR', { sensitivity: 'base' });
+  const SYNC_MS = 5 * 60 * 1000;
+
+  const STATUS = { a_fazer: 'A fazer', fazendo: 'Fazendo', concluido: 'Concluído', cancelado: 'Cancelado' };
+  const PRIO = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+
+  let token = sessionStorage.getItem('pauta_token');
+  let liderId = sessionStorage.getItem('pauta_lider_id');
+  let liderNome = sessionStorage.getItem('pauta_lider_nome');
+  let lideres = [];
+  let itens = [];
+  let timer = null;
+
+  const fmtData = (d) => (d ? d.split('-').reverse().join('/') : '');
+  const setMsg = (el, texto, tipo) => { el.className = 'msg ' + (tipo || ''); el.textContent = texto; };
+
+  const ERROS = {
+    sessao_invalida: 'Sua sessão expirou. Entre de novo.',
+    sem_permissao: 'Você não pode alterar este item.',
+    responsavel_obrigatorio: 'Escolha o responsável.',
+    area_e_assunto_obrigatorios: 'Preencha área e assunto.',
+  };
+  const traduz = (m) => ERROS[m] || m;
+
+  function sair() {
+    sessionStorage.removeItem('pauta_token');
+    sessionStorage.removeItem('pauta_lider_id');
+    sessionStorage.removeItem('pauta_lider_nome');
+    token = liderId = liderNome = null;
+    clearInterval(timer);
+    mostrarEntrada();
+  }
+
+  function mostrarEntrada() {
+    $('tela-entrar').classList.remove('oculto');
+    $('tela-pauta').classList.add('oculto');
+    $('sair').classList.add('oculto');
+    $('form-item').classList.add('oculto');
+    carregarLideres();
+  }
+
+  async function mostrarPauta() {
+    $('tela-entrar').classList.add('oculto');
+    $('tela-pauta').classList.remove('oculto');
+    $('sair').classList.remove('oculto');
+    $('nome-lider').textContent = liderNome;
+    await carregarLideres();
+    await carregarItens();
+    clearInterval(timer);
+    timer = setInterval(carregarItens, SYNC_MS);
+  }
+
+  // ---------- Entrada ----------
+  async function carregarLideres() {
+    const sel = $('e-lider');
+    const { data, error } = await sb.rpc('pauta_lista_lideres');
+    if (error) return setMsg($('msg-entrar'), 'Erro ao carregar nomes: ' + error.message, 'erro');
+    lideres = (data || []).slice().sort((a, b) => collator.compare(a.nome, b.nome));
+    sel.innerHTML = '';
+    for (const l of lideres) {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.nome;
+      opt.dataset.primeiro = l.primeiro_acesso ? '0' : '1';
+      sel.appendChild(opt);
+    }
+    atualizarBlocoEntrada();
+  }
+
+  function atualizarBlocoEntrada() {
+    const opt = $('e-lider').selectedOptions[0];
+    const primeiro = opt && opt.dataset.primeiro === '1';
+    $('bloco-primeiro').classList.toggle('oculto', !primeiro);
+    $('bloco-senha').classList.toggle('oculto', primeiro);
+    $('btn-entrar').textContent = primeiro ? 'Criar senha e entrar' : 'Entrar';
+    $('titulo-entrar').textContent = primeiro ? 'Primeiro acesso' : 'Entrar na Pauta';
+  }
+
+  $('e-lider').addEventListener('change', atualizarBlocoEntrada);
+
+  function guardarSessao(tok, id, nome) {
+    token = tok; liderId = id; liderNome = nome;
+    sessionStorage.setItem('pauta_token', tok);
+    sessionStorage.setItem('pauta_lider_id', id);
+    sessionStorage.setItem('pauta_lider_nome', nome);
+  }
+
+  $('form-entrar').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-entrar');
+    setMsg(msg, 'Entrando…');
+    const id = $('e-lider').value;
+    const nome = $('e-lider').selectedOptions[0]?.textContent || '';
+    const opt = $('e-lider').selectedOptions[0];
+    const primeiro = opt && opt.dataset.primeiro === '1';
+
+    if (primeiro) {
+      const n1 = $('e-nova').value, n2 = $('e-conf').value;
+      if (n1.length < 6) return setMsg(msg, 'A senha precisa ter pelo menos 6 caracteres.', 'erro');
+      if (n1 !== n2) return setMsg(msg, 'As senhas não coincidem.', 'erro');
+      const { data, error } = await sb.rpc('pauta_primeiro_acesso', { p_lider_id: id, p_senha: n1 });
+      if (error) return setMsg(msg, error.message.includes('primeiro_acesso_indisponivel') ? 'Acesso já foi criado. Use a senha.' : traduz(error.message), 'erro');
+      guardarSessao(data, id, nome);
+      return mostrarPauta();
+    }
+
+    const { data, error } = await sb.rpc('pauta_entrar', { p_lider_id: id, p_senha: $('e-senha').value });
+    if (error) return setMsg(msg, 'Não foi possível conectar. Tente de novo.', 'erro');
+    if (!data.ok) {
+      if (data.motivo === 'bloqueado') {
+        const ate = new Date(data.ate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        return setMsg(msg, 'Muitas tentativas. Tente de novo após ' + ate + '.', 'erro');
+      }
+      return setMsg(msg, 'Nome ou senha inválidos.', 'erro');
+    }
+    guardarSessao(data.token, id, nome);
+    $('e-senha').value = '';
+    mostrarPauta();
+  });
+
+  // ---------- Itens ----------
+  async function carregarItens() {
+    if (!token) return;
+    const { data, error } = await sb.rpc('pauta_listar', { p_token: token });
+    if (error) {
+      if (error.message.includes('sessao_invalida')) { sair(); return setMsg($('msg-entrar'), traduz('sessao_invalida'), 'erro'); }
+      return;
+    }
+    itens = data || [];
+    renderItens();
+  }
+
+  function renderItens() {
+    const tb = $('lista-itens');
+    tb.innerHTML = '';
+    if (!itens.length) {
+      tb.innerHTML = '<tr><td colspan="7">Nenhum item na Pauta.</td></tr>';
+      return;
+    }
+    for (const it of itens) {
+      const tr = document.createElement('tr');
+      const celulas = [it.assunto, it.area, it.responsavel_nome || '', PRIO[it.prioridade] || '', fmtData(it.prazo), STATUS[it.status] || ''];
+      for (const c of celulas) {
+        const td = document.createElement('td');
+        td.textContent = c;
+        tr.appendChild(td);
+      }
+      const acoes = document.createElement('td');
+      acoes.className = 'acoes';
+      if (it.pode_editar) {
+        const ed = document.createElement('button');
+        ed.type = 'button'; ed.className = 'sec pequeno'; ed.textContent = 'Editar';
+        ed.onclick = () => abrirForm(it);
+        const ex = document.createElement('button');
+        ex.type = 'button'; ex.className = 'sec pequeno'; ex.textContent = 'Excluir';
+        ex.onclick = () => excluirItem(it);
+        acoes.append(ed, ' ', ex);
+      } else {
+        const t = document.createElement('span');
+        t.className = 'tag';
+        t.textContent = 'de ' + it.criador_nome;
+        acoes.appendChild(t);
+      }
+      tr.appendChild(acoes);
+      tb.appendChild(tr);
+    }
+  }
+
+  function preencherResponsaveis(selecionado) {
+    const sel = $('i-resp');
+    sel.innerHTML = '';
+    for (const l of lideres) {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.nome;
+      if (l.id === selecionado) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  function abrirForm(it) {
+    $('form-item').classList.remove('oculto');
+    $('titulo-item').textContent = it ? 'Editar item' : 'Novo item';
+    $('i-id').value = it ? it.id : '';
+    preencherResponsaveis(it ? it.responsavel_id : liderId);
+    $('i-area').value = it?.area || '';
+    $('i-assunto').value = it?.assunto || '';
+    $('i-desc').value = it?.descricao || '';
+    $('i-prio').value = it?.prioridade || 'media';
+    $('i-prazo').value = it?.prazo || '';
+    $('i-status').value = it?.status || 'a_fazer';
+    setMsg($('msg-item'), '');
+    $('form-item').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  $('novo').addEventListener('click', () => abrirForm(null));
+  $('cancelar').addEventListener('click', () => $('form-item').classList.add('oculto'));
+
+  $('form-item').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-item');
+    setMsg(msg, 'Salvando…');
+    const { error } = await sb.rpc('pauta_salvar', {
+      p_token: token,
+      p_id: $('i-id').value || null,
+      p_responsavel_id: $('i-resp').value,
+      p_area: $('i-area').value.trim(),
+      p_assunto: $('i-assunto').value.trim(),
+      p_descricao: $('i-desc').value.trim() || null,
+      p_prioridade: $('i-prio').value,
+      p_prazo: $('i-prazo').value || null,
+      p_status: $('i-status').value,
+    });
+    if (error) {
+      if (error.message.includes('sessao_invalida')) return sair();
+      return setMsg(msg, traduz(error.message), 'erro');
+    }
+    $('form-item').classList.add('oculto');
+    carregarItens();
+  });
+
+  async function excluirItem(it) {
+    if (!confirm('Excluir o item "' + it.assunto + '"?')) return;
+    const { error } = await sb.rpc('pauta_excluir', { p_token: token, p_id: it.id });
+    if (error) {
+      if (error.message.includes('sessao_invalida')) return sair();
+      return alert(traduz(error.message));
+    }
+    carregarItens();
+  }
+
+  $('sair').addEventListener('click', sair);
+
+  (async function iniciar() {
+    if (token) {
+      // Confere se a sessão ainda vale antes de mostrar a pauta
+      const { error } = await sb.rpc('pauta_listar', { p_token: token });
+      if (!error) return mostrarPauta();
+      sair();
+      return;
+    }
+    mostrarEntrada();
+  })();
+</script>
+</body>
+</html>

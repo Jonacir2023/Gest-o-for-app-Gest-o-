@@ -162,6 +162,7 @@
         <button type="button" class="aba" data-cad="unidades">Unidades de medida</button>
         <button type="button" class="aba" data-cad="locais">Locais</button>
         <button type="button" class="aba" data-cad="motivos">Motivos de justificativa</button>
+        <button type="button" class="aba" data-cad="lideres">Líderes da Pauta</button>
       </nav>
 
       <section id="cad-unidades" class="card oculto">
@@ -221,6 +222,26 @@
           <input id="m-desc" required>
           <button type="submit">Acrescentar motivo</button>
           <div id="msg-motivo" class="msg"></div>
+        </form>
+      </section>
+
+      <section id="cad-lideres" class="card oculto">
+        <h1>Líderes da Pauta</h1>
+        <p style="font-size:14px;color:var(--muted);margin:0 0 8px">
+          Cada líder entra pelo link da Pauta, escolhe o próprio nome e cria a senha no primeiro acesso.
+          Para redefinir a senha de alguém, toque em <strong>Redefinir senha</strong>.
+        </p>
+        <div class="tabela-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>Acesso</th><th></th></tr></thead>
+            <tbody id="lista-lideres"></tbody>
+          </table>
+        </div>
+        <form id="form-lider">
+          <label for="ld-nome">Novo líder *</label>
+          <input id="ld-nome" required>
+          <button type="submit">Acrescentar líder</button>
+          <div id="msg-lider" class="msg"></div>
         </form>
       </section>
     </div>
@@ -423,7 +444,7 @@
   }
 
   function mostrarCad(c) {
-    ['unidades', 'locais', 'motivos'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
+    ['unidades', 'locais', 'motivos', 'lideres'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
     document.querySelectorAll('[data-cad]').forEach((b) => b.classList.toggle('ativa', b.dataset.cad === c));
   }
 
@@ -459,6 +480,7 @@
     carregarUnidades();
     carregarProjetosSelect();
     carregarMotivos();
+    carregarLideres();
   }
 
   // ---------- Unidades de medida ----------
@@ -564,6 +586,56 @@
     $('m-desc').value = '';
     setMsg(msg, 'Motivo acrescentado.', 'ok');
     carregarMotivos();
+  });
+
+  // ---------- Líderes da Pauta ----------
+  async function carregarLideres() {
+    const tb = $('lista-lideres');
+    const { data, error } = await sb.from('pauta_lideres').select('id, nome, primeiro_acesso_feito');
+    if (error) return mostrarErroTabela(tb, 3, error.message);
+    const lista = data.slice().sort((a, b) => collator.compare(a.nome, b.nome));
+    tb.innerHTML = '';
+    if (!lista.length) {
+      tb.innerHTML = '<tr><td colspan="3">Nenhum líder cadastrado.</td></tr>';
+      return;
+    }
+    for (const l of lista) {
+      const tr = document.createElement('tr');
+      const tdNome = document.createElement('td');
+      tdNome.textContent = l.nome;
+      const tdStatus = document.createElement('td');
+      tdStatus.textContent = l.primeiro_acesso_feito ? 'Senha criada' : 'Aguardando primeiro acesso';
+      const tdAcao = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sec';
+      btn.style.marginTop = '0';
+      btn.textContent = 'Redefinir senha';
+      btn.onclick = () => redefinirSenhaLider(l);
+      tdAcao.appendChild(btn);
+      tr.append(tdNome, tdStatus, tdAcao);
+      tb.appendChild(tr);
+    }
+  }
+
+  async function redefinirSenhaLider(l) {
+    if (!confirm('Redefinir a senha de ' + l.nome + '? A pessoa criará uma senha nova no próximo acesso.')) return;
+    const { error } = await sb.rpc('pauta_redefinir_senha', { p_lider_id: l.id });
+    if (error) return alert('Erro: ' + error.message);
+    carregarLideres();
+  }
+
+  $('form-lider').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-lider');
+    const nome = $('ld-nome').value.trim();
+    if (!nome) return setMsg(msg, 'Informe o nome do líder.', 'erro');
+    setMsg(msg, 'Salvando…');
+    const { error } = await sb.from('pauta_lideres').insert({ nome });
+    if (error) return setMsg(msg, error.code === '23505' ? 'Já existe um líder com esse nome.' : error.message, 'erro');
+    $('ld-nome').value = '';
+    setMsg(msg, 'Líder acrescentado.', 'ok');
+    carregarLideres();
   });
 
   // ---------- Eventos de navegação ----------
