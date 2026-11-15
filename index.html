@@ -198,7 +198,8 @@
               <input id="u-desc">
             </div>
           </div>
-          <button type="submit">Acrescentar unidade</button>
+          <button type="submit" id="u-submit">Acrescentar unidade</button>
+          <button type="button" id="u-cancelar" class="sec oculto">Cancelar edição</button>
           <div id="msg-unidade" class="msg"></div>
         </form>
       </section>
@@ -216,7 +217,8 @@
         <form id="form-local">
           <label for="l-nome">Novo local *</label>
           <input id="l-nome" required>
-          <button type="submit">Acrescentar local</button>
+          <button type="submit" id="l-submit">Acrescentar local</button>
+          <button type="button" id="l-cancelar" class="sec oculto">Cancelar edição</button>
           <div id="msg-local" class="msg"></div>
         </form>
       </section>
@@ -234,7 +236,8 @@
         <form id="form-motivo">
           <label for="m-desc">Novo motivo *</label>
           <input id="m-desc" required>
-          <button type="submit">Acrescentar motivo</button>
+          <button type="submit" id="m-submit">Acrescentar motivo</button>
+          <button type="button" id="m-cancelar" class="sec oculto">Cancelar edição</button>
           <div id="msg-motivo" class="msg"></div>
         </form>
       </section>
@@ -555,14 +558,60 @@
     carregarLideres();
   }
 
+  // ---------- Tabelas com botão Editar ----------
+  function preencherComEdicao(tb, itens, colunas, vazio, onEdit) {
+    tb.innerHTML = '';
+    const n = colunas.length + 1;
+    if (!itens.length) {
+      tb.innerHTML = `<tr><td colspan="${n}"></td></tr>`;
+      tb.querySelector('td').textContent = vazio;
+      return;
+    }
+    for (const it of itens) {
+      const tr = document.createElement('tr');
+      for (const c of colunas) {
+        const td = document.createElement('td');
+        td.textContent = c(it);
+        tr.appendChild(td);
+      }
+      const acao = document.createElement('td');
+      acao.appendChild(botao('Editar', () => onEdit(it)));
+      tr.appendChild(acao);
+      tb.appendChild(tr);
+    }
+  }
+
   // ---------- Unidades de medida ----------
+  let editUnidade = null;
+
   async function carregarUnidades() {
     const tb = $('lista-unidades');
-    const { data, error } = await sb.from('unidades_medida').select('sigla, descricao');
-    if (error) return mostrarErroTabela(tb, 2, error.message);
+    const { data, error } = await sb.from('unidades_medida').select('id, sigla, descricao');
+    if (error) return mostrarErroTabela(tb, 3, error.message);
     data.sort((a, b) => collator.compare(a.sigla, b.sigla));
-    preencherLinhas(tb, data.map((u) => [u.sigla, u.descricao || '']), 2, 'Nenhuma unidade cadastrada.');
+    preencherComEdicao(tb, data, [(u) => u.sigla, (u) => u.descricao || ''], 'Nenhuma unidade cadastrada.', editarUnidade);
   }
+
+  function editarUnidade(u) {
+    editUnidade = u;
+    $('u-sigla').value = u.sigla;
+    $('u-desc').value = u.descricao || '';
+    $('u-submit').textContent = 'Salvar alteração';
+    $('u-cancelar').classList.remove('oculto');
+    setMsg($('msg-unidade'), 'Editando a unidade ' + u.sigla + '.');
+    $('u-sigla').focus();
+  }
+
+  function cancelarUnidade() {
+    editUnidade = null;
+    $('u-sigla').value = '';
+    $('u-desc').value = '';
+    $('u-submit').textContent = 'Acrescentar unidade';
+    $('u-cancelar').classList.add('oculto');
+    setMsg($('msg-unidade'), '');
+  }
+
+  $('u-cancelar').addEventListener('click', cancelarUnidade);
 
   $('form-unidade').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -570,11 +619,14 @@
     const sigla = $('u-sigla').value.trim();
     if (!sigla) return setMsg(msg, 'Informe a sigla.', 'erro');
     setMsg(msg, 'Salvando…');
-    const { error } = await sb.from('unidades_medida').insert({ sigla, descricao: $('u-desc').value.trim() || null });
+    const dados = { sigla, descricao: $('u-desc').value.trim() || null };
+    const { error } = editUnidade
+      ? await sb.from('unidades_medida').update(dados).eq('id', editUnidade.id)
+      : await sb.from('unidades_medida').insert(dados);
     if (error) return setMsg(msg, error.code === '23505' ? 'Essa unidade já existe.' : error.message, 'erro');
-    $('u-sigla').value = '';
-    $('u-desc').value = '';
-    setMsg(msg, 'Unidade acrescentada.', 'ok');
+    const editando = !!editUnidade;
+    cancelarUnidade();
+    setMsg(msg, editando ? 'Unidade alterada.' : 'Unidade acrescentada.', 'ok');
     carregarUnidades();
   });
 
@@ -593,17 +645,37 @@
     carregarLocais();
   }
 
+  let editLocal = null;
+
   async function carregarLocais() {
     const tb = $('lista-locais');
     const pid = $('loc-obra').value;
-    if (!pid) return preencherLinhas(tb, [], 1, 'Cadastre uma obra antes de incluir locais.');
-    const { data, error } = await sb.from('locais').select('nome').eq('projeto_id', pid);
-    if (error) return mostrarErroTabela(tb, 1, error.message);
+    if (!pid) return preencherComEdicao(tb, [], [(l) => l.nome], 'Cadastre uma obra antes de incluir locais.', editarLocal);
+    const { data, error } = await sb.from('locais').select('id, nome').eq('projeto_id', pid);
+    if (error) return mostrarErroTabela(tb, 2, error.message);
     data.sort((a, b) => collator.compare(a.nome, b.nome));
-    preencherLinhas(tb, data.map((l) => [l.nome]), 1, 'Nenhum local nesta obra.');
+    preencherComEdicao(tb, data, [(l) => l.nome], 'Nenhum local nesta obra.', editarLocal);
   }
 
-  $('loc-obra').addEventListener('change', carregarLocais);
+  function editarLocal(l) {
+    editLocal = l;
+    $('l-nome').value = l.nome;
+    $('l-submit').textContent = 'Salvar alteração';
+    $('l-cancelar').classList.remove('oculto');
+    setMsg($('msg-local'), 'Editando o local ' + l.nome + '.');
+    $('l-nome').focus();
+  }
+
+  function cancelarLocal() {
+    editLocal = null;
+    $('l-nome').value = '';
+    $('l-submit').textContent = 'Acrescentar local';
+    $('l-cancelar').classList.add('oculto');
+    setMsg($('msg-local'), '');
+  }
+
+  $('l-cancelar').addEventListener('click', cancelarLocal);
+  $('loc-obra').addEventListener('change', () => { cancelarLocal(); carregarLocais(); });
 
   $('form-local').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -613,12 +685,17 @@
     if (!pid) return setMsg(msg, 'Cadastre uma obra antes.', 'erro');
     if (!nome) return setMsg(msg, 'Informe o nome do local.', 'erro');
     setMsg(msg, 'Salvando…');
-    const { data: existe } = await sb.from('locais').select('id').eq('projeto_id', pid).eq('nome', nome).limit(1);
+    let consulta = sb.from('locais').select('id').eq('projeto_id', pid).eq('nome', nome);
+    if (editLocal) consulta = consulta.neq('id', editLocal.id);
+    const { data: existe } = await consulta.limit(1);
     if (existe && existe.length) return setMsg(msg, 'Esse local já existe nesta obra.', 'erro');
-    const { error } = await sb.from('locais').insert({ projeto_id: pid, nome });
+    const { error } = editLocal
+      ? await sb.from('locais').update({ nome }).eq('id', editLocal.id)
+      : await sb.from('locais').insert({ projeto_id: pid, nome });
     if (error) return setMsg(msg, error.message, 'erro');
-    $('l-nome').value = '';
-    setMsg(msg, 'Local acrescentado.', 'ok');
+    const editando = !!editLocal;
+    cancelarLocal();
+    setMsg(msg, editando ? 'Local alterado.' : 'Local acrescentado.', 'ok');
     carregarLocais();
   });
 
@@ -634,15 +711,35 @@
     }
   }
 
+  let editMotivo = null;
+
   async function carregarMotivos() {
     const tb = $('lista-motivos');
-    const { data, error } = await sb.from('motivos_justificativa').select('descricao').eq('tipo', $('mot-tipo').value);
-    if (error) return mostrarErroTabela(tb, 1, error.message);
+    const { data, error } = await sb.from('motivos_justificativa').select('id, descricao').eq('tipo', $('mot-tipo').value);
+    if (error) return mostrarErroTabela(tb, 2, error.message);
     data.sort((a, b) => collator.compare(a.descricao, b.descricao));
-    preencherLinhas(tb, data.map((m) => [m.descricao]), 1, 'Nenhum motivo deste tipo.');
+    preencherComEdicao(tb, data, [(m) => m.descricao], 'Nenhum motivo deste tipo.', editarMotivo);
   }
 
-  $('mot-tipo').addEventListener('change', carregarMotivos);
+  function editarMotivo(m) {
+    editMotivo = m;
+    $('m-desc').value = m.descricao;
+    $('m-submit').textContent = 'Salvar alteração';
+    $('m-cancelar').classList.remove('oculto');
+    setMsg($('msg-motivo'), 'Editando o motivo.');
+    $('m-desc').focus();
+  }
+
+  function cancelarMotivo() {
+    editMotivo = null;
+    $('m-desc').value = '';
+    $('m-submit').textContent = 'Acrescentar motivo';
+    $('m-cancelar').classList.add('oculto');
+    setMsg($('msg-motivo'), '');
+  }
+
+  $('m-cancelar').addEventListener('click', cancelarMotivo);
+  $('mot-tipo').addEventListener('change', () => { cancelarMotivo(); carregarMotivos(); });
 
   $('form-motivo').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -651,12 +748,17 @@
     const descricao = $('m-desc').value.trim();
     if (!descricao) return setMsg(msg, 'Informe a descrição do motivo.', 'erro');
     setMsg(msg, 'Salvando…');
-    const { data: existe } = await sb.from('motivos_justificativa').select('id').eq('tipo', tipo).eq('descricao', descricao).limit(1);
+    let consulta = sb.from('motivos_justificativa').select('id').eq('tipo', tipo).eq('descricao', descricao);
+    if (editMotivo) consulta = consulta.neq('id', editMotivo.id);
+    const { data: existe } = await consulta.limit(1);
     if (existe && existe.length) return setMsg(msg, 'Esse motivo já existe neste tipo.', 'erro');
-    const { error } = await sb.from('motivos_justificativa').insert({ tipo, descricao });
+    const { error } = editMotivo
+      ? await sb.from('motivos_justificativa').update({ descricao }).eq('id', editMotivo.id)
+      : await sb.from('motivos_justificativa').insert({ tipo, descricao });
     if (error) return setMsg(msg, error.message, 'erro');
-    $('m-desc').value = '';
-    setMsg(msg, 'Motivo acrescentado.', 'ok');
+    const editando = !!editMotivo;
+    cancelarMotivo();
+    setMsg(msg, editando ? 'Motivo alterado.' : 'Motivo acrescentado.', 'ok');
     carregarMotivos();
   });
 
