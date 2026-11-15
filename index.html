@@ -247,13 +247,15 @@
         </p>
         <div class="tabela-wrap">
           <table>
-            <thead><tr><th>Nome</th><th>Setor</th><th>Acesso</th><th></th></tr></thead>
+            <thead><tr><th>Nome</th><th>Função</th><th>Setor</th><th>Acesso</th><th></th></tr></thead>
             <tbody id="lista-lideres"></tbody>
           </table>
         </div>
         <form id="form-lider">
           <label for="ld-nome">Nome do líder *</label>
           <input id="ld-nome" required>
+          <label for="ld-funcao">Função *</label>
+          <input id="ld-funcao" required>
           <label for="ld-setor">Setor a que o líder é vinculado *</label>
           <input id="ld-setor" list="lista-setores" required>
           <datalist id="lista-setores"></datalist>
@@ -661,38 +663,46 @@
   // ---------- Líderes da Pauta ----------
   async function carregarLideres() {
     const tb = $('lista-lideres');
-    const { data, error } = await sb.from('pauta_lideres').select('id, nome, setor, primeiro_acesso_feito');
-    if (error) return mostrarErroTabela(tb, 4, error.message);
+    const { data, error } = await sb.from('pauta_lideres').select('id, nome, funcao, setor, primeiro_acesso_feito');
+    if (error) return mostrarErroTabela(tb, 5, error.message);
     const lista = data.slice().sort((a, b) => collator.compare(a.nome, b.nome));
     preencherSetores(lista);
     tb.innerHTML = '';
     if (!lista.length) {
-      tb.innerHTML = '<tr><td colspan="4">Nenhum líder cadastrado.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="5">Nenhum líder cadastrado.</td></tr>';
       return;
     }
     for (const l of lista) {
       const tr = document.createElement('tr');
       const tdNome = document.createElement('td');
       tdNome.textContent = l.nome;
+      const tdFuncao = document.createElement('td');
+      tdFuncao.textContent = l.funcao || 'Sem função';
       const tdSetor = document.createElement('td');
       tdSetor.textContent = l.setor || 'Sem setor';
       const tdStatus = document.createElement('td');
       tdStatus.textContent = l.primeiro_acesso_feito ? 'Senha criada' : 'Aguardando primeiro acesso';
       const tdAcao = document.createElement('td');
+      const btnFuncao = document.createElement('button');
+      btnFuncao.type = 'button';
+      btnFuncao.className = 'sec';
+      btnFuncao.style.marginTop = '0';
+      btnFuncao.textContent = 'Editar função';
+      btnFuncao.onclick = () => editarCampoLider(l, 'funcao', 'Função');
       const btnSetor = document.createElement('button');
       btnSetor.type = 'button';
       btnSetor.className = 'sec';
       btnSetor.style.marginTop = '0';
       btnSetor.textContent = 'Editar setor';
-      btnSetor.onclick = () => editarSetorLider(l);
+      btnSetor.onclick = () => editarCampoLider(l, 'setor', 'Setor');
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'sec';
       btn.style.marginTop = '0';
       btn.textContent = 'Redefinir senha';
       btn.onclick = () => redefinirSenhaLider(l);
-      tdAcao.append(btnSetor, ' ', btn);
-      tr.append(tdNome, tdSetor, tdStatus, tdAcao);
+      tdAcao.append(btnFuncao, ' ', btnSetor, ' ', btn);
+      tr.append(tdNome, tdFuncao, tdSetor, tdStatus, tdAcao);
       tb.appendChild(tr);
     }
   }
@@ -709,12 +719,12 @@
     }
   }
 
-  async function editarSetorLider(l) {
-    const novo = prompt('Setor de ' + l.nome + ':', l.setor || '');
+  async function editarCampoLider(l, campo, rotulo) {
+    const novo = prompt(rotulo + ' de ' + l.nome + ':', l[campo] || '');
     if (novo === null) return;
-    const setor = novo.trim();
-    if (!setor) return alert('Informe o setor.');
-    const { error } = await sb.from('pauta_lideres').update({ setor }).eq('id', l.id);
+    const valor = novo.trim();
+    if (!valor) return alert('Informe ' + rotulo.toLowerCase() + '.');
+    const { error } = await sb.from('pauta_lideres').update({ [campo]: valor }).eq('id', l.id);
     if (error) return alert('Erro: ' + error.message);
     carregarLideres();
   }
@@ -730,13 +740,16 @@
     e.preventDefault();
     const msg = $('msg-lider');
     const nome = $('ld-nome').value.trim();
+    const funcao = $('ld-funcao').value.trim();
     const setor = $('ld-setor').value.trim();
     if (!nome) return setMsg(msg, 'Informe o nome do líder.', 'erro');
+    if (!funcao) return setMsg(msg, 'Informe a função do líder.', 'erro');
     if (!setor) return setMsg(msg, 'Informe o setor do líder.', 'erro');
     setMsg(msg, 'Salvando…');
-    const { error } = await sb.from('pauta_lideres').insert({ nome, setor });
+    const { error } = await sb.from('pauta_lideres').insert({ nome, funcao, setor });
     if (error) return setMsg(msg, error.code === '23505' ? 'Já existe um líder com esse nome.' : error.message, 'erro');
     $('ld-nome').value = '';
+    $('ld-funcao').value = '';
     $('ld-setor').value = '';
     setMsg(msg, 'Líder acrescentado.', 'ok');
     carregarLideres();
