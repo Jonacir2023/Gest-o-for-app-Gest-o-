@@ -21,7 +21,7 @@
   body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; font-family: Poppins, Arial, sans-serif; background: var(--fundo); color: var(--texto); }
   header { background: var(--azul); color: var(--branco); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
   .marca { font-weight: 700; letter-spacing: .08em; }
-  main { flex: 1; width: 100%; max-width: 960px; margin: 0 auto; padding: 16px; }
+  main { flex: 1; width: 100%; max-width: none; margin: 0; padding: 16px; }
   .card { background: var(--branco); border: 1px solid var(--borda); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
   h1 { font-size: 20px; color: var(--azul); margin: 4px 0 12px; }
   h2 { font-size: 16px; color: var(--azul); margin: 0 0 8px; }
@@ -90,7 +90,7 @@
       <div class="tabela-wrap">
         <table>
           <thead>
-            <tr><th>Assunto</th><th>Criador</th><th>Setor do criador</th><th>Responsável</th><th>Setor do responsável</th><th>Área</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr>
+            <tr><th>Assunto</th><th>Descrição</th><th>Criador</th><th>Setor do criador</th><th>Responsável</th><th>Setor do responsável</th><th>Área</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr>
           </thead>
           <tbody id="lista-itens"></tbody>
         </table>
@@ -127,8 +127,8 @@
           <input id="i-assunto" required>
         </div>
         <div class="full">
-          <label for="i-desc">Descrição</label>
-          <textarea id="i-desc" rows="3"></textarea>
+          <label for="i-desc">Descrição (resumo, até 200 caracteres)</label>
+          <textarea id="i-desc" rows="2" maxlength="200"></textarea>
         </div>
         <div>
           <label for="i-prio">Prioridade</label>
@@ -310,7 +310,7 @@
     }
     for (const it of itens) {
       const tr = document.createElement('tr');
-      const celulas = [it.assunto, it.criador_nome || '', it.criador_setor || '—', it.responsavel_nome || '', it.responsavel_setor || '—', it.area, PRIO[it.prioridade] || '', fmtData(it.prazo), STATUS[it.status] || ''];
+      const celulas = [it.assunto, it.descricao || '', it.criador_nome || '', it.criador_setor || '—', it.responsavel_nome || '', it.responsavel_setor || '—', it.area, PRIO[it.prioridade] || '', fmtData(it.prazo), STATUS[it.status] || ''];
       for (const c of celulas) {
         const td = document.createElement('td');
         td.textContent = c;
