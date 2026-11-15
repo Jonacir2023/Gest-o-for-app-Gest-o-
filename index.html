@@ -396,12 +396,12 @@
                 <input id="r-data" type="date" required>
               </div>
               <div>
-                <label for="r-frente">Frente *</label>
-                <input id="r-frente" required>
+                <label for="r-frente">Local *</label>
+                <select id="r-frente" required></select>
               </div>
               <div>
-                <label for="r-enc">Encarregado *</label>
-                <input id="r-enc" required>
+                <label for="r-enc">Responsável pelo local *</label>
+                <select id="r-enc" required></select>
               </div>
               <div>
                 <label for="r-apt">Apontador *</label>
@@ -1775,6 +1775,7 @@
       const { data } = await sb.from('locais').select('id, nome').eq('projeto_id', pid);
       rdoLocais = (data || []).sort((a, b) => collator.compare(a.nome, b.nome));
     }
+    opcoes($('r-frente'), rdoLocais.map((l) => [l.id, l.nome]), 'Selecione o local', $('r-frente').value);
     document.querySelectorAll('#r-ativ .linha-rdo').forEach((d) => {
       const sel = d.querySelector('.at-local');
       opcoes(sel, rdoLocais.map((l) => [l.id, l.nome]), 'Selecione', sel.value);
@@ -1821,11 +1822,12 @@
     const { data, error } = await sb.rpc('rdo_detalhe', { p_id: id });
     if (error) return setMsg($('msg-rdo'), 'Erro: ' + error.message, 'erro');
     $('r-data').value = data.data;
-    $('r-frente').value = data.frente;
-    $('r-enc').value = data.encarregado;
+    rdoResponsavelPendente = data.encarregado;
     $('r-apt').value = data.apontador;
     opcoes($('r-proj'), [...$('r-proj').options].filter((o) => o.value).map((o) => [o.value, o.textContent]), 'Selecione a obra', data.projeto_id);
     await carregarLocaisRdo();
+    const locAbre = rdoLocais.find((l) => l.nome === data.frente);
+    $('r-frente').value = locAbre ? locAbre.id : '';
     $('r-obs').value = data.observacoes || '';
     aplicarClima(data);
     preencherItens(data);
@@ -1958,6 +1960,21 @@
     return { ...efetivoEstado };
   }
 
+  // Responsável pelo local: só quem tem função de encarregado, supervisor, coordenador ou engenheiro
+  let rdoResponsavelPendente = null;
+
+  function refreshResponsaveisLocal() {
+    const sel = $('r-enc');
+    const atual = rdoResponsavelPendente || sel.value || '';
+    rdoResponsavelPendente = null;
+    const re = /encarregado|supervisor|coordenador|engenheiro/i;
+    const pares = rdoColab
+      .filter((c) => re.test(c.funcao || ''))
+      .map((c) => [c.nome, c.nome + (c.funcao ? ' · ' + c.funcao : '')]);
+    if (atual && !pares.some((p) => p[0] === atual)) pares.push([atual, atual]);
+    opcoes(sel, pares, 'Selecione o responsável', atual);
+  }
+
   async function carregarEfetivoRDO(mapa) {
     const dia = $('r-data').value;
     const box = $('r-efetivo');
@@ -1972,6 +1989,7 @@
       return;
     }
     rdoColab = data.filter((c) => vigenteNoDia(c, dia));
+    refreshResponsaveisLocal();
     renderEfetivoRDO();
     atualizarTiles();
   }
@@ -2259,8 +2277,8 @@
     const cab = {
       data: $('r-data').value,
       projeto_id: $('r-proj').value,
-      frente: $('r-frente').value.trim(),
-      encarregado: $('r-enc').value.trim(),
+      frente: (rdoLocais.find((l) => l.id === $('r-frente').value) || {}).nome || '',
+      encarregado: $('r-enc').value || '',
       apontador: $('r-apt').value.trim(),
     };
     if (!cab.data || !cab.projeto_id || !cab.frente || !cab.encarregado || !cab.apontador) {
