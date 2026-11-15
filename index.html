@@ -65,6 +65,19 @@
   .abas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
   .aba { background: transparent; color: var(--azul); border: 1px solid var(--azul); margin-top: 0; padding: 8px 12px; font-size: 14px; }
   .aba.ativa { background: var(--azul); color: var(--branco); }
+  button.pequeno { margin-top: 0; padding: 6px 10px; font-size: 13px; }
+  .filtros { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+  @media (min-width: 640px) { .filtros { grid-template-columns: 1fr 1fr; } }
+  .kanban { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (min-width: 900px) { .kanban { grid-template-columns: repeat(3, 1fr); } }
+  .coluna { background: var(--branco); border: 1px solid var(--borda); border-radius: 10px; padding: 12px; min-width: 0; }
+  .coluna h2 { font-size: 15px; color: var(--azul); margin: 0 0 8px; }
+  .item-ck { border: 1px solid var(--borda); border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 14px; }
+  .texto-apoio { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .alerta { display: inline-block; font-size: 12px; color: var(--erro); border: 1px solid var(--erro); border-radius: 999px; padding: 2px 8px; margin-top: 6px; }
+  .acoes-ck { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .acoes-ck select { width: auto; padding: 6px; font-size: 13px; }
+  details summary { cursor: pointer; font-size: 13px; margin-top: 6px; color: var(--azul); }
 </style>
 </head>
 <body>
@@ -102,6 +115,7 @@
     <nav id="nav-principal" class="abas oculto">
       <button type="button" class="aba" data-view="obras">Obras</button>
       <button type="button" class="aba" data-view="cadastros">Cadastros</button>
+      <button type="button" class="aba" data-view="checkin">Check-in</button>
     </nav>
 
     <div id="area-obra" class="oculto">
@@ -245,6 +259,55 @@
         </form>
       </section>
     </div>
+
+    <div id="view-checkin" class="oculto">
+      <div class="card">
+        <h1>Check-in</h1>
+        <p class="texto-apoio">Reunião diária às 7h. Os itens vêm da Pauta e a lista atualiza a cada 5 minutos.</p>
+        <div class="filtros">
+          <div>
+            <label for="ck-area">Área</label>
+            <select id="ck-area"></select>
+          </div>
+          <div>
+            <label for="ck-resp">Responsável</label>
+            <select id="ck-resp"></select>
+          </div>
+        </div>
+        <button id="ck-atualizar" type="button" class="sec">Atualizar agora</button>
+        <div id="msg-checkin" class="msg"></div>
+      </div>
+
+      <div class="kanban">
+        <div class="coluna"><h2>A fazer</h2><div id="col-a_fazer"></div></div>
+        <div class="coluna"><h2>Fazendo</h2><div id="col-fazendo"></div></div>
+        <div class="coluna"><h2>Concluído (últimos 7 dias)</h2><div id="col-concluido"></div></div>
+      </div>
+
+      <form id="form-prazo" class="card oculto">
+        <h2 id="prazo-titulo">Alterar prazo</h2>
+        <label for="pz-novo">Novo prazo *</label>
+        <input id="pz-novo" type="date" required>
+        <label for="pz-motivo">Motivo da alteração *</label>
+        <textarea id="pz-motivo" rows="2" required></textarea>
+        <button type="submit">Salvar prazo</button>
+        <button type="button" class="sec" data-fechar="form-prazo">Cancelar</button>
+        <div id="msg-prazo" class="msg"></div>
+      </form>
+
+      <form id="form-desc" class="card oculto">
+        <h2 id="desc-titulo">Descrição</h2>
+        <textarea id="ds-texto" rows="4"></textarea>
+        <button type="submit">Salvar descrição</button>
+        <button type="button" class="sec" data-fechar="form-desc">Cancelar</button>
+        <div id="msg-desc" class="msg"></div>
+      </form>
+
+      <div class="card">
+        <h2>Histórico (concluídos há mais de 7 dias e cancelados)</h2>
+        <div id="col-historico"></div>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -304,6 +367,7 @@
     } else {
       $('area-obra').classList.add('oculto');
       $('view-cadastros').classList.add('oculto');
+      $('view-checkin').classList.add('oculto');
     }
   }
 
@@ -439,6 +503,9 @@
   function mostrarView(v) {
     $('area-obra').classList.toggle('oculto', v !== 'obras');
     $('view-cadastros').classList.toggle('oculto', v !== 'cadastros');
+    $('view-checkin').classList.toggle('oculto', v !== 'checkin');
+    if (v !== 'checkin' && ckTimer) { clearInterval(ckTimer); ckTimer = null; }
+    if (v === 'checkin') { carregarCheckin(); clearInterval(ckTimer); ckTimer = setInterval(carregarCheckin, 5 * 60 * 1000); }
     document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('ativa', b.dataset.view === v));
     if (v === 'cadastros') carregarCadastros();
   }
@@ -637,6 +704,218 @@
     setMsg(msg, 'Líder acrescentado.', 'ok');
     carregarLideres();
   });
+
+  // ---------- Check-in ----------
+  let ckItens = [];
+  let ckTimer = null;
+  let ckAtual = null;
+  const DIA_MS = 24 * 3600 * 1000;
+  const ST_ROT = { a_fazer: 'A fazer', fazendo: 'Fazendo', concluido: 'Concluído', cancelado: 'Cancelado' };
+
+  function dataBr(d) {
+    if (!d) return '';
+    const iso = d.length === 10 ? d + 'T12:00:00' : d;
+    return new Date(iso).toLocaleDateString('pt-BR');
+  }
+
+  function botao(texto, fn) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sec pequeno';
+    b.textContent = texto;
+    b.onclick = fn;
+    return b;
+  }
+
+  async function carregarCheckin() {
+    const msg = $('msg-checkin');
+    setMsg(msg, 'Atualizando…');
+    const { error: errSync } = await sb.rpc('checkin_sincronizar');
+    const { data, error } = await sb.from('checkin_itens').select('*').order('criado_em');
+    const erro = errSync || error;
+    if (erro) return setMsg(msg, 'Erro: ' + erro.message, 'erro');
+    ckItens = data || [];
+    preencherFiltrosCheckin();
+    renderCheckin();
+    setMsg(msg, 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), 'ok');
+  }
+
+  function preencherSelect(sel, valores, rotuloTodos, atual) {
+    sel.innerHTML = '';
+    const todos = document.createElement('option');
+    todos.value = '';
+    todos.textContent = rotuloTodos;
+    sel.appendChild(todos);
+    for (const v of valores) {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = v;
+      sel.appendChild(o);
+    }
+    sel.value = atual || '';
+  }
+
+  function preencherFiltrosCheckin() {
+    const areas = [...new Set(ckItens.map((i) => i.area).filter(Boolean))].sort((a, b) => collator.compare(a, b));
+    const resps = [...new Set(ckItens.map((i) => i.responsavel).filter(Boolean))].sort((a, b) => collator.compare(a, b));
+    preencherSelect($('ck-area'), areas, 'Todas as áreas', $('ck-area').value);
+    preencherSelect($('ck-resp'), resps, 'Todos os responsáveis', $('ck-resp').value);
+  }
+
+  function renderCheckin() {
+    const area = $('ck-area').value;
+    const resp = $('ck-resp').value;
+    const corte = Date.now() - 7 * DIA_MS;
+    const visiveis = ckItens.filter((i) => (!area || i.area === area) && (!resp || i.responsavel === resp));
+    const colunas = { a_fazer: [], fazendo: [], concluido: [] };
+    const historico = [];
+    for (const i of visiveis) {
+      if (i.status === 'cancelado') historico.push(i);
+      else if (i.status === 'concluido') {
+        if (i.concluido_em && new Date(i.concluido_em).getTime() >= corte) colunas.concluido.push(i);
+        else historico.push(i);
+      } else if (colunas[i.status]) colunas[i.status].push(i);
+    }
+    for (const k of Object.keys(colunas)) {
+      const col = $('col-' + k);
+      col.innerHTML = '';
+      if (!colunas[k].length) {
+        const p = document.createElement('p');
+        p.className = 'texto-apoio';
+        p.textContent = 'Nenhum item.';
+        col.appendChild(p);
+      }
+      colunas[k].forEach((i) => col.appendChild(cardCheckin(i, false)));
+    }
+    const hist = $('col-historico');
+    hist.innerHTML = '';
+    if (!historico.length) {
+      const p = document.createElement('p');
+      p.className = 'texto-apoio';
+      p.textContent = 'Nenhum item no histórico.';
+      hist.appendChild(p);
+    }
+    historico.forEach((i) => hist.appendChild(cardCheckin(i, true)));
+  }
+
+  function cardCheckin(i, somenteLeitura) {
+    const div = document.createElement('div');
+    div.className = 'item-ck';
+    const titulo = document.createElement('strong');
+    titulo.textContent = i.assunto;
+    div.appendChild(titulo);
+
+    const linha = (texto) => {
+      const p = document.createElement('div');
+      p.className = 'texto-apoio';
+      p.textContent = texto;
+      div.appendChild(p);
+    };
+    linha([i.area, i.responsavel].filter(Boolean).join(' · '));
+    linha('Prazo: ' + (dataBr(i.prazo_atual) || '—'));
+    if (i.descricao) linha(i.descricao);
+
+    if (i.atencao_especial) {
+      const b = document.createElement('span');
+      b.className = 'alerta';
+      b.textContent = 'Atenção especial';
+      div.appendChild(b);
+    }
+
+    if (i.historico_prazos && i.historico_prazos.length) {
+      const det = document.createElement('details');
+      const sum = document.createElement('summary');
+      sum.textContent = 'Histórico de prazos (' + i.historico_prazos.length + ')';
+      det.appendChild(sum);
+      for (const h of i.historico_prazos) {
+        const p = document.createElement('div');
+        p.className = 'texto-apoio';
+        p.textContent = `${dataBr(h.prazo_anterior)} → ${dataBr(h.prazo_novo)} · ${h.motivo} · ${dataBr(h.em)}`;
+        det.appendChild(p);
+      }
+      div.appendChild(det);
+    }
+
+    if (!somenteLeitura) {
+      const acoes = document.createElement('div');
+      acoes.className = 'acoes-ck';
+      const sel = document.createElement('select');
+      for (const [v, r] of Object.entries(ST_ROT)) {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = r;
+        if (v === i.status) o.selected = true;
+        sel.appendChild(o);
+      }
+      sel.addEventListener('change', () => mudarStatus(i, sel.value));
+      acoes.append(sel, botao('Prazo', () => abrirPrazo(i)), botao('Descrição', () => abrirDescricao(i)));
+      div.appendChild(acoes);
+    }
+    return div;
+  }
+
+  async function mudarStatus(i, status) {
+    const { error } = await sb.rpc('checkin_alterar_status', { p_id: i.id, p_status: status });
+    if (error) return alert('Erro: ' + error.message);
+    carregarCheckin();
+  }
+
+  function abrirPrazo(i) {
+    ckAtual = i;
+    $('prazo-titulo').textContent = 'Alterar prazo: ' + i.assunto;
+    $('pz-novo').value = i.prazo_atual || '';
+    $('pz-motivo').value = '';
+    setMsg($('msg-prazo'), '');
+    $('form-desc').classList.add('oculto');
+    $('form-prazo').classList.remove('oculto');
+    $('form-prazo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function abrirDescricao(i) {
+    ckAtual = i;
+    $('desc-titulo').textContent = 'Descrição: ' + i.assunto;
+    $('ds-texto').value = i.descricao || '';
+    setMsg($('msg-desc'), '');
+    $('form-prazo').classList.add('oculto');
+    $('form-desc').classList.remove('oculto');
+    $('form-desc').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  $('form-prazo').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-prazo');
+    const motivo = $('pz-motivo').value.trim();
+    if (!motivo) return setMsg(msg, 'Informe o motivo da alteração.', 'erro');
+    if (!$('pz-novo').value) return setMsg(msg, 'Informe o novo prazo.', 'erro');
+    setMsg(msg, 'Salvando…');
+    const { error } = await sb.rpc('checkin_alterar_prazo', {
+      p_id: ckAtual.id,
+      p_novo: $('pz-novo').value,
+      p_motivo: motivo,
+    });
+    if (error) return setMsg(msg, error.message, 'erro');
+    $('form-prazo').classList.add('oculto');
+    carregarCheckin();
+  });
+
+  $('form-desc').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-desc');
+    setMsg(msg, 'Salvando…');
+    const { error } = await sb.rpc('checkin_salvar_descricao', {
+      p_id: ckAtual.id,
+      p_descricao: $('ds-texto').value.trim() || null,
+    });
+    if (error) return setMsg(msg, error.message, 'erro');
+    $('form-desc').classList.add('oculto');
+    carregarCheckin();
+  });
+
+  document.querySelectorAll('[data-fechar]').forEach((b) =>
+    b.addEventListener('click', () => $(b.dataset.fechar).classList.add('oculto')));
+  $('ck-atualizar').addEventListener('click', carregarCheckin);
+  $('ck-area').addEventListener('change', renderCheckin);
+  $('ck-resp').addEventListener('change', renderCheckin);
 
   // ---------- Eventos de navegação ----------
   document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => mostrarView(b.dataset.view)));
