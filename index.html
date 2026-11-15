@@ -107,6 +107,8 @@
   .seg button.on { background: var(--azul); color: var(--branco); border-color: var(--azul); }
   .seg-op button.on[data-v="sem_operacao"] { background: var(--erro); border-color: var(--erro); }
   .seg-op button.on[data-v="operacao"] { background: var(--ok); border-color: var(--ok); }
+  .paralisadas-lista { font-size: 14px; margin-bottom: 6px; }
+  .paralisada-item { border-left: 3px solid var(--erro); padding: 6px 10px; margin-bottom: 6px; background: var(--fundo); border-radius: 6px; }
   .fotos-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 8px; }
   .fotos-lista img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--borda); }
   .campos-rdo { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
@@ -412,6 +414,12 @@
             <h2>Atividades</h2>
             <div id="r-ativ"></div>
             <button type="button" id="r-add-at" class="sec">+ Atividade</button>
+          </section>
+
+          <section class="rdo-card rdo-full">
+            <h2>Atividades paralisadas</h2>
+            <div id="r-paralisadas" class="paralisadas-lista"></div>
+            <p class="texto-apoio">Marque "Paralisada" em uma atividade e escolha o motivo. Esta lista é preenchida automaticamente.</p>
           </section>
 
           <section class="rdo-card rdo-full">
@@ -1553,6 +1561,7 @@
         <div><label>Unidade</label><select class="at-un"></select></div>
         <div><label>Quantidade</label><input class="at-qtd" inputmode="decimal"></div>
         <div><label><input class="at-par" type="checkbox" style="width:auto"> Paralisada</label></div>
+        <div class="at-motivo-bloco oculto"><label>Motivo da paralisação</label><select class="at-motivo"></select></div>
       </div>`;
     div.querySelector('.at-nome').value = v.atividade || '';
     opcoes(div.querySelector('.at-un'), rdoUnidades.map((u) => [u.id, u.sigla]), 'Selecione', v.unidade_id || '');
@@ -1560,7 +1569,17 @@
     div.querySelector('.at-qtd').value = v.quantidade != null ? String(v.quantidade) : '';
     div.querySelector('.at-par').checked = !!v.paralisada;
     div.querySelector('.at-desc').value = v.descricao || '';
-    div.appendChild(botaoRemover(div));
+    opcoes(div.querySelector('.at-motivo'), rdoMotivosAtiv.map((m) => [m.id, m.descricao]), 'Selecione o motivo', v.justificativa_id || '');
+    const par = div.querySelector('.at-par');
+    const bloco = div.querySelector('.at-motivo-bloco');
+    const ajustaPar = () => { bloco.classList.toggle('oculto', !par.checked); atualizarParalisadas(); };
+    par.addEventListener('change', ajustaPar);
+    div.querySelector('.at-motivo').addEventListener('change', atualizarParalisadas);
+    div.querySelector('.at-nome').addEventListener('input', atualizarParalisadas);
+    bloco.classList.toggle('oculto', !par.checked);
+    const remover = botao('Remover', () => { div.remove(); atualizarParalisadas(); });
+    remover.classList.add('perigo');
+    div.appendChild(remover);
     return div;
   }
 
@@ -1574,6 +1593,8 @@
     const { data: mot } = await sb.from('motivos_justificativa').select('id, descricao').eq('tipo', 'dia_sem_execucao');
     rdoMotivosDia = (mot || []).sort((a, b) => collator.compare(a.descricao, b.descricao));
     refreshMotivoOptions();
+    const { data: motAt } = await sb.from('motivos_justificativa').select('id, descricao').eq('tipo', 'atividade_paralisada');
+    rdoMotivosAtiv = (motAt || []).sort((a, b) => collator.compare(a.descricao, b.descricao));
     const { data: un } = await sb.from('unidades_medida').select('id, sigla');
     rdoUnidades = (un || []).sort((a, b) => collator.compare(a.sigla, b.sigla));
     await carregarLocaisRdo();
@@ -1627,6 +1648,7 @@
     for (const e of det.efetivo) $('r-efetivo').appendChild(linhaEfetivo(e));
     for (const q of det.equipamentos) $('r-equip').appendChild(linhaEquipamento(q));
     for (const a of det.atividades) $('r-ativ').appendChild(linhaAtividade(a));
+    atualizarParalisadas();
   }
 
   async function abrirRdo(id) {
@@ -1693,6 +1715,7 @@
       local_id: d.querySelector('.at-local').value || null,
       quantidade: d.querySelector('.at-qtd').value.trim() || null,
       paralisada: d.querySelector('.at-par').checked,
+      justificativa_id: d.querySelector('.at-par').checked ? (d.querySelector('.at-motivo').value || null) : null,
       descricao: d.querySelector('.at-desc').value.trim() || null,
     }));
   }
@@ -1710,7 +1733,7 @@
   $('r-copiar').addEventListener('click', copiarUltimo);
   $('r-add-ef').addEventListener('click', () => $('r-efetivo').appendChild(linhaEfetivo()));
   $('r-add-eq').addEventListener('click', () => $('r-equip').appendChild(linhaEquipamento()));
-  $('r-add-at').addEventListener('click', () => $('r-ativ').appendChild(linhaAtividade()));
+  $('r-add-at').addEventListener('click', () => { $('r-ativ').appendChild(linhaAtividade()); atualizarParalisadas(); });
 
   $('form-rdo').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1763,6 +1786,31 @@
   const climaEstado = { manha: { clima: null, op: null, motivo: null }, tarde: { clima: null, op: null, motivo: null } };
   const ROTULO_CLIMA = { sol: 'Sol', nublado: 'Nublado', chuva: 'Chuva' };
   let rdoMotivosDia = [];
+  let rdoMotivosAtiv = [];
+
+  function atualizarParalisadas() {
+    const box = $('r-paralisadas');
+    if (!box) return;
+    box.innerHTML = '';
+    const linhas = [...document.querySelectorAll('#r-ativ .linha-rdo')].filter((d) => d.querySelector('.at-par').checked);
+    if (!linhas.length) {
+      box.textContent = 'Nenhuma atividade paralisada.';
+      return;
+    }
+    for (const d of linhas) {
+      const nome = d.querySelector('.at-nome').value.trim() || '(sem nome)';
+      const sel = d.querySelector('.at-motivo');
+      const motivo = sel.value ? sel.options[sel.selectedIndex].textContent : 'Sem motivo informado';
+      const item = document.createElement('div');
+      item.className = 'paralisada-item';
+      const t = document.createElement('strong');
+      t.textContent = nome;
+      const m = document.createElement('span');
+      m.textContent = ' · ' + motivo;
+      item.append(t, m);
+      box.appendChild(item);
+    }
+  }
   let rdoFotosNovas = [];
 
   function refreshMotivoOptions() {
