@@ -110,6 +110,14 @@
   .seg-op button.on[data-v="sem_operacao"] { background: var(--erro); border-color: var(--erro); }
   .seg-op button.on[data-v="operacao"] { background: var(--ok); border-color: var(--ok); }
   .paralisadas-lista { font-size: 14px; margin-bottom: 6px; }
+  .card, .rdo-card { position: relative; }
+  .card h1, .rdo-card h2 { padding-right: 64px; }
+  .btn-add-round { position: absolute; top: 12px; right: 12px; width: 52px; height: 52px; border-radius: 50%; border: 0; margin: 0; padding: 0; background: #3DAA6C; color: #FFFFFF; font-size: 28px; font-weight: 600; line-height: 1; box-shadow: 0 6px 16px rgba(61, 170, 108, .35); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .btn-add-round:active { transform: scale(.96); }
+  .tiles-efetivo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 12px; }
+  .tile { border: 1px solid var(--borda); border-radius: 10px; padding: 10px 6px; text-align: center; background: var(--branco); }
+  .tile-num { font-size: 24px; font-weight: 800; color: var(--azul); }
+  .tile-rot { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
   .efetivo-cat { font-weight: 700; color: var(--azul); margin: 12px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
   .efetivo-row { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--borda); }
   @media (min-width: 700px) { .efetivo-row { grid-template-columns: 1fr 190px; align-items: center; } }
@@ -186,7 +194,7 @@
             <tbody id="lista-obras"></tbody>
           </table>
         </div>
-        <button id="nova" type="button" class="sec">Nova obra</button>
+        <button id="nova" type="button" class="btn-add-round" aria-label="Nova obra">+</button>
       </div>
 
       <form id="form-obra" class="card oculto">
@@ -450,44 +458,50 @@
 
           <section class="rdo-card">
             <h2>Efetivo</h2>
+            <div class="tiles-efetivo">
+              <div class="tile"><div class="tile-num" id="t-pres">0</div><div class="tile-rot">Presentes</div></div>
+              <div class="tile"><div class="tile-num" id="t-aus">0</div><div class="tile-rot">Ausentes</div></div>
+              <div class="tile"><div class="tile-num" id="t-cad">0</div><div class="tile-rot">Cadastro</div></div>
+            </div>
             <div id="r-efetivo" class="efetivo-lista"></div>
+            <button type="button" id="r-add-colab" class="btn-add-round" aria-label="Cadastrar colaborador">+</button>
           </section>
 
           <section class="rdo-card">
             <h2>Equipamentos</h2>
             <div id="r-equip"></div>
-            <button type="button" id="r-add-eq" class="sec">+ Equipamento</button>
+            <button type="button" id="r-add-eq" class="btn-add-round" aria-label="Adicionar equipamento">+</button>
           </section>
 
           <section class="rdo-card">
             <h2>Evento de Segurança do Trabalho (SST)</h2>
             <div id="r-ev-sst"></div>
-            <button type="button" id="r-add-sst" class="sec">+ Evento SST</button>
+            <button type="button" id="r-add-sst" class="btn-add-round" aria-label="Adicionar evento SST">+</button>
           </section>
 
           <section class="rdo-card">
             <h2>Evento de Meio Ambiente (MA)</h2>
             <div id="r-ev-ma"></div>
-            <button type="button" id="r-add-ma" class="sec">+ Evento MA</button>
+            <button type="button" id="r-add-ma" class="btn-add-round" aria-label="Adicionar evento MA">+</button>
           </section>
 
           <section class="rdo-card">
             <h2>Evento de Qualidade (Q)</h2>
             <div id="r-ev-q"></div>
-            <button type="button" id="r-add-q" class="sec">+ Evento Q</button>
+            <button type="button" id="r-add-q" class="btn-add-round" aria-label="Adicionar evento Q">+</button>
           </section>
 
           <section class="rdo-card rdo-full">
             <h2>Atividades</h2>
             <div id="r-ativ"></div>
-            <button type="button" id="r-add-at" class="sec">+ Atividade</button>
+            <button type="button" id="r-add-at" class="btn-add-round" aria-label="Adicionar atividade">+</button>
           </section>
 
           <section class="rdo-card rdo-full">
             <h2>Atividades paralisadas</h2>
             <div id="r-paralisadas" class="paralisadas-lista"></div>
             <p class="texto-apoio">Marque "Paralisada" em uma atividade e escolha o motivo. Chuva com "Sem operação" no período entra aqui automaticamente.</p>
-            <button type="button" id="r-add-par" class="sec">+ Atividade Paralisada</button>
+            <button type="button" id="r-add-par" class="btn-add-round" aria-label="Adicionar atividade paralisada">+</button>
           </section>
 
           <section class="rdo-card rdo-full">
@@ -591,6 +605,27 @@
     </div>
   </section>
 </main>
+
+<div id="modal-colab" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="colab-titulo">
+  <form id="form-colab-rapido" class="caixa-modal">
+    <h2 id="colab-titulo">Novo colaborador</h2>
+    <label for="cr-nome">Nome *</label>
+    <input id="cr-nome" required>
+    <label for="cr-mat">Matrícula</label>
+    <input id="cr-mat">
+    <label for="cr-funcao">Função</label>
+    <input id="cr-funcao">
+    <label for="cr-cat">Categoria *</label>
+    <input id="cr-cat" list="lista-cats" required>
+    <label for="cr-terc">Grupo terceiro (opcional)</label>
+    <input id="cr-terc" placeholder="Ex.: GEONOR - TERCEIRO">
+    <div class="acoes-modal">
+      <button type="submit">Salvar</button>
+      <button type="button" id="cr-cancelar" class="sec">Cancelar</button>
+    </div>
+    <div id="msg-colab-rapido" class="msg"></div>
+  </form>
+</div>
 
 <div id="modal-par" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="par-titulo">
   <form id="form-par" class="caixa-modal">
@@ -1884,6 +1919,7 @@
     }
     rdoColab = data.filter((c) => vigenteNoDia(c, dia));
     renderEfetivoRDO(estado);
+    atualizarTiles();
   }
 
   function renderEfetivoRDO(map) {
@@ -1946,7 +1982,43 @@
       });
   }
 
+  function atualizarTiles() {
+    const vals = Object.values(statusEfetivoAtual());
+    const pres = vals.filter((v) => v === 'presente').length;
+    $('t-pres').textContent = pres;
+    $('t-aus').textContent = vals.length - pres;
+    $('t-cad').textContent = rdoColab.length;
+  }
+
+  $('r-efetivo').addEventListener('change', atualizarTiles);
   $('r-data').addEventListener('change', () => carregarEfetivoRDO());
+
+  $('r-add-colab').addEventListener('click', () => {
+    $('form-colab-rapido').reset();
+    setMsg($('msg-colab-rapido'), '');
+    $('modal-colab').classList.remove('oculto');
+    $('cr-nome').focus();
+  });
+  $('cr-cancelar').addEventListener('click', () => $('modal-colab').classList.add('oculto'));
+  $('modal-colab').addEventListener('click', (ev) => { if (ev.target.id === 'modal-colab') $('modal-colab').classList.add('oculto'); });
+  $('form-colab-rapido').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-colab-rapido');
+    const nome = $('cr-nome').value.trim();
+    const categoria = $('cr-cat').value.trim();
+    if (!nome || !categoria) return setMsg(msg, 'Informe nome e categoria.', 'erro');
+    setMsg(msg, 'Salvando…');
+    const { error } = await sb.from('colaboradores').insert({
+      nome,
+      matricula: $('cr-mat').value.trim() || null,
+      funcao: $('cr-funcao').value.trim() || null,
+      categoria,
+      grupo_terceiro: $('cr-terc').value.trim() || null,
+    });
+    if (error) return setMsg(msg, error.message, 'erro');
+    $('modal-colab').classList.add('oculto');
+    carregarEfetivoRDO(statusEfetivoAtual());
+  });
 
   function coletarEquipamentos() {
     return lerLinhas('#r-equip').map((d) => ({
