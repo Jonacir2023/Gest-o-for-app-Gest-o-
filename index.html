@@ -255,7 +255,7 @@
         <button type="button" class="aba" data-cad="locais">Locais</button>
         <button type="button" class="aba" data-cad="motivos">Motivos de justificativa</button>
         <button type="button" class="aba" data-cad="lideres">Líderes da Pauta</button>
-        <button type="button" class="aba" data-cad="categorias">Categorias e funções</button>
+        <button type="button" class="aba" data-cad="categorias">Setores e funções</button>
         <button type="button" class="aba" data-cad="efetivo">Efetivo</button>
       </nav>
 
@@ -338,9 +338,9 @@
           <label for="ld-nome">Nome do líder *</label>
           <input id="ld-nome" required>
           <label for="ld-funcao">Função *</label>
-          <input id="ld-funcao" required>
+          <select id="ld-funcao" required></select>
           <label for="ld-setor">Setor a que o líder é vinculado *</label>
-          <input id="ld-setor" list="lista-setores" required>
+          <select id="ld-setor" required></select>
           <datalist id="lista-setores"></datalist>
           <button type="submit">Acrescentar líder</button>
           <div id="msg-lider" class="msg"></div>
@@ -349,15 +349,15 @@
 
       <section id="cad-categorias" class="oculto">
         <div class="card">
-          <h1>Categorias de efetivo</h1>
-          <p class="texto-apoio">Lista usada para escolher a categoria de cada colaborador. Toque no + para acrescentar.</p>
+          <h1>Setores</h1>
+          <p class="texto-apoio">Lista usada nas listas suspensas de Setor do efetivo e do cadastro de líderes da Pauta. Toque no + para acrescentar.</p>
           <div class="tabela-wrap">
             <table>
-              <thead><tr><th>Categoria</th></tr></thead>
+              <thead><tr><th>Setor</th></tr></thead>
               <tbody id="lista-categorias"></tbody>
             </table>
           </div>
-          <button id="btn-nova-cat" type="button" class="btn-add-round" aria-label="Nova categoria">+</button>
+          <button id="btn-nova-cat" type="button" class="btn-add-round" aria-label="Novo setor">+</button>
         </div>
         <div class="card">
           <h1>Funções</h1>
@@ -375,7 +375,7 @@
       <section id="cad-efetivo" class="oculto">
         <div class="card">
           <h1>Efetivo</h1>
-          <p class="texto-apoio">Colaboradores por categoria. Use <strong>+ Colaborador</strong> dentro de cada categoria. Dar baixa tira a pessoa dos RDOs a partir de hoje; os RDOs anteriores continuam com ela.</p>
+          <p class="texto-apoio">Colaboradores por setor. Use <strong>+ Colaborador</strong> dentro de cada setor. Dar baixa tira a pessoa dos RDOs a partir de hoje; os RDOs anteriores continuam com ela.</p>
         </div>
         <div id="efetivo-blocos"></div>
       </section>
@@ -618,7 +618,7 @@
 <div id="modal-ef" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="ef-titulo">
   <div class="caixa-modal caixa-larga">
     <h2 id="ef-titulo">Selecionar efetivo do dia</h2>
-    <p class="texto-apoio">Marque o status de cada colaborador. O resumo por categoria é atualizado ao salvar.</p>
+    <p class="texto-apoio">Marque o status de cada colaborador. O resumo por setor é atualizado ao salvar.</p>
     <div id="ef-lista"></div>
     <div class="acoes-modal">
       <button type="button" id="ef-salvar">Salvar</button>
@@ -630,7 +630,7 @@
 
 <div id="modal-cat" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="cat-titulo">
   <form id="form-cat" class="caixa-modal">
-    <h2 id="cat-titulo">Nova categoria</h2>
+    <h2 id="cat-titulo">Novo setor</h2>
     <label for="cat-nome">Nome *</label>
     <input id="cat-nome" required>
     <div class="acoes-modal">
@@ -650,7 +650,7 @@
     <input id="cr-nome" required>
     <label for="cr-funcao">Função</label>
     <select id="cr-funcao"></select>
-    <label for="cr-cat">Categoria *</label>
+    <label for="cr-cat">Setor *</label>
     <select id="cr-cat" required></select>
     <label for="cr-terc">Empresa</label>
     <input id="cr-terc" placeholder="Vazio = empresa própria · Ex.: Terceirizada XYZ">
@@ -1884,7 +1884,7 @@
     if (!ordem.length) {
       const p = document.createElement('div');
       p.className = 'card';
-      p.innerHTML = '<p class="texto-apoio">Nenhuma categoria cadastrada. Crie em Categorias e funções.</p>';
+      p.innerHTML = '<p class="texto-apoio">Nenhum setor cadastrado. Crie em Setores e funções.</p>';
       box.appendChild(p);
       return;
     }
@@ -1987,7 +1987,7 @@
     }
     const porCat = {};
     for (const c of rdoColab) {
-      const chave = c.categoria || 'Sem categoria';
+      const chave = c.categoria || 'Sem setor';
       const p = (porCat[chave] = porCat[chave] || { presentes: 0, total: 0 });
       p.total++;
       if (efetivoEstado[c.nome] === 'presente') p.presentes++;
@@ -2019,7 +2019,7 @@
     }
     const grupos = {};
     for (const c of rdoColab) {
-      const chave = c.categoria || 'Sem categoria';
+      const chave = c.categoria || 'Sem setor';
       (grupos[chave] = grupos[chave] || []).push(c);
     }
     for (const cat of Object.keys(grupos).sort((a, b) => collator.compare(a, b))) {
@@ -2096,7 +2096,7 @@
   $('r-data').addEventListener('change', () => carregarEfetivoRDO());
 
   // ---------- Categorias e funções do efetivo (listas suspensas) ----------
-  const TABELAS_LISTA = { categorias_efetivo: 'Categoria', funcoes_efetivo: 'Função' };
+  const TABELAS_LISTA = { categorias_efetivo: 'Novo setor', funcoes_efetivo: 'Nova função' };
   let listaTipoAtual = null;
 
   function preencherSelectLista(sel, nomes, rotuloVazio, atual) {
@@ -2140,13 +2140,15 @@
     };
     preencherTabela($('lista-categorias'), nomesCat, 'Nenhuma categoria cadastrada.');
     preencherTabela($('lista-funcoes'), nomesFun, 'Nenhuma função cadastrada.');
-    preencherSelectLista($('cr-cat'), nomesCat, 'Selecione a categoria', $('cr-cat').value);
+    preencherSelectLista($('cr-cat'), nomesCat, 'Selecione o setor', $('cr-cat').value);
+    preencherSelectLista($('ld-setor'), nomesCat, 'Selecione o setor', $('ld-setor').value);
+    preencherSelectLista($('ld-funcao'), nomesFun, 'Selecione a função', $('ld-funcao').value);
     preencherSelectLista($('cr-funcao'), nomesFun, 'Sem função', $('cr-funcao').value);
   }
 
   function abrirModalLista(tipo) {
     listaTipoAtual = tipo;
-    $('cat-titulo').textContent = 'Nova ' + TABELAS_LISTA[tipo].toLowerCase();
+    $('cat-titulo').textContent = TABELAS_LISTA[tipo];
     $('cat-nome').value = '';
     setMsg($('msg-cat'), '');
     $('modal-cat').classList.remove('oculto');
