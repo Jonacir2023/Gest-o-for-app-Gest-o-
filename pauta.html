@@ -90,7 +90,7 @@
       <div class="tabela-wrap">
         <table>
           <thead>
-            <tr><th>Assunto</th><th>Área</th><th>Criador</th><th>Responsável</th><th>Setor</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr>
+            <tr><th>Assunto</th><th>Criador</th><th>Setor do criador</th><th>Responsável</th><th>Setor do responsável</th><th>Área</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr>
           </thead>
           <tbody id="lista-itens"></tbody>
         </table>
@@ -105,6 +105,10 @@
         <div>
           <label for="i-criador">Criador</label>
           <input id="i-criador" readonly>
+        </div>
+        <div>
+          <label for="i-setor-criador">Setor do criador</label>
+          <input id="i-setor-criador" readonly>
         </div>
         <div>
           <label for="i-resp">Responsável *</label>
@@ -288,7 +292,7 @@
   // ---------- Itens ----------
   async function carregarItens() {
     if (!token) return;
-    const { data, error } = await sb.rpc('pauta_listar_v2', { p_token: token });
+    const { data, error } = await sb.rpc('pauta_listar_v3', { p_token: token });
     if (error) {
       if (error.message.includes('sessao_invalida')) { sair(); return setMsg($('msg-entrar'), traduz('sessao_invalida'), 'erro'); }
       return;
@@ -306,7 +310,7 @@
     }
     for (const it of itens) {
       const tr = document.createElement('tr');
-      const celulas = [it.assunto, it.area, it.criador_nome || '', it.responsavel_nome || '', it.responsavel_setor || '—', PRIO[it.prioridade] || '', fmtData(it.prazo), STATUS[it.status] || ''];
+      const celulas = [it.assunto, it.criador_nome || '', it.criador_setor || '—', it.responsavel_nome || '', it.responsavel_setor || '—', it.area, PRIO[it.prioridade] || '', fmtData(it.prazo), STATUS[it.status] || ''];
       for (const c of celulas) {
         const td = document.createElement('td');
         td.textContent = c;
@@ -354,6 +358,8 @@
     $('i-id').value = it ? it.id : '';
     preencherResponsaveis(it ? it.responsavel_id : liderId);
     $('i-criador').value = it ? it.criador_nome : liderNome;
+    const eu = lideres.find((x) => x.id === liderId);
+    $('i-setor-criador').value = it ? (it.criador_setor || 'Sem setor cadastrado') : (eu && eu.setor ? eu.setor : 'Sem setor cadastrado');
     $('i-area').value = it?.area || '';
     $('i-assunto').value = it?.assunto || '';
     $('i-desc').value = it?.descricao || '';
