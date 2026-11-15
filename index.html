@@ -34,7 +34,7 @@
   }
   h1 { font-size: 20px; color: var(--azul); margin: 4px 0 12px; }
   label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
-  input, textarea {
+  input, textarea, select {
     width: 100%; padding: 10px; border: 1px solid var(--borda); border-radius: 8px;
     font: inherit; color: var(--texto); background: var(--branco);
   }
@@ -61,6 +61,10 @@
     padding: 10px 16px; text-align: center;
   }
   .oculto { display: none !important; }
+  select { width: 100%; padding: 10px; border: 1px solid var(--borda); border-radius: 8px; font: inherit; color: var(--texto); background: var(--branco); }
+  .abas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .aba { background: transparent; color: var(--azul); border: 1px solid var(--azul); margin-top: 0; padding: 8px 12px; font-size: 14px; }
+  .aba.ativa { background: var(--azul); color: var(--branco); }
 </style>
 </head>
 <body>
@@ -94,6 +98,11 @@
     <div id="sem-acesso" class="card oculto">
       <p>Seu perfil não tem acesso ao cadastro de obras.</p>
     </div>
+
+    <nav id="nav-principal" class="abas oculto">
+      <button type="button" class="aba" data-view="obras">Obras</button>
+      <button type="button" class="aba" data-view="cadastros">Cadastros</button>
+    </nav>
 
     <div id="area-obra" class="oculto">
       <div class="card">
@@ -147,6 +156,74 @@
         <div id="msg-obra" class="msg"></div>
       </form>
     </div>
+
+    <div id="view-cadastros" class="oculto">
+      <nav class="abas">
+        <button type="button" class="aba" data-cad="unidades">Unidades de medida</button>
+        <button type="button" class="aba" data-cad="locais">Locais</button>
+        <button type="button" class="aba" data-cad="motivos">Motivos de justificativa</button>
+      </nav>
+
+      <section id="cad-unidades" class="card oculto">
+        <h1>Unidades de medida</h1>
+        <div class="tabela-wrap">
+          <table>
+            <thead><tr><th>Sigla</th><th>Descrição</th></tr></thead>
+            <tbody id="lista-unidades"></tbody>
+          </table>
+        </div>
+        <form id="form-unidade">
+          <div class="grid">
+            <div>
+              <label for="u-sigla">Sigla *</label>
+              <input id="u-sigla" maxlength="10" required>
+            </div>
+            <div>
+              <label for="u-desc">Descrição</label>
+              <input id="u-desc">
+            </div>
+          </div>
+          <button type="submit">Acrescentar unidade</button>
+          <div id="msg-unidade" class="msg"></div>
+        </form>
+      </section>
+
+      <section id="cad-locais" class="card oculto">
+        <h1>Locais</h1>
+        <label for="loc-obra">Obra</label>
+        <select id="loc-obra"></select>
+        <div class="tabela-wrap" style="margin-top:12px">
+          <table>
+            <thead><tr><th>Local</th></tr></thead>
+            <tbody id="lista-locais"></tbody>
+          </table>
+        </div>
+        <form id="form-local">
+          <label for="l-nome">Novo local *</label>
+          <input id="l-nome" required>
+          <button type="submit">Acrescentar local</button>
+          <div id="msg-local" class="msg"></div>
+        </form>
+      </section>
+
+      <section id="cad-motivos" class="card oculto">
+        <h1>Motivos de justificativa</h1>
+        <label for="mot-tipo">Tipo</label>
+        <select id="mot-tipo"></select>
+        <div class="tabela-wrap" style="margin-top:12px">
+          <table>
+            <thead><tr><th>Motivo</th></tr></thead>
+            <tbody id="lista-motivos"></tbody>
+          </table>
+        </div>
+        <form id="form-motivo">
+          <label for="m-desc">Novo motivo *</label>
+          <input id="m-desc" required>
+          <button type="submit">Acrescentar motivo</button>
+          <div id="msg-motivo" class="msg"></div>
+        </form>
+      </section>
+    </div>
   </section>
 </main>
 
@@ -198,9 +275,15 @@
     $('perfil').textContent = error ? 'erro ao ler perfil' : (perfil || 'sem cadastro de pessoa');
 
     const ok = !error && perfil === 'acesso_total';
-    $('area-obra').classList.toggle('oculto', !ok);
     $('sem-acesso').classList.toggle('oculto', ok);
-    if (ok) carregarObras();
+    $('nav-principal').classList.toggle('oculto', !ok);
+    if (ok) {
+      mostrarView('obras');
+      carregarObras();
+    } else {
+      $('area-obra').classList.add('oculto');
+      $('view-cadastros').classList.add('oculto');
+    }
   }
 
   async function carregarObras() {
@@ -323,6 +406,171 @@
     $('form-obra').classList.add('oculto');
     carregarObras();
   });
+
+  // ---------- Navegação ----------
+  const collator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
+  const TIPOS = {
+    dia_sem_execucao: 'Dia sem execução',
+    equipamento_parado: 'Equipamento parado',
+    atividade_paralisada: 'Atividade paralisada',
+  };
+
+  function mostrarView(v) {
+    $('area-obra').classList.toggle('oculto', v !== 'obras');
+    $('view-cadastros').classList.toggle('oculto', v !== 'cadastros');
+    document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('ativa', b.dataset.view === v));
+    if (v === 'cadastros') carregarCadastros();
+  }
+
+  function mostrarCad(c) {
+    ['unidades', 'locais', 'motivos'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
+    document.querySelectorAll('[data-cad]').forEach((b) => b.classList.toggle('ativa', b.dataset.cad === c));
+  }
+
+  function preencherLinhas(tb, linhas, colunas, vazio) {
+    tb.innerHTML = '';
+    if (!linhas.length) {
+      tb.innerHTML = `<tr><td colspan="${colunas}"></td></tr>`;
+      tb.querySelector('td').textContent = vazio;
+      return;
+    }
+    for (const cols of linhas) {
+      const tr = document.createElement('tr');
+      for (const c of cols) {
+        const td = document.createElement('td');
+        td.textContent = c;
+        tr.appendChild(td);
+      }
+      tb.appendChild(tr);
+    }
+  }
+
+  function mostrarErroTabela(tb, colunas, msg) {
+    tb.innerHTML = `<tr><td colspan="${colunas}" class="erro"></td></tr>`;
+    tb.querySelector('td').textContent = 'Erro: ' + msg;
+  }
+
+  function setMsg(el, texto, tipo) {
+    el.className = 'msg ' + (tipo || '');
+    el.textContent = texto;
+  }
+
+  function carregarCadastros() {
+    carregarUnidades();
+    carregarProjetosSelect();
+    carregarMotivos();
+  }
+
+  // ---------- Unidades de medida ----------
+  async function carregarUnidades() {
+    const tb = $('lista-unidades');
+    const { data, error } = await sb.from('unidades_medida').select('sigla, descricao');
+    if (error) return mostrarErroTabela(tb, 2, error.message);
+    data.sort((a, b) => collator.compare(a.sigla, b.sigla));
+    preencherLinhas(tb, data.map((u) => [u.sigla, u.descricao || '']), 2, 'Nenhuma unidade cadastrada.');
+  }
+
+  $('form-unidade').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-unidade');
+    const sigla = $('u-sigla').value.trim();
+    if (!sigla) return setMsg(msg, 'Informe a sigla.', 'erro');
+    setMsg(msg, 'Salvando…');
+    const { error } = await sb.from('unidades_medida').insert({ sigla, descricao: $('u-desc').value.trim() || null });
+    if (error) return setMsg(msg, error.code === '23505' ? 'Essa unidade já existe.' : error.message, 'erro');
+    $('u-sigla').value = '';
+    $('u-desc').value = '';
+    setMsg(msg, 'Unidade acrescentada.', 'ok');
+    carregarUnidades();
+  });
+
+  // ---------- Locais ----------
+  async function carregarProjetosSelect() {
+    const sel = $('loc-obra');
+    const { data, error } = await sb.from('projetos').select('id, nome').order('nome');
+    if (error) return mostrarErroTabela($('lista-locais'), 1, error.message);
+    sel.innerHTML = '';
+    for (const p of data) {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.nome;
+      sel.appendChild(opt);
+    }
+    carregarLocais();
+  }
+
+  async function carregarLocais() {
+    const tb = $('lista-locais');
+    const pid = $('loc-obra').value;
+    if (!pid) return preencherLinhas(tb, [], 1, 'Cadastre uma obra antes de incluir locais.');
+    const { data, error } = await sb.from('locais').select('nome').eq('projeto_id', pid);
+    if (error) return mostrarErroTabela(tb, 1, error.message);
+    data.sort((a, b) => collator.compare(a.nome, b.nome));
+    preencherLinhas(tb, data.map((l) => [l.nome]), 1, 'Nenhum local nesta obra.');
+  }
+
+  $('loc-obra').addEventListener('change', carregarLocais);
+
+  $('form-local').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-local');
+    const pid = $('loc-obra').value;
+    const nome = $('l-nome').value.trim();
+    if (!pid) return setMsg(msg, 'Cadastre uma obra antes.', 'erro');
+    if (!nome) return setMsg(msg, 'Informe o nome do local.', 'erro');
+    setMsg(msg, 'Salvando…');
+    const { data: existe } = await sb.from('locais').select('id').eq('projeto_id', pid).eq('nome', nome).limit(1);
+    if (existe && existe.length) return setMsg(msg, 'Esse local já existe nesta obra.', 'erro');
+    const { error } = await sb.from('locais').insert({ projeto_id: pid, nome });
+    if (error) return setMsg(msg, error.message, 'erro');
+    $('l-nome').value = '';
+    setMsg(msg, 'Local acrescentado.', 'ok');
+    carregarLocais();
+  });
+
+  // ---------- Motivos de justificativa ----------
+  function preencherTipos() {
+    const sel = $('mot-tipo');
+    sel.innerHTML = '';
+    for (const [valor, rotulo] of Object.entries(TIPOS)) {
+      const opt = document.createElement('option');
+      opt.value = valor;
+      opt.textContent = rotulo;
+      sel.appendChild(opt);
+    }
+  }
+
+  async function carregarMotivos() {
+    const tb = $('lista-motivos');
+    const { data, error } = await sb.from('motivos_justificativa').select('descricao').eq('tipo', $('mot-tipo').value);
+    if (error) return mostrarErroTabela(tb, 1, error.message);
+    data.sort((a, b) => collator.compare(a.descricao, b.descricao));
+    preencherLinhas(tb, data.map((m) => [m.descricao]), 1, 'Nenhum motivo deste tipo.');
+  }
+
+  $('mot-tipo').addEventListener('change', carregarMotivos);
+
+  $('form-motivo').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-motivo');
+    const tipo = $('mot-tipo').value;
+    const descricao = $('m-desc').value.trim();
+    if (!descricao) return setMsg(msg, 'Informe a descrição do motivo.', 'erro');
+    setMsg(msg, 'Salvando…');
+    const { data: existe } = await sb.from('motivos_justificativa').select('id').eq('tipo', tipo).eq('descricao', descricao).limit(1);
+    if (existe && existe.length) return setMsg(msg, 'Esse motivo já existe neste tipo.', 'erro');
+    const { error } = await sb.from('motivos_justificativa').insert({ tipo, descricao });
+    if (error) return setMsg(msg, error.message, 'erro');
+    $('m-desc').value = '';
+    setMsg(msg, 'Motivo acrescentado.', 'ok');
+    carregarMotivos();
+  });
+
+  // ---------- Eventos de navegação ----------
+  document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => mostrarView(b.dataset.view)));
+  document.querySelectorAll('[data-cad]').forEach((b) => b.addEventListener('click', () => mostrarCad(b.dataset.cad)));
+  preencherTipos();
+  mostrarCad('unidades');
 
   (async function iniciar() {
     const { data: { session } } = await sb.auth.getSession();
