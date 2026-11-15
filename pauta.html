@@ -90,7 +90,7 @@
       <div class="tabela-wrap">
         <table>
           <thead>
-            <tr><th>Assunto</th><th>Descrição</th><th>Criador</th><th>Setor do criador</th><th>Responsável</th><th>Setor do responsável</th><th>Área</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr>
+            <tr><th>Assunto</th><th>Descrição</th><th>Criador</th><th>Setor do criador</th><th>Responsável</th><th>Setor do responsável</th><th>Área</th><th>Prioridade</th><th>Data de criação</th><th>Prazo</th><th>Status</th><th></th></tr>
           </thead>
           <tbody id="lista-itens"></tbody>
         </table>
@@ -292,7 +292,7 @@
   // ---------- Itens ----------
   async function carregarItens() {
     if (!token) return;
-    const { data, error } = await sb.rpc('pauta_listar_v3', { p_token: token });
+    const { data, error } = await sb.rpc('pauta_listar_v4', { p_token: token });
     if (error) {
       if (error.message.includes('sessao_invalida')) { sair(); return setMsg($('msg-entrar'), traduz('sessao_invalida'), 'erro'); }
       return;
@@ -310,7 +310,7 @@
     }
     for (const it of itens) {
       const tr = document.createElement('tr');
-      const celulas = [it.assunto, it.descricao || '', it.criador_nome || '', it.criador_setor || '—', it.responsavel_nome || '', it.responsavel_setor || '—', it.area, PRIO[it.prioridade] || '', fmtData(it.prazo), STATUS[it.status] || ''];
+      const celulas = [it.assunto, it.descricao || '', it.criador_nome || '', it.criador_setor || '—', it.responsavel_nome || '', it.responsavel_setor || '—', it.area, PRIO[it.prioridade] || '', it.criado_em ? new Date(it.criado_em).toLocaleDateString('pt-BR') : '', fmtData(it.prazo), STATUS[it.status] || ''];
       for (const c of celulas) {
         const td = document.createElement('td');
         td.textContent = c;
