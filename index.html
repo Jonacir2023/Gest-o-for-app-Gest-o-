@@ -429,7 +429,7 @@
           <section class="rdo-card rdo-full">
             <h2>Atividades paralisadas</h2>
             <div id="r-paralisadas" class="paralisadas-lista"></div>
-            <p class="texto-apoio">Marque "Paralisada" em uma atividade e escolha o motivo. Esta lista é preenchida automaticamente.</p>
+            <p class="texto-apoio">Marque "Paralisada" em uma atividade e escolha o motivo. Chuva com "Sem operação" no período entra aqui automaticamente.</p>
           </section>
 
           <section class="rdo-card rdo-full">
@@ -1810,9 +1810,22 @@
     if (!box) return;
     box.innerHTML = '';
     const linhas = [...document.querySelectorAll('#r-ativ .linha-rdo')].filter((d) => d.querySelector('.at-par').checked);
-    if (!linhas.length) {
+    const automaticos = ['manha', 'tarde'].filter((per) => climaEstado[per].clima === 'chuva' && climaEstado[per].op === 'sem_operacao');
+    if (!linhas.length && !automaticos.length) {
       box.textContent = 'Nenhuma atividade paralisada.';
       return;
+    }
+    for (const per of automaticos) {
+      const e = climaEstado[per];
+      const item = document.createElement('div');
+      item.className = 'paralisada-item';
+      const t = document.createElement('strong');
+      t.textContent = (per === 'manha' ? 'Manhã (07h–12h)' : 'Tarde (13h–17h)') + ' · Chuva';
+      const m = document.createElement('span');
+      const mot = e.motivo ? rdoMotivosDia.find((x) => x.id === e.motivo) : null;
+      m.textContent = ' · ' + (mot ? mot.descricao : 'Sem operação') + (e.mm != null ? ' · ' + String(e.mm).replace('.', ',') + ' mm' : '');
+      item.append(t, m);
+      box.appendChild(item);
     }
     for (const d of linhas) {
       const nome = d.querySelector('.at-nome').value.trim() || '(sem nome)';
@@ -1861,6 +1874,7 @@
       return s;
     };
     $('clima-resumo').textContent = resumo('manha', 'Manhã') + '   |   ' + resumo('tarde', 'Tarde');
+    atualizarParalisadas();
   }
 
   function aplicarClima(det) {
