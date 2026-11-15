@@ -391,15 +391,21 @@
           </section>
 
           <section class="rdo-card">
-            <h2>Eventos de segurança do trabalho (SST)</h2>
+            <h2>Evento de Segurança do Trabalho (SST)</h2>
             <div id="r-ev-sst"></div>
             <button type="button" id="r-add-sst" class="sec">+ Evento SST</button>
           </section>
 
           <section class="rdo-card">
-            <h2>Eventos de meio ambiente (MA)</h2>
+            <h2>Evento de Meio Ambiente (MA)</h2>
             <div id="r-ev-ma"></div>
             <button type="button" id="r-add-ma" class="sec">+ Evento MA</button>
+          </section>
+
+          <section class="rdo-card">
+            <h2>Evento de Qualidade (Q)</h2>
+            <div id="r-ev-q"></div>
+            <button type="button" id="r-add-q" class="sec">+ Evento Q</button>
           </section>
 
           <section class="rdo-card rdo-full">
@@ -1298,7 +1304,7 @@
   $('ck-resp').addEventListener('change', renderCheckin);
 
   // ---------- Calendário ----------
-  const TIPOS_CAL = ['Check-in', 'Pauta', 'RDO', 'Efetivo', 'Equipamentos parados', 'Eventos SST', 'Eventos MA'];
+  const TIPOS_CAL = ['Check-in', 'Pauta', 'RDO', 'Efetivo', 'Equipamentos parados', 'Eventos SST', 'Eventos MA', 'Eventos Qualidade'];
   const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   let calAno = new Date().getFullYear();
   let calMes = new Date().getMonth();
@@ -1360,8 +1366,8 @@
       for (const r of data) {
         itens.push({ chave: r.rdo.data, titulo: r.colaborador, detalhe: r.presente ? 'Presente' : 'Ausente', editavel: editavelNo(r.rdo.data), abrir: null });
       }
-    } else if (calTipo === 'Eventos SST' || calTipo === 'Eventos MA') {
-      const tipo = calTipo === 'Eventos SST' ? 'SST' : 'MA';
+    } else if (calTipo === 'Eventos SST' || calTipo === 'Eventos MA' || calTipo === 'Eventos Qualidade') {
+      const tipo = { 'Eventos SST': 'SST', 'Eventos MA': 'MA', 'Eventos Qualidade': 'Q' }[calTipo];
       const { data, error } = await sb.from('rdo_eventos')
         .select('id, descricao, rdo:rdo_id!inner(data, substituido_por)')
         .eq('tipo', tipo).gte('rdo.data', dIni).lt('rdo.data', dFim).is('rdo.substituido_por', null);
@@ -1637,7 +1643,9 @@
     preencherItens(data);
     $('r-ev-sst').innerHTML = '';
     $('r-ev-ma').innerHTML = '';
-    for (const ev of data.eventos) (ev.tipo === 'SST' ? $('r-ev-sst') : $('r-ev-ma')).appendChild(linhaEvento(ev.tipo, ev));
+    $('r-ev-q').innerHTML = '';
+    const contEvento = { SST: 'r-ev-sst', MA: 'r-ev-ma', Q: 'r-ev-q' };
+    for (const ev of data.eventos) $(contEvento[ev.tipo]).appendChild(linhaEvento(ev.tipo, ev));
     await mostrarFotosExistentes(data.fotos);
     setMsg($('msg-rdo'), 'RDO carregado. Ao salvar, cria um novo RDO e substitui este.', '');
     $('form-rdo').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1828,7 +1836,7 @@
   }
 
   function coletarEventos() {
-    return [...document.querySelectorAll('#r-ev-sst .linha-rdo, #r-ev-ma .linha-rdo')].map((d) => ({
+    return [...document.querySelectorAll('#r-ev-sst .linha-rdo, #r-ev-ma .linha-rdo, #r-ev-q .linha-rdo')].map((d) => ({
       tipo: d.dataset.tipo,
       descricao: d.querySelector('.ev-desc').value.trim(),
       providencias: d.querySelector('.ev-prov').value.trim() || null,
@@ -1881,6 +1889,7 @@
   });
   $('r-add-sst').addEventListener('click', () => $('r-ev-sst').appendChild(linhaEvento('SST')));
   $('r-add-ma').addEventListener('click', () => $('r-ev-ma').appendChild(linhaEvento('MA')));
+  $('r-add-q').addEventListener('click', () => $('r-ev-q').appendChild(linhaEvento('Q')));
   configurarClima();
 
   // ---------- Eventos de navegação ----------
