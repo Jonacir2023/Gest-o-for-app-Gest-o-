@@ -1,6 +1,6 @@
-# Gestão · CESBE
+# Gestão
 
-App de gestão de obras da CESBE: cadastro de obras, RDO, Check-in e Pauta.
+App de gestão de obras: cadastro de obras, RDO, Check-in e Pauta.
 Um único app para todas as obras. O backend é o Supabase.
 
 ## Estado atual
@@ -68,6 +68,6 @@ O app não tem tela de cadastro de usuários nesta fase.
 
 ## Pendências
 
-- Logotipo oficial horizontal da CESBE (hoje é texto).
+- Logotipo oficial horizontal (hoje é texto).
 - Decisão: ao criar uma obra, copiar a lista padrão de locais ou cada obra cadastra os seus.
 - Gerentes de contratos e de planejamento: criar as contas e vincular.
