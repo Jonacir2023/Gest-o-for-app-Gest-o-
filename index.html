@@ -113,6 +113,7 @@
   .modal { position: fixed; inset: 0; background: rgba(36, 55, 75, .45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
   .caixa-modal { background: var(--branco); border-radius: 12px; padding: 18px; width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0, 0, 0, .2); }
   .acoes-modal { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ch-horas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
   .acoes-modal button { margin-top: 14px; }
   .acoes-par { display: flex; gap: 6px; margin-top: 6px; }
   .acoes-par button { margin: 0; padding: 4px 10px; font-size: 13px; }
@@ -368,6 +369,10 @@
               <div class="mm-bloco oculto">
                 <label>Chuva (mm) *</label>
                 <input class="mm-input" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Ex.: 12,5">
+                <div class="ch-horas">
+                  <div><label>Início da chuva *</label><input class="ch-ini" type="time"></div>
+                  <div><label>Fim da chuva *</label><input class="ch-fim" type="time"></div>
+                </div>
               </div>
               <div class="motivo-bloco oculto">
                 <label>Motivo da paralisação</label>
@@ -388,6 +393,10 @@
               <div class="mm-bloco oculto">
                 <label>Chuva (mm) *</label>
                 <input class="mm-input" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Ex.: 12,5">
+                <div class="ch-horas">
+                  <div><label>Início da chuva *</label><input class="ch-ini" type="time"></div>
+                  <div><label>Fim da chuva *</label><input class="ch-fim" type="time"></div>
+                </div>
               </div>
               <div class="motivo-bloco oculto">
                 <label>Motivo da paralisação</label>
@@ -546,6 +555,16 @@
     <h2 id="par-titulo">Nova atividade paralisada</h2>
     <label for="par-motivo">Motivo da paralisação *</label>
     <select id="par-motivo" required></select>
+    <label for="par-periodo">Período *</label>
+    <select id="par-periodo" required>
+      <option value="">Selecione o período</option>
+      <option value="manha">Manhã (07h–12h)</option>
+      <option value="tarde">Tarde (13h–17h)</option>
+    </select>
+    <div class="ch-horas">
+      <div><label for="par-ini">Horário de início *</label><input id="par-ini" type="time" required></div>
+      <div><label for="par-fim">Horário de fim *</label><input id="par-fim" type="time" required></div>
+    </div>
     <label for="par-desc">Detalhe (opcional)</label>
     <input id="par-desc">
     <div class="acoes-modal">
@@ -1703,8 +1722,9 @@
     const contEvento = { SST: 'r-ev-sst', MA: 'r-ev-ma', Q: 'r-ev-q' };
     for (const ev of data.eventos) $(contEvento[ev.tipo]).appendChild(linhaEvento(ev.tipo, ev));
     await mostrarFotosExistentes(data.fotos);
-    const { data: pars } = await sb.from('rdo_paralisacoes').select('motivo_id, descricao').eq('rdo_id', id);
-    parManuais = (pars || []).map((p) => ({ motivo_id: p.motivo_id, descricao: p.descricao }));
+    const { data: pars } = await sb.from('rdo_paralisacoes').select('motivo_id, descricao, periodo, hora_inicio, hora_fim').eq('rdo_id', id);
+    parManuais = (pars || []).map((p) => ({ motivo_id: p.motivo_id, descricao: p.descricao, periodo: p.periodo,
+      hora_inicio: p.hora_inicio ? p.hora_inicio.slice(0, 5) : null, hora_fim: p.hora_fim ? p.hora_fim.slice(0, 5) : null }));
     atualizarParalisadas();
     setMsg($('msg-rdo'), 'RDO carregado. Ao salvar, cria um novo RDO e substitui este.', '');
     $('form-rdo').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1764,6 +1784,8 @@
     atividade_obrigatoria: 'Informe a atividade em todas as linhas.',
     sem_permissao: 'Seu perfil não pode lançar RDO.',
     chuva_mm_obrigatorio: 'Informe os milímetros de chuva do período em que choveu.',
+    chuva_horario_obrigatorio: 'Informe o horário de início e de fim da chuva.',
+    chuva_horario_invalido: 'O fim da chuva não pode ser antes do início.',
   };
 
   $('r-proj').addEventListener('change', carregarLocaisRdo);
@@ -1793,6 +1815,10 @@
     if (equipamentos.some((x) => !x.codigo)) return setMsg(msg, ERROS_RDO.codigo_equipamento_obrigatorio, 'erro');
     if (atividades.some((x) => !x.atividade)) return setMsg(msg, ERROS_RDO.atividade_obrigatoria, 'erro');
 
+    if ((climaEstado.manha.clima === 'chuva' && (!climaEstado.manha.ini || !climaEstado.manha.fim)) ||
+        (climaEstado.tarde.clima === 'chuva' && (!climaEstado.tarde.ini || !climaEstado.tarde.fim))) {
+      return setMsg(msg, ERROS_RDO.chuva_horario_obrigatorio, 'erro');
+    }
     if ((climaEstado.manha.clima === 'chuva' && climaEstado.manha.mm == null) ||
         (climaEstado.tarde.clima === 'chuva' && climaEstado.tarde.mm == null)) {
       return setMsg(msg, ERROS_RDO.chuva_mm_obrigatorio, 'erro');
@@ -1811,6 +1837,10 @@
       motivo_tarde_id: climaEstado.tarde.op === 'sem_operacao' ? climaEstado.tarde.motivo : null,
       chuva_mm_manha: climaEstado.manha.clima === 'chuva' ? climaEstado.manha.mm : null,
       chuva_mm_tarde: climaEstado.tarde.clima === 'chuva' ? climaEstado.tarde.mm : null,
+      chuva_inicio_manha: climaEstado.manha.clima === 'chuva' ? climaEstado.manha.ini : null,
+      chuva_fim_manha: climaEstado.manha.clima === 'chuva' ? climaEstado.manha.fim : null,
+      chuva_inicio_tarde: climaEstado.tarde.clima === 'chuva' ? climaEstado.tarde.ini : null,
+      chuva_fim_tarde: climaEstado.tarde.clima === 'chuva' ? climaEstado.tarde.fim : null,
       observacoes: $('r-obs').value.trim() || null,
     };
     const { data: novoId, error } = await sb.rpc('rdo_salvar', { p: payload });
@@ -1824,7 +1854,10 @@
     }
     const manuais = parManuais.filter((x) => x.motivo_id);
     if (manuais.length) {
-      const { error: eP } = await sb.from('rdo_paralisacoes').insert(manuais.map((x) => ({ rdo_id: novoId, motivo_id: x.motivo_id, descricao: x.descricao })));
+      const { error: eP } = await sb.from('rdo_paralisacoes').insert(manuais.map((x) => ({
+        rdo_id: novoId, motivo_id: x.motivo_id, descricao: x.descricao,
+        periodo: x.periodo, hora_inicio: x.hora_inicio, hora_fim: x.hora_fim,
+      })));
       if (eP) {
         setMsg(msg, 'RDO salvo, mas as paralisações não foram gravadas: ' + eP.message, 'erro');
         return carregarListaRdo();
@@ -1883,6 +1916,9 @@
     const item = idx == null ? null : parManuais[idx];
     preencherMotivosParalisacao($('par-motivo'), item ? item.motivo_id : '');
     $('par-desc').value = item ? (item.descricao || '') : '';
+    $('par-periodo').value = item ? (item.periodo || '') : '';
+    $('par-ini').value = item ? (item.hora_inicio || '') : '';
+    $('par-fim').value = item ? (item.hora_fim || '') : '';
     $('par-titulo').textContent = item ? 'Editar atividade paralisada' : 'Nova atividade paralisada';
     setMsg($('msg-par'), '');
     $('modal-par').classList.remove('oculto');
@@ -1901,7 +1937,13 @@
     ev.preventDefault();
     const motivo_id = $('par-motivo').value;
     if (!motivo_id) return setMsg($('msg-par'), 'Escolha o motivo da paralisação.', 'erro');
-    const reg = { motivo_id, descricao: $('par-desc').value.trim() || null };
+    const periodo = $('par-periodo').value;
+    const hora_inicio = $('par-ini').value;
+    const hora_fim = $('par-fim').value;
+    if (!periodo) return setMsg($('msg-par'), 'Escolha o período da paralisação.', 'erro');
+    if (!hora_inicio || !hora_fim) return setMsg($('msg-par'), 'Informe o horário de início e de fim.', 'erro');
+    if (hora_fim < hora_inicio) return setMsg($('msg-par'), 'O fim não pode ser antes do início.', 'erro');
+    const reg = { motivo_id, descricao: $('par-desc').value.trim() || null, periodo, hora_inicio, hora_fim };
     if (parEditIdx == null) parManuais.push(reg);
     else parManuais[parEditIdx] = reg;
     fecharModalPar();
@@ -1926,7 +1968,7 @@
       t.textContent = (per === 'manha' ? 'Manhã (07h–12h)' : 'Tarde (13h–17h)') + ' · Chuva';
       const m = document.createElement('span');
       const mot = e.motivo ? rdoMotivosDia.find((x) => x.id === e.motivo) : null;
-      m.textContent = ' · ' + (mot ? mot.descricao : 'Sem operação') + (e.mm != null ? ' · ' + String(e.mm).replace('.', ',') + ' mm' : '');
+      m.textContent = ' · ' + (mot ? mot.descricao : 'Sem operação') + (e.mm != null ? ' · ' + String(e.mm).replace('.', ',') + ' mm' : '') + (e.ini && e.fim ? ' · ' + e.ini + '–' + e.fim : '');
       item.append(t, m);
       box.appendChild(item);
     }
@@ -1936,7 +1978,9 @@
       const t = document.createElement('strong');
       t.textContent = nomeMotivo(pm.motivo_id);
       const m = document.createElement('span');
-      m.textContent = pm.descricao ? ' · ' + pm.descricao : '';
+      const perTxt = pm.periodo === 'manha' ? 'Manhã' : pm.periodo === 'tarde' ? 'Tarde' : '';
+      const horTxt = pm.hora_inicio && pm.hora_fim ? pm.hora_inicio + '–' + pm.hora_fim : '';
+      m.textContent = [perTxt, horTxt, pm.descricao].filter(Boolean).map((x) => ' · ' + x).join('');
       item.append(t, m);
       const acoes = document.createElement('div');
       acoes.className = 'acoes-par';
@@ -1985,6 +2029,10 @@
       box.querySelector('.mm-bloco').classList.toggle('oculto', est.clima !== 'chuva');
       const mmInput = box.querySelector('.mm-input');
       if (document.activeElement !== mmInput) mmInput.value = est.mm ?? '';
+      const chIni = box.querySelector('.ch-ini');
+      const chFim = box.querySelector('.ch-fim');
+      if (document.activeElement !== chIni) chIni.value = est.ini || '';
+      if (document.activeElement !== chFim) chFim.value = est.fim || '';
       box.querySelector('.motivo-sel').value = est.motivo || '';
     }
     const resumo = (per, nome) => {
@@ -1993,6 +2041,7 @@
       let s = nome + ': ' + (e.clima ? ROTULO_CLIMA[e.clima] : '—') + ' · ' +
         (e.op === 'sem_operacao' ? 'Sem operação' : e.op === 'operacao' ? 'Operação' : '—');
       if (e.clima === 'chuva' && e.mm != null) s += ' · ' + String(e.mm).replace('.', ',') + ' mm';
+      if (e.clima === 'chuva' && e.ini && e.fim) s += ' · ' + e.ini + '–' + e.fim;
       if (e.op === 'sem_operacao' && e.motivo) {
         const m = rdoMotivosDia.find((x) => x.id === e.motivo);
         if (m) s += ' (' + m.descricao + ')';
@@ -2004,8 +2053,14 @@
   }
 
   function aplicarClima(det) {
-    climaEstado.manha = { clima: det.clima_manha || null, op: det.operacao_manha || null, motivo: det.motivo_manha_id || null, mm: det.chuva_mm_manha != null ? Number(det.chuva_mm_manha) : null };
-    climaEstado.tarde = { clima: det.clima_tarde || null, op: det.operacao_tarde || null, motivo: det.motivo_tarde_id || null, mm: det.chuva_mm_tarde != null ? Number(det.chuva_mm_tarde) : null };
+    climaEstado.manha = { clima: det.clima_manha || null, op: det.operacao_manha || null, motivo: det.motivo_manha_id || null,
+      mm: det.chuva_mm_manha != null ? Number(det.chuva_mm_manha) : null,
+      ini: det.chuva_inicio_manha ? det.chuva_inicio_manha.slice(0, 5) : null,
+      fim: det.chuva_fim_manha ? det.chuva_fim_manha.slice(0, 5) : null };
+    climaEstado.tarde = { clima: det.clima_tarde || null, op: det.operacao_tarde || null, motivo: det.motivo_tarde_id || null,
+      mm: det.chuva_mm_tarde != null ? Number(det.chuva_mm_tarde) : null,
+      ini: det.chuva_inicio_tarde ? det.chuva_inicio_tarde.slice(0, 5) : null,
+      fim: det.chuva_fim_tarde ? det.chuva_fim_tarde.slice(0, 5) : null };
     renderClima();
   }
 
@@ -2014,7 +2069,11 @@
       const per = box.dataset.periodo;
       box.querySelectorAll('.seg-clima button').forEach((b) => b.addEventListener('click', () => {
         climaEstado[per].clima = climaEstado[per].clima === b.dataset.v ? null : b.dataset.v;
-        if (climaEstado[per].clima !== 'chuva') climaEstado[per].mm = null;
+        if (climaEstado[per].clima !== 'chuva') {
+          climaEstado[per].mm = null;
+          climaEstado[per].ini = null;
+          climaEstado[per].fim = null;
+        }
         renderClima();
       }));
       box.querySelectorAll('.seg-op button').forEach((b) => b.addEventListener('click', () => {
@@ -2022,6 +2081,14 @@
         if (climaEstado[per].op !== 'sem_operacao') climaEstado[per].motivo = null;
         renderClima();
       }));
+      box.querySelector('.ch-ini').addEventListener('input', (ev) => {
+        climaEstado[per].ini = ev.target.value || null;
+        renderClima();
+      });
+      box.querySelector('.ch-fim').addEventListener('input', (ev) => {
+        climaEstado[per].fim = ev.target.value || null;
+        renderClima();
+      });
       box.querySelector('.mm-input').addEventListener('input', (ev) => {
         climaEstado[per].mm = ev.target.value === '' ? null : Number(ev.target.value);
         renderClima();
