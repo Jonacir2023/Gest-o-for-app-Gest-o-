@@ -135,6 +135,14 @@
   .colab-row button { margin: 0; padding: 6px 10px; font-size: 13px; }
   .acoes-colab { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .acoes-colab button { margin: 0; padding: 4px 8px; font-size: 13px; }
+  .barra-ef { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+  .barra-ef select { min-width: 200px; }
+  .tabela-ef { overflow-x: auto; }
+  .tabela-planilha { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 980px; }
+  .tabela-planilha th { background: #24374B; color: #fff; text-align: left; padding: 8px; white-space: nowrap; }
+  .tabela-planilha td { padding: 6px 8px; border-bottom: 1px solid var(--borda); white-space: nowrap; }
+  .tabela-planilha tr.baixado td { color: var(--muted); }
+  .tabela-planilha select { padding: 4px 6px; font-size: 13px; }
   .btn-dash { width: 100%; margin: 10px 0 0; padding: 10px; background: var(--branco); color: #1C94C4; border: 1px dashed #1C94C4; border-radius: 8px; font-weight: 600; cursor: pointer; }
   .btn-dash:hover { background: #D5E4E6; }
   .modal { position: fixed; inset: 0; background: rgba(36, 55, 75, .45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
@@ -378,7 +386,23 @@
           <h1>Efetivo</h1>
           <p class="texto-apoio">Colaboradores por setor. Use <strong>+ Colaborador</strong> dentro de cada setor. Dar baixa tira a pessoa dos RDOs a partir de hoje; os RDOs anteriores continuam com ela.</p>
         </div>
-        <div id="efetivo-blocos"></div>
+        <div class="barra-ef">
+          <button type="button" id="ef-modo-planilha">Planilha</button>
+          <button type="button" id="ef-modo-blocos" class="sec">Por setor</button>
+        </div>
+        <div id="efetivo-planilha" class="card">
+          <div class="barra-ef">
+            <select id="ef-filtro-setor" aria-label="Filtrar por setor"></select>
+            <button type="button" id="ef-novo" class="sec">+ Colaborador</button>
+          </div>
+          <div class="tabela-ef">
+            <table class="tabela-planilha">
+              <thead><tr><th>Matrícula</th><th>Nome</th><th>Função</th><th>Setor</th><th>Empresa</th><th>Apto RDO</th><th>Situação</th><th>Data contrato</th><th>E45</th><th>E90</th><th>Baixada</th><th>Ações</th></tr></thead>
+              <tbody id="ef-corpo"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="efetivo-blocos" class="oculto"></div>
       </section>
     </div>
 
@@ -656,6 +680,8 @@
     <select id="cr-cat" required></select>
     <label for="cr-terc">Empresa</label>
     <input id="cr-terc" placeholder="Vazio = empresa própria · Ex.: Terceirizada XYZ">
+    <label for="cr-contrato">Data do contrato</label>
+    <input id="cr-contrato" type="date">
     <label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="cr-apto" style="width:auto"> Apto a responsável pelo local e criador do RDO</label>
     <div class="acoes-modal">
       <button type="submit">Salvar</button>
@@ -1870,16 +1896,144 @@
   // Vigente no dia: sem baixa, ou dia anterior à baixa (a baixa vale a partir do dia dela)
   const vigenteNoDia = (c, dia) => !c.inativo_em || dia < c.inativo_em;
 
+  // Modo de exibição do cadastro: planilha (padrão) ou blocos por setor
+  let modoEfetivo = 'planilha';
+  let filtroSetorEf = '';
+
+  const efData = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
+  const efSomaDias = (iso, n) => {
+    if (!iso) return '—';
+    const dt = new Date(iso + 'T12:00:00');
+    dt.setDate(dt.getDate() + n);
+    return dt.toLocaleDateString('pt-BR');
+  };
+
+  function trocarModoEfetivo(m) {
+    modoEfetivo = m;
+    $('ef-modo-planilha').classList.toggle('sec', m !== 'planilha');
+    $('ef-modo-blocos').classList.toggle('sec', m !== 'blocos');
+    carregarColaboradores();
+  }
+
+  // Planilha: uma linha por colaborador, com data de contrato, E45/E90 calculados e baixada (30/45/60/90)
+  function renderPlanilhaEfetivo(cols, cats) {
+    const sel = $('ef-filtro-setor');
+    const setores = [...new Set([...cats.map((c) => c.nome), ...cols.map((c) => c.categoria).filter(Boolean)])]
+      .sort((a, b) => collator.compare(a, b));
+    const terceiros = new Set(cats.filter((c) => c.terceiro).map((c) => c.nome));
+    sel.innerHTML = '';
+    sel.appendChild(new Option('Todos os setores', ''));
+    for (const s of setores) sel.appendChild(new Option(s, s));
+    if (!setores.includes(filtroSetorEf)) filtroSetorEf = '';
+    sel.value = filtroSetorEf;
+
+    const corpo = $('ef-corpo');
+    corpo.innerHTML = '';
+    const lista = cols
+      .filter((c) => !filtroSetorEf || c.categoria === filtroSetorEf)
+      .sort((a, b) => collator.compare(a.categoria, b.categoria) || collator.compare(a.nome, b.nome));
+    if (!lista.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 12;
+      td.textContent = 'Nenhum colaborador.';
+      tr.appendChild(td);
+      corpo.appendChild(tr);
+      return;
+    }
+    for (const c of lista) {
+      const ativo = !c.inativo_em;
+      const tr = document.createElement('tr');
+      if (!ativo) tr.className = 'baixado';
+      const celula = (texto) => {
+        const el = document.createElement('td');
+        el.textContent = texto;
+        tr.appendChild(el);
+        return el;
+      };
+      celula(c.matricula || '—');
+      celula(c.nome);
+      celula(c.funcao || '—');
+      const tdSetor = celula(c.categoria);
+      if (terceiros.has(c.categoria)) {
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = 'Terceiro';
+        tdSetor.append(' ', tag);
+      }
+      celula(c.grupo_terceiro || 'Empresa própria');
+      celula(c.apto_rdo ? '✔' : '—').style.textAlign = 'center';
+      celula(ativo ? 'Ativo' : 'Com baixa');
+      celula(efData(c.data_contrato));
+      celula(efSomaDias(c.data_contrato, 45));
+      celula(efSomaDias(c.data_contrato, 90));
+
+      const tdBaixada = document.createElement('td');
+      if (ativo) {
+        const s = document.createElement('select');
+        s.setAttribute('aria-label', 'Baixada, em dias');
+        s.appendChild(new Option('—', ''));
+        for (const d of [30, 45, 60, 90]) s.appendChild(new Option(d + ' dias', String(d)));
+        s.value = c.baixada_dias ? String(c.baixada_dias) : '';
+        s.addEventListener('change', async () => {
+          const { error } = await sb.from('colaboradores')
+            .update({ baixada_dias: s.value ? Number(s.value) : null })
+            .eq('id', c.id);
+          if (error) {
+            alert('Erro: ' + error.message);
+            carregarColaboradores();
+          }
+        });
+        tdBaixada.appendChild(s);
+      } else {
+        tdBaixada.textContent = '—';
+      }
+      tr.appendChild(tdBaixada);
+
+      const tdAcoes = document.createElement('td');
+      if (ativo) {
+        const acoes = document.createElement('div');
+        acoes.className = 'acoes-colab';
+        const lapis = botao('✏️', () => abrirModalColab(c.categoria, c));
+        lapis.setAttribute('aria-label', 'Editar colaborador');
+        const lixeira = botao('🗑️', () => darExcluirColab(c));
+        lixeira.classList.add('perigo');
+        lixeira.setAttribute('aria-label', 'Excluir colaborador');
+        const baixa = botao('Dar baixa', () => darBaixaColab(c));
+        baixa.classList.add('perigo');
+        acoes.append(lapis, lixeira, baixa);
+        tdAcoes.appendChild(acoes);
+      }
+      tr.appendChild(tdAcoes);
+      corpo.appendChild(tr);
+    }
+  }
+
+  $('ef-modo-planilha').addEventListener('click', () => trocarModoEfetivo('planilha'));
+  $('ef-modo-blocos').addEventListener('click', () => trocarModoEfetivo('blocos'));
+  $('ef-filtro-setor').addEventListener('change', () => {
+    filtroSetorEf = $('ef-filtro-setor').value;
+    carregarColaboradores();
+  });
+  $('ef-novo').addEventListener('click', () => abrirModalColab(filtroSetorEf || null));
+
   // Cadastro por categoria (padrão do BP): um bloco por categoria, com + Colaborador
   async function carregarColaboradores() {
     const box = $('efetivo-blocos');
     const [cats, cols] = await Promise.all([
       sb.from('categorias_efetivo').select('nome, terceiro').order('nome'),
-      sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em, apto_rdo'),
+      sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em, apto_rdo, data_contrato, baixada_dias'),
     ]);
     const erro = cats.error || cols.error;
+    const planilha = modoEfetivo === 'planilha';
+    $('efetivo-planilha').classList.toggle('oculto', !planilha);
+    box.classList.toggle('oculto', planilha);
     if (erro) {
-      box.textContent = 'Erro: ' + erro.message;
+      (planilha ? $('ef-corpo') : box).textContent = 'Erro: ' + erro.message;
+      return;
+    }
+    if (planilha) {
+      renderPlanilhaEfetivo(cols.data, cats.data);
       return;
     }
     const nomesCat = new Set(cats.data.map((c) => c.nome));
@@ -2237,6 +2391,7 @@
     $('cr-nome').value = c ? c.nome : '';
     $('cr-terc').value = c ? (c.grupo_terceiro || '') : '';
     $('cr-apto').checked = c ? !!c.apto_rdo : false;
+    $('cr-contrato').value = c ? (c.data_contrato || '') : '';
     carregarListasEfetivo().then(() => {
       if (c) {
         $('cr-cat').value = c.categoria || '';
@@ -2269,6 +2424,7 @@
       categoria,
       grupo_terceiro: $('cr-terc').value.trim() || null,
       apto_rdo: $('cr-apto').checked,
+      data_contrato: $('cr-contrato').value || null,
     };
     // Matrícula já existente em outro colaborador: se estiver com baixa, reativa em vez de duplicar
     const { data: iguais, error: eBusca } = await sb.from('colaboradores').select('id, inativo_em').eq('matricula', mat);
