@@ -632,6 +632,7 @@
     <h2 id="cat-titulo">Novo setor</h2>
     <label for="cat-nome">Nome *</label>
     <input id="cat-nome" required>
+    <label id="cat-terc-bloco" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="cat-terceiro" style="width:auto"> Setor de terceiro (empresa)</label>
     <div class="acoes-modal">
       <button type="submit">Salvar</button>
       <button type="button" id="cat-cancelar" class="sec">Cancelar</button>
@@ -1871,7 +1872,7 @@
   async function carregarColaboradores() {
     const box = $('efetivo-blocos');
     const [cats, cols] = await Promise.all([
-      sb.from('categorias_efetivo').select('nome').order('nome'),
+      sb.from('categorias_efetivo').select('nome, terceiro').order('nome'),
       sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em, apto_rdo'),
     ]);
     const erro = cats.error || cols.error;
@@ -1880,6 +1881,7 @@
       return;
     }
     const nomesCat = new Set(cats.data.map((c) => c.nome));
+    const terceiros = new Set(cats.data.filter((c) => c.terceiro).map((c) => c.nome));
     for (const c of cols.data) if (c.categoria) nomesCat.add(c.categoria);
     box.innerHTML = '';
     const ordem = [...nomesCat].sort((a, b) => collator.compare(a, b));
@@ -1906,6 +1908,12 @@
       pill.className = 'pill';
       pill.textContent = ativos.length;
       cab.append(nomeCat, pill);
+      if (terceiros.has(cat)) {
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = 'Terceiro';
+        cab.appendChild(tag);
+      }
       bloco.appendChild(cab);
 
       if (!ativos.length) {
@@ -2174,6 +2182,8 @@
   function abrirModalLista(tipo) {
     listaTipoAtual = tipo;
     $('cat-titulo').textContent = TABELAS_LISTA[tipo];
+    $('cat-terceiro').checked = false;
+    $('cat-terc-bloco').classList.toggle('oculto', tipo !== 'categorias_efetivo');
     $('cat-nome').value = '';
     setMsg($('msg-cat'), '');
     $('modal-cat').classList.remove('oculto');
@@ -2190,10 +2200,12 @@
     const nome = $('cat-nome').value.trim();
     if (!nome) return setMsg(msg, 'Informe o nome.', 'erro');
     setMsg(msg, 'Salvando…');
-    const { error } = await sb.from(listaTipoAtual).insert({ nome });
+    const dados = listaTipoAtual === 'categorias_efetivo' ? { nome, terceiro: $('cat-terceiro').checked } : { nome };
+    const { error } = await sb.from(listaTipoAtual).insert(dados);
     if (error) return setMsg(msg, error.code === '23505' ? 'Já existe com esse nome.' : error.message, 'erro');
     $('modal-cat').classList.add('oculto');
     carregarListasEfetivo();
+    carregarColaboradores();
   });
 
   function abrirModalColab(categoria) {
