@@ -81,6 +81,14 @@
   .acoes-ck { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
   .acoes-ck select { width: auto; padding: 6px; font-size: 13px; }
   details summary { cursor: pointer; font-size: 13px; margin-top: 6px; color: var(--azul); }
+  .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--borda); color: var(--muted); margin-top: 6px; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+  .cal-semana, .cal-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-semana { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .cal-dia { margin: 0; padding: 8px 0; min-height: 44px; background: var(--branco); color: var(--texto); border: 1px solid var(--borda); border-radius: 8px; font: inherit; font-size: 14px; }
+  .cal-dia:disabled { color: var(--muted); opacity: .55; cursor: default; }
+  .cal-dia.hoje { border: 2px solid var(--azul); }
+  .cal-dia.bolinha::after { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--azul); margin: 4px auto 0; }
 </style>
 </head>
 <body>
@@ -117,6 +125,7 @@
 
     <nav id="nav-principal" class="abas oculto">
       <button type="button" class="aba" data-view="obras">Obras</button>
+      <button type="button" class="aba" data-view="calendario">Calendário</button>
       <button type="button" class="aba" data-view="cadastros">Cadastros</button>
       <button type="button" class="aba" data-view="checkin">Check-in</button>
     </nav>
@@ -271,6 +280,27 @@
       </section>
     </div>
 
+    <div id="view-calendario" class="oculto">
+      <div class="card">
+        <h1>Calendário</h1>
+        <label for="cal-tipo">Tipo de lançamento</label>
+        <select id="cal-tipo"></select>
+        <div class="cal-nav">
+          <button id="cal-ant" type="button" class="sec pequeno">‹ Anterior</button>
+          <strong id="cal-mes"></strong>
+          <button id="cal-prox" type="button" class="sec pequeno">Próximo ›</button>
+        </div>
+        <div class="cal-semana"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span></div>
+        <div id="cal-grade" class="cal-grade"></div>
+        <p class="texto-apoio">Bolinha: há lançamento deste tipo no dia. Toque no dia para ver. Até 2 dias após o registro o lançamento é editável; depois, somente leitura.</p>
+        <div id="msg-cal" class="msg"></div>
+      </div>
+      <div id="cal-lista" class="card oculto">
+        <h2 id="cal-dia-titulo"></h2>
+        <div id="cal-itens"></div>
+      </div>
+    </div>
+
     <div id="view-checkin" class="oculto">
       <div class="card">
         <h1>Check-in</h1>
@@ -373,12 +403,13 @@
     $('sem-acesso').classList.toggle('oculto', ok);
     $('nav-principal').classList.toggle('oculto', !ok);
     if (ok) {
-      mostrarView('obras');
+      mostrarView('calendario');
       carregarObras();
     } else {
       $('area-obra').classList.add('oculto');
       $('view-cadastros').classList.add('oculto');
       $('view-checkin').classList.add('oculto');
+      $('view-calendario').classList.add('oculto');
     }
   }
 
@@ -514,6 +545,8 @@
   function mostrarView(v) {
     $('area-obra').classList.toggle('oculto', v !== 'obras');
     $('view-cadastros').classList.toggle('oculto', v !== 'cadastros');
+    $('view-calendario').classList.toggle('oculto', v !== 'calendario');
+    if (v === 'calendario') carregarCalendario();
     $('view-checkin').classList.toggle('oculto', v !== 'checkin');
     if (v !== 'checkin' && ckTimer) { clearInterval(ckTimer); ckTimer = null; }
     if (v === 'checkin') { carregarCheckin(); clearInterval(ckTimer); ckTimer = setInterval(carregarCheckin, 5 * 60 * 1000); }
@@ -1102,6 +1135,169 @@
   $('ck-atualizar').addEventListener('click', carregarCheckin);
   $('ck-area').addEventListener('change', renderCheckin);
   $('ck-resp').addEventListener('change', renderCheckin);
+
+  // ---------- Calendário ----------
+  const TIPOS_CAL = ['Check-in', 'Pauta', 'RDO', 'Efetivo', 'Equipamentos parados', 'Eventos SST', 'Eventos MA'];
+  const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  let calAno = new Date().getFullYear();
+  let calMes = new Date().getMonth();
+  let calTipo = 'Check-in';
+  let calMapa = {};
+
+  function chaveData(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  // Dias corridos entre o registro e hoje (0 = hoje)
+  function diasDesde(chave) {
+    const [y, m, d] = chave.split('-').map(Number);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    return Math.round((hoje - new Date(y, m - 1, d)) / DIA_MS);
+  }
+
+  // Editável nos 2 primeiros dias; depois, somente leitura
+  const editavelNo = (chave) => diasDesde(chave) < 2;
+
+  async function buscarCalendario() {
+    const ini = new Date(calAno, calMes, 1);
+    const fim = new Date(calAno, calMes + 1, 1);
+    const dIni = chaveData(ini);
+    const dFim = chaveData(fim);
+    const tIni = ini.toISOString();
+    const tFim = fim.toISOString();
+    const itens = [];
+
+    if (calTipo === 'Check-in') {
+      const { data, error } = await sb.from('checkin_itens').select('id, assunto, responsavel, criado_em')
+        .gte('criado_em', tIni).lt('criado_em', tFim);
+      if (error) throw error;
+      for (const r of data) {
+        const k = chaveData(new Date(r.criado_em));
+        itens.push({ chave: k, titulo: r.assunto, detalhe: r.responsavel || '', editavel: editavelNo(k), abrir: 'checkin' });
+      }
+    } else if (calTipo === 'Pauta') {
+      const { data, error } = await sb.from('pauta_itens').select('id, assunto, criado_em')
+        .gte('criado_em', tIni).lt('criado_em', tFim);
+      if (error) throw error;
+      for (const r of data) {
+        const k = chaveData(new Date(r.criado_em));
+        itens.push({ chave: k, titulo: r.assunto, detalhe: '', editavel: false, abrir: 'pauta' });
+      }
+    } else if (calTipo === 'RDO') {
+      const { data, error } = await sb.from('rdo').select('id, data, frente, encarregado')
+        .gte('data', dIni).lt('data', dFim).is('substituido_por', null);
+      if (error) throw error;
+      for (const r of data) {
+        itens.push({ chave: r.data, titulo: 'Frente ' + r.frente, detalhe: 'Encarregado: ' + r.encarregado, editavel: editavelNo(r.data), abrir: null });
+      }
+    } else if (calTipo === 'Efetivo') {
+      const { data, error } = await sb.from('rdo_efetivo')
+        .select('id, colaborador, presente, rdo:rdo_id!inner(data, substituido_por)')
+        .gte('rdo.data', dIni).lt('rdo.data', dFim).is('rdo.substituido_por', null);
+      if (error) throw error;
+      for (const r of data) {
+        itens.push({ chave: r.rdo.data, titulo: r.colaborador, detalhe: r.presente ? 'Presente' : 'Ausente', editavel: editavelNo(r.rdo.data), abrir: null });
+      }
+    } else if (calTipo === 'Equipamentos parados') {
+      const { data, error } = await sb.from('rdo_equipamentos')
+        .select('id, equipamento_codigo, rdo:rdo_id!inner(data, substituido_por)')
+        .eq('status', 'parado').gte('rdo.data', dIni).lt('rdo.data', dFim).is('rdo.substituido_por', null);
+      if (error) throw error;
+      for (const r of data) {
+        itens.push({ chave: r.rdo.data, titulo: 'Equipamento ' + r.equipamento_codigo, detalhe: 'Parado', editavel: editavelNo(r.rdo.data), abrir: null });
+      }
+    }
+    return itens;
+  }
+
+  async function carregarCalendario() {
+    $('cal-mes').textContent = MESES[calMes] + ' de ' + calAno;
+    $('cal-tipo').value = calTipo;
+    $('cal-lista').classList.add('oculto');
+    const msg = $('msg-cal');
+    calMapa = {};
+
+    if (calTipo === 'Eventos SST' || calTipo === 'Eventos MA') {
+      setMsg(msg, 'Este tipo ainda não tem campos definidos. Defina os campos para liberar o calendário.');
+      return renderCalendario();
+    }
+
+    setMsg(msg, 'Carregando…');
+    try {
+      const itens = await buscarCalendario();
+      for (const it of itens) (calMapa[it.chave] = calMapa[it.chave] || []).push(it);
+      setMsg(msg, '');
+    } catch (e) {
+      setMsg(msg, 'Erro ao carregar: ' + e.message, 'erro');
+    }
+    renderCalendario();
+  }
+
+  function renderCalendario() {
+    const grade = $('cal-grade');
+    grade.innerHTML = '';
+    const primeiro = new Date(calAno, calMes, 1).getDay();
+    const dias = new Date(calAno, calMes + 1, 0).getDate();
+    const hoje = chaveData(new Date());
+    for (let i = 0; i < primeiro; i++) grade.appendChild(document.createElement('div'));
+    for (let d = 1; d <= dias; d++) {
+      const chave = calAno + '-' + String(calMes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cal-dia' + (calMapa[chave] ? ' bolinha' : '') + (chave === hoje ? ' hoje' : '');
+      b.textContent = d;
+      if (calMapa[chave]) b.onclick = () => mostrarDia(chave);
+      else b.disabled = true;
+      grade.appendChild(b);
+    }
+  }
+
+  function mostrarDia(chave) {
+    const [y, m, d] = chave.split('-');
+    $('cal-dia-titulo').textContent = calTipo + ' · ' + d + '/' + m + '/' + y;
+    const box = $('cal-itens');
+    box.innerHTML = '';
+    for (const it of calMapa[chave] || []) {
+      const div = document.createElement('div');
+      div.className = 'item-ck';
+      const t = document.createElement('strong');
+      t.textContent = it.titulo;
+      div.appendChild(t);
+      if (it.detalhe) {
+        const p = document.createElement('div');
+        p.className = 'texto-apoio';
+        p.textContent = it.detalhe;
+        div.appendChild(p);
+      }
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = it.editavel ? 'Editável' : 'Somente leitura';
+      div.appendChild(tag);
+      if (it.editavel && it.abrir === 'checkin') div.appendChild(botao('Abrir no Check-in', () => mostrarView('checkin')));
+      box.appendChild(div);
+    }
+    $('cal-lista').classList.remove('oculto');
+    $('cal-lista').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  TIPOS_CAL.forEach((t) => {
+    const o = document.createElement('option');
+    o.value = t;
+    o.textContent = t;
+    $('cal-tipo').appendChild(o);
+  });
+  $('cal-tipo').addEventListener('change', () => { calTipo = $('cal-tipo').value; carregarCalendario(); });
+  $('cal-ant').addEventListener('click', () => {
+    calMes--;
+    if (calMes < 0) { calMes = 11; calAno--; }
+    carregarCalendario();
+  });
+  $('cal-prox').addEventListener('click', () => {
+    calMes++;
+    if (calMes > 11) { calMes = 0; calAno++; }
+    carregarCalendario();
+  });
 
   // ---------- Eventos de navegação ----------
   document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => mostrarView(b.dataset.view)));
