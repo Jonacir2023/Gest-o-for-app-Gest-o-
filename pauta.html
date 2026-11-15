@@ -90,7 +90,7 @@
       <div class="tabela-wrap">
         <table>
           <thead>
-            <tr><th>Assunto</th><th>Área</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr>
+            <tr><th>Assunto</th><th>Área</th><th>Criador</th><th>Responsável</th><th>Setor</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr>
           </thead>
           <tbody id="lista-itens"></tbody>
         </table>
@@ -103,8 +103,16 @@
       <input type="hidden" id="i-id">
       <div class="grid">
         <div>
+          <label for="i-criador">Criador</label>
+          <input id="i-criador" readonly>
+        </div>
+        <div>
           <label for="i-resp">Responsável *</label>
           <select id="i-resp" required></select>
+        </div>
+        <div class="full">
+          <label for="i-setor">Setor (do responsável)</label>
+          <input id="i-setor" readonly>
         </div>
         <div>
           <label for="i-area">Área *</label>
@@ -212,7 +220,7 @@
   // ---------- Entrada ----------
   async function carregarLideres() {
     const sel = $('e-lider');
-    const { data, error } = await sb.rpc('pauta_lista_lideres');
+    const { data, error } = await sb.rpc('pauta_lista_lideres_v2');
     if (error) return setMsg($('msg-entrar'), 'Erro ao carregar nomes: ' + error.message, 'erro');
     lideres = (data || []).slice().sort((a, b) => collator.compare(a.nome, b.nome));
     sel.innerHTML = '';
@@ -280,7 +288,7 @@
   // ---------- Itens ----------
   async function carregarItens() {
     if (!token) return;
-    const { data, error } = await sb.rpc('pauta_listar', { p_token: token });
+    const { data, error } = await sb.rpc('pauta_listar_v2', { p_token: token });
     if (error) {
       if (error.message.includes('sessao_invalida')) { sair(); return setMsg($('msg-entrar'), traduz('sessao_invalida'), 'erro'); }
       return;
@@ -298,7 +306,7 @@
     }
     for (const it of itens) {
       const tr = document.createElement('tr');
-      const celulas = [it.assunto, it.area, it.responsavel_nome || '', PRIO[it.prioridade] || '', fmtData(it.prazo), STATUS[it.status] || ''];
+      const celulas = [it.assunto, it.area, it.criador_nome || '', it.responsavel_nome || '', it.responsavel_setor || '—', PRIO[it.prioridade] || '', fmtData(it.prazo), STATUS[it.status] || ''];
       for (const c of celulas) {
         const td = document.createElement('td');
         td.textContent = c;
@@ -314,11 +322,6 @@
         ex.type = 'button'; ex.className = 'sec pequeno'; ex.textContent = 'Excluir';
         ex.onclick = () => excluirItem(it);
         acoes.append(ed, ' ', ex);
-      } else {
-        const t = document.createElement('span');
-        t.className = 'tag';
-        t.textContent = 'de ' + it.criador_nome;
-        acoes.appendChild(t);
       }
       tr.appendChild(acoes);
       tb.appendChild(tr);
@@ -335,13 +338,22 @@
       if (l.id === selecionado) opt.selected = true;
       sel.appendChild(opt);
     }
+    atualizarSetor();
   }
+
+  // O setor vem do cadastro do líder escolhido como responsável
+  function atualizarSetor() {
+    const l = lideres.find((x) => x.id === $('i-resp').value);
+    $('i-setor').value = l && l.setor ? l.setor : 'Sem setor cadastrado';
+  }
+  $('i-resp').addEventListener('change', atualizarSetor);
 
   function abrirForm(it) {
     $('form-item').classList.remove('oculto');
     $('titulo-item').textContent = it ? 'Editar item' : 'Novo item';
     $('i-id').value = it ? it.id : '';
     preencherResponsaveis(it ? it.responsavel_id : liderId);
+    $('i-criador').value = it ? it.criador_nome : liderNome;
     $('i-area').value = it?.area || '';
     $('i-assunto').value = it?.assunto || '';
     $('i-desc').value = it?.descricao || '';
