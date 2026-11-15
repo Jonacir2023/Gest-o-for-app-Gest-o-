@@ -342,14 +342,6 @@
           </section>
 
           <section class="rdo-card">
-            <h2>Local da obra</h2>
-            <label for="r-local">Local</label>
-            <select id="r-local"></select>
-            <label for="r-local-desc">O que foi executado no local</label>
-            <textarea id="r-local-desc" rows="3"></textarea>
-          </section>
-
-          <section class="rdo-card">
             <h2>Condições do tempo</h2>
             <div id="clima-resumo" class="clima-resumo"></div>
             <div class="clima-periodo" data-periodo="manha">
@@ -1549,12 +1541,12 @@
     div.className = 'item-ck linha-rdo';
     div.innerHTML = `
       <div class="linha-campos">
+        <div><label>Local</label><select class="at-local"></select></div>
+        <div><label>Descrição</label><input class="at-desc"></div>
         <div><label>Atividade *</label><input class="at-nome"></div>
         <div><label>Unidade</label><select class="at-un"></select></div>
-        <div><label>Local</label><select class="at-local"></select></div>
         <div><label>Quantidade</label><input class="at-qtd" inputmode="decimal"></div>
         <div><label><input class="at-par" type="checkbox" style="width:auto"> Paralisada</label></div>
-        <div><label>Descrição</label><input class="at-desc"></div>
       </div>`;
     div.querySelector('.at-nome').value = v.atividade || '';
     opcoes(div.querySelector('.at-un'), rdoUnidades.map((u) => [u.id, u.sigla]), 'Selecione', v.unidade_id || '');
@@ -1589,7 +1581,6 @@
       const { data } = await sb.from('locais').select('id, nome').eq('projeto_id', pid);
       rdoLocais = (data || []).sort((a, b) => collator.compare(a.nome, b.nome));
     }
-    opcoes($('r-local'), rdoLocais.map((l) => [l.id, l.nome]), 'Nenhum local', $('r-local').value);
     document.querySelectorAll('#r-ativ .linha-rdo').forEach((d) => {
       const sel = d.querySelector('.at-local');
       opcoes(sel, rdoLocais.map((l) => [l.id, l.nome]), 'Selecione', sel.value);
@@ -1641,8 +1632,6 @@
     $('r-apt').value = data.apontador;
     opcoes($('r-proj'), [...$('r-proj').options].filter((o) => o.value).map((o) => [o.value, o.textContent]), 'Selecione a obra', data.projeto_id);
     await carregarLocaisRdo();
-    $('r-local').value = data.local_id || '';
-    $('r-local-desc').value = data.local_descricao || '';
     $('r-obs').value = data.observacoes || '';
     aplicarClima(data);
     preencherItens(data);
@@ -1747,8 +1736,6 @@
       clima_tarde: climaEstado.tarde.clima,
       operacao_tarde: climaEstado.tarde.op,
       motivo_tarde_id: climaEstado.tarde.op === 'sem_operacao' ? climaEstado.tarde.motivo : null,
-      local_id: $('r-local').value || null,
-      local_descricao: $('r-local-desc').value.trim() || null,
       observacoes: $('r-obs').value.trim() || null,
     };
     const { data: novoId, error } = await sb.rpc('rdo_salvar', { p: payload });
