@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pauta</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
 <style>
   :root {
     --azul: #24374B;
-    --branco: #ffffff;
-    --fundo: #f3f5f8;
-    --texto: #1d2530;
-    --muted: #5b6777;
-    --borda: #d7dde6;
-    --erro: #b3261e;
-    --ok: #1e7b4a;
+    --branco: #FFFFFF;
+    --fundo: #EEEEEB;
+    --texto: #24374B;
+    --muted: #879797;
+    --borda: #D5E4E6;
+    --erro: #B3261E;
+    --ok: #1E6B52;
   }
   * { box-sizing: border-box; }
   body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; font-family: Poppins, Arial, sans-serif; background: var(--fundo); color: var(--texto); }
@@ -23,7 +23,7 @@
   .marca { font-weight: 700; letter-spacing: .08em; }
   main { flex: 1; width: 100%; max-width: none; margin: 0; padding: 16px; }
   .card { background: var(--branco); border: 1px solid var(--borda); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-  h1 { font-size: 20px; color: var(--azul); margin: 4px 0 12px; }
+  h1 { font-size: 20px; font-weight: 800; color: var(--azul); margin: 4px 0 12px; }
   h2 { font-size: 16px; color: var(--azul); margin: 0 0 8px; }
   label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
   input, textarea, select { width: 100%; padding: 10px; border: 1px solid var(--borda); border-radius: 8px; font: inherit; color: var(--texto); background: var(--branco); }
@@ -39,9 +39,11 @@
   .tabela-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+  th { background: var(--azul); color: var(--branco); border-bottom: none; font-weight: 600; }
+  tbody tr:nth-child(even) td { background: #F7F7F5; }
   .acoes { white-space: nowrap; }
   .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--borda); color: var(--muted); }
-  footer { background: var(--azul); color: var(--branco); font-size: 12px; padding: 10px 16px; text-align: center; }
+  footer { background: var(--azul); color: #D5E4E6; font-size: 11px; padding: 10px 16px; text-align: center; }
   .oculto { display: none !important; }
 </style>
 </head>
