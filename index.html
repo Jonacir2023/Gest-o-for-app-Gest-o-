@@ -110,6 +110,10 @@
   .seg-op button.on[data-v="sem_operacao"] { background: var(--erro); border-color: var(--erro); }
   .seg-op button.on[data-v="operacao"] { background: var(--ok); border-color: var(--ok); }
   .paralisadas-lista { font-size: 14px; margin-bottom: 6px; }
+  .modal { position: fixed; inset: 0; background: rgba(36, 55, 75, .45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  .caixa-modal { background: var(--branco); border-radius: 12px; padding: 18px; width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0, 0, 0, .2); }
+  .acoes-modal { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acoes-modal button { margin-top: 14px; }
   .acoes-par { display: flex; gap: 6px; margin-top: 6px; }
   .acoes-par button { margin: 0; padding: 4px 10px; font-size: 13px; }
   .paralisada-item { border-left: 3px solid var(--erro); padding: 6px 10px; margin-bottom: 6px; background: var(--fundo); border-radius: 6px; }
@@ -432,7 +436,6 @@
             <h2>Atividades paralisadas</h2>
             <div id="r-paralisadas" class="paralisadas-lista"></div>
             <p class="texto-apoio">Marque "Paralisada" em uma atividade e escolha o motivo. Chuva com "Sem operação" no período entra aqui automaticamente.</p>
-            <div id="r-par-manuais"></div>
             <button type="button" id="r-add-par" class="sec">+ Atividade Paralisada</button>
           </section>
 
@@ -537,6 +540,21 @@
     </div>
   </section>
 </main>
+
+<div id="modal-par" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="par-titulo">
+  <form id="form-par" class="caixa-modal">
+    <h2 id="par-titulo">Nova atividade paralisada</h2>
+    <label for="par-motivo">Motivo da paralisação *</label>
+    <select id="par-motivo" required></select>
+    <label for="par-desc">Detalhe (opcional)</label>
+    <input id="par-desc">
+    <div class="acoes-modal">
+      <button type="submit">Salvar</button>
+      <button type="button" id="par-cancelar" class="sec">Cancelar</button>
+    </div>
+    <div id="msg-par" class="msg"></div>
+  </form>
+</div>
 
 <footer>by Jonacir Cazelli</footer>
 
@@ -1685,9 +1703,8 @@
     const contEvento = { SST: 'r-ev-sst', MA: 'r-ev-ma', Q: 'r-ev-q' };
     for (const ev of data.eventos) $(contEvento[ev.tipo]).appendChild(linhaEvento(ev.tipo, ev));
     await mostrarFotosExistentes(data.fotos);
-    $('r-par-manuais').innerHTML = '';
     const { data: pars } = await sb.from('rdo_paralisacoes').select('motivo_id, descricao').eq('rdo_id', id);
-    for (const pm of pars || []) $('r-par-manuais').appendChild(linhaParalisacaoManual(pm));
+    parManuais = (pars || []).map((p) => ({ motivo_id: p.motivo_id, descricao: p.descricao }));
     atualizarParalisadas();
     setMsg($('msg-rdo'), 'RDO carregado. Ao salvar, cria um novo RDO e substitui este.', '');
     $('form-rdo').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1805,9 +1822,7 @@
       setMsg(msg, 'RDO salvo, mas o envio de fotos falhou: ' + err.message, 'erro');
       return carregarListaRdo();
     }
-    const manuais = [...document.querySelectorAll('#r-par-manuais .pm-row')]
-      .map((d) => ({ motivo_id: d.querySelector('.pm-motivo').value, descricao: d.querySelector('.pm-desc').value.trim() || null }))
-      .filter((x) => x.motivo_id);
+    const manuais = parManuais.filter((x) => x.motivo_id);
     if (manuais.length) {
       const { error: eP } = await sb.from('rdo_paralisacoes').insert(manuais.map((x) => ({ rdo_id: novoId, motivo_id: x.motivo_id, descricao: x.descricao })));
       if (eP) {
@@ -1815,7 +1830,7 @@
         return carregarListaRdo();
       }
     }
-    $('r-par-manuais').innerHTML = '';
+    parManuais = [];
     atualizarParalisadas();
     setMsg(msg, 'RDO salvo' + (fotos ? ' com ' + fotos + ' foto(s).' : '.'), 'ok');
     carregarListaRdo();
@@ -1828,8 +1843,17 @@
   let rdoMotivosAtiv = [];
   let rdoMotivosEq = [];
 
-  function opcoesMotivosParalisacao(valorAtual) {
-    const sel = document.createElement('select');
+  // Atividades paralisadas criadas à mão: lista única, guardada em memória
+  let parManuais = [];
+  let parEditIdx = null;
+
+  function nomeMotivo(id) {
+    const m = [...rdoMotivosDia, ...rdoMotivosEq, ...rdoMotivosAtiv].find((x) => x.id === id);
+    return m ? m.descricao : 'Motivo não encontrado';
+  }
+
+  function preencherMotivosParalisacao(sel, valorAtual) {
+    sel.innerHTML = '';
     const vazio = document.createElement('option');
     vazio.value = '';
     vazio.textContent = 'Selecione o motivo';
@@ -1852,29 +1876,37 @@
       sel.appendChild(og);
     }
     sel.value = valorAtual || '';
-    return sel;
   }
 
-  function linhaParalisacaoManual(v = {}) {
-    const div = document.createElement('div');
-    div.className = 'item-ck linha-rdo pm-row';
-    div.innerHTML = `
-      <div class="linha-campos">
-        <div><label>Motivo da paralisação *</label><span class="pm-sel-cont"></span></div>
-        <div><label>Detalhe (opcional)</label><input class="pm-desc"></div>
-      </div>`;
-    const cont = div.querySelector('.pm-sel-cont');
-    const sel = opcoesMotivosParalisacao(v.motivo_id || '');
-    sel.className = 'pm-motivo';
-    cont.appendChild(sel);
-    div.querySelector('.pm-desc').value = v.descricao || '';
-    sel.addEventListener('change', atualizarParalisadas);
-    div.querySelector('.pm-desc').addEventListener('input', atualizarParalisadas);
-    const remover = botao('Remover', () => { div.remove(); atualizarParalisadas(); });
-    remover.classList.add('perigo');
-    div.appendChild(remover);
-    return div;
+  function abrirModalPar(idx) {
+    parEditIdx = idx;
+    const item = idx == null ? null : parManuais[idx];
+    preencherMotivosParalisacao($('par-motivo'), item ? item.motivo_id : '');
+    $('par-desc').value = item ? (item.descricao || '') : '';
+    $('par-titulo').textContent = item ? 'Editar atividade paralisada' : 'Nova atividade paralisada';
+    setMsg($('msg-par'), '');
+    $('modal-par').classList.remove('oculto');
+    $('par-motivo').focus();
   }
+
+  function fecharModalPar() {
+    $('modal-par').classList.add('oculto');
+    parEditIdx = null;
+  }
+
+  $('r-add-par').addEventListener('click', () => abrirModalPar(null));
+  $('par-cancelar').addEventListener('click', fecharModalPar);
+  $('modal-par').addEventListener('click', (ev) => { if (ev.target.id === 'modal-par') fecharModalPar(); });
+  $('form-par').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const motivo_id = $('par-motivo').value;
+    if (!motivo_id) return setMsg($('msg-par'), 'Escolha o motivo da paralisação.', 'erro');
+    const reg = { motivo_id, descricao: $('par-desc').value.trim() || null };
+    if (parEditIdx == null) parManuais.push(reg);
+    else parManuais[parEditIdx] = reg;
+    fecharModalPar();
+    atualizarParalisadas();
+  });
 
   function atualizarParalisadas() {
     const box = $('r-paralisadas');
@@ -1882,8 +1914,7 @@
     box.innerHTML = '';
     const linhas = [...document.querySelectorAll('#r-ativ .linha-rdo')].filter((d) => d.querySelector('.at-par').checked);
     const automaticos = ['manha', 'tarde'].filter((per) => climaEstado[per].clima === 'chuva' && climaEstado[per].op === 'sem_operacao');
-    const manuaisCount = document.querySelectorAll('#r-par-manuais .pm-row').length;
-    if (!linhas.length && !automaticos.length && !manuaisCount) {
+    if (!linhas.length && !automaticos.length && !parManuais.length) {
       box.textContent = 'Nenhuma atividade paralisada.';
       return;
     }
@@ -1899,27 +1930,21 @@
       item.append(t, m);
       box.appendChild(item);
     }
-    for (const d of document.querySelectorAll('#r-par-manuais .pm-row')) {
-      const sel = d.querySelector('.pm-motivo');
-      const motivo = sel.value ? sel.options[sel.selectedIndex].textContent : 'Motivo não escolhido';
-      const det = d.querySelector('.pm-desc').value.trim();
+    parManuais.forEach((pm, idx) => {
       const item = document.createElement('div');
       item.className = 'paralisada-item';
       const t = document.createElement('strong');
-      t.textContent = motivo;
+      t.textContent = nomeMotivo(pm.motivo_id);
       const m = document.createElement('span');
-      m.textContent = det ? ' · ' + det : '';
+      m.textContent = pm.descricao ? ' · ' + pm.descricao : '';
       item.append(t, m);
       const acoes = document.createElement('div');
       acoes.className = 'acoes-par';
-      const lapis = botao('✏️ Editar', () => {
-        d.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        d.querySelector('.pm-motivo').focus();
-      });
+      const lapis = botao('✏️ Editar', () => abrirModalPar(idx));
       lapis.setAttribute('aria-label', 'Editar atividade paralisada');
       const lixeira = botao('🗑️ Excluir', () => {
         if (!confirm('Excluir esta atividade paralisada do RDO?')) return;
-        d.remove();
+        parManuais.splice(idx, 1);
         atualizarParalisadas();
       });
       lixeira.classList.add('perigo');
@@ -1927,7 +1952,7 @@
       acoes.append(lapis, lixeira);
       item.appendChild(acoes);
       box.appendChild(item);
-    }
+    });
     for (const d of linhas) {
       const nome = d.querySelector('.at-nome').value.trim() || '(sem nome)';
       const sel = d.querySelector('.at-motivo');
@@ -2079,7 +2104,6 @@
   $('r-add-sst').addEventListener('click', () => $('r-ev-sst').appendChild(linhaEvento('SST')));
   $('r-add-ma').addEventListener('click', () => $('r-ev-ma').appendChild(linhaEvento('MA')));
   $('r-add-q').addEventListener('click', () => $('r-ev-q').appendChild(linhaEvento('Q')));
-  $('r-add-par').addEventListener('click', () => { $('r-par-manuais').appendChild(linhaParalisacaoManual()); atualizarParalisadas(); });
   configurarClima();
 
   // ---------- Eventos de navegação ----------
