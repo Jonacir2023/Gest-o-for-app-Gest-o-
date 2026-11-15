@@ -88,6 +88,10 @@
   .cal-dia { margin: 0; padding: 8px 0; min-height: 44px; background: var(--branco); color: var(--texto); border: 1px solid var(--borda); border-radius: 8px; font: inherit; font-size: 14px; }
   .cal-dia:disabled { color: var(--muted); opacity: .55; cursor: default; }
   .cal-dia.hoje { border: 2px solid var(--azul); }
+  .linha-rdo { position: relative; }
+  .linha-campos { display: grid; grid-template-columns: 1fr; gap: 0 10px; }
+  @media (min-width: 640px) { .linha-campos { grid-template-columns: repeat(3, 1fr); } }
+  .linha-campos label { margin-top: 6px; }
   .cal-dia.bolinha::after { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--azul); margin: 4px auto 0; }
 </style>
 </head>
@@ -126,6 +130,7 @@
     <nav id="nav-principal" class="abas oculto">
       <button type="button" class="aba" data-view="obras">Obras</button>
       <button type="button" class="aba" data-view="calendario">Calendário</button>
+      <button type="button" class="aba" data-view="rdo">RDO</button>
       <button type="button" class="aba" data-view="cadastros">Cadastros</button>
       <button type="button" class="aba" data-view="checkin">Check-in</button>
     </nav>
@@ -280,6 +285,62 @@
       </section>
     </div>
 
+    <div id="view-rdo" class="oculto">
+      <form id="form-rdo" class="card">
+        <h1>RDO</h1>
+        <div class="grid">
+          <div>
+            <label for="r-data">Data *</label>
+            <input id="r-data" type="date" required>
+          </div>
+          <div>
+            <label for="r-proj">Obra *</label>
+            <select id="r-proj" required></select>
+          </div>
+          <div>
+            <label for="r-frente">Frente *</label>
+            <input id="r-frente" required>
+          </div>
+          <div>
+            <label for="r-enc">Encarregado *</label>
+            <input id="r-enc" required>
+          </div>
+          <div class="full">
+            <label for="r-apt">Apontador *</label>
+            <input id="r-apt" required>
+          </div>
+        </div>
+        <button type="button" id="r-copiar" class="sec">Copiar do último diário</button>
+
+        <h2>Efetivo</h2>
+        <div id="r-efetivo"></div>
+        <button type="button" id="r-add-ef" class="sec">+ Pessoa</button>
+
+        <h2>Equipamentos</h2>
+        <div id="r-equip"></div>
+        <button type="button" id="r-add-eq" class="sec">+ Equipamento</button>
+
+        <h2>Atividades</h2>
+        <div id="r-ativ"></div>
+        <button type="button" id="r-add-at" class="sec">+ Atividade</button>
+
+        <div><button type="submit">Salvar RDO</button></div>
+        <div id="msg-rdo" class="msg"></div>
+      </form>
+
+      <div class="card">
+        <h2>RDOs lançados</h2>
+        <label for="r-mes">Mês</label>
+        <input id="r-mes" type="month">
+        <div class="tabela-wrap">
+          <table>
+            <thead><tr><th>Data</th><th>Frente</th><th>Encarregado</th><th>Apontador</th><th>Situação</th><th></th></tr></thead>
+            <tbody id="lista-rdo"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="view-calendario" class="oculto">
       <div class="card">
         <h1>Calendário</h1>
@@ -410,6 +471,7 @@
       $('view-cadastros').classList.add('oculto');
       $('view-checkin').classList.add('oculto');
       $('view-calendario').classList.add('oculto');
+      $('view-rdo').classList.add('oculto');
     }
   }
 
@@ -545,6 +607,8 @@
   function mostrarView(v) {
     $('area-obra').classList.toggle('oculto', v !== 'obras');
     $('view-cadastros').classList.toggle('oculto', v !== 'cadastros');
+    $('view-rdo').classList.toggle('oculto', v !== 'rdo');
+    if (v === 'rdo') carregarRdoView();
     $('view-calendario').classList.toggle('oculto', v !== 'calendario');
     if (v === 'calendario') carregarCalendario();
     $('view-checkin').classList.toggle('oculto', v !== 'checkin');
@@ -1297,6 +1361,264 @@
     calMes++;
     if (calMes > 11) { calMes = 0; calAno++; }
     carregarCalendario();
+  });
+
+  // ---------- RDO ----------
+  let rdoUnidades = [];
+  let rdoLocais = [];
+  const MOTIVOS_AUS = [['falta', 'Falta'], ['atestado', 'Atestado'], ['folga', 'Folga'], ['baixada', 'Baixada'], ['ferias', 'Férias']];
+  const STATUS_EQ = [['operando', 'Operando'], ['parado', 'Parado'], ['manutencao', 'Manutenção']];
+
+  function opcoes(sel, lista, rotuloVazio, valorAtual) {
+    sel.innerHTML = '';
+    if (rotuloVazio !== null) {
+      const v0 = document.createElement('option');
+      v0.value = '';
+      v0.textContent = rotuloVazio;
+      sel.appendChild(v0);
+    }
+    for (const [valor, rotulo] of lista) {
+      const o = document.createElement('option');
+      o.value = valor;
+      o.textContent = rotulo;
+      sel.appendChild(o);
+    }
+    sel.value = valorAtual || '';
+  }
+
+  function botaoRemover(div) {
+    const b = botao('Remover', () => div.remove());
+    b.classList.add('perigo');
+    return b;
+  }
+
+  function linhaEfetivo(v = {}) {
+    const div = document.createElement('div');
+    div.className = 'item-ck linha-rdo';
+    div.innerHTML = `
+      <div class="linha-campos">
+        <div><label>Nome *</label><input class="ef-nome"></div>
+        <div><label>Situação</label><select class="ef-pres"><option value="1">Presente</option><option value="0">Ausente</option></select></div>
+        <div class="ef-mot-bloco"><label>Motivo da ausência</label><select class="ef-mot"></select></div>
+        <div><label>Categoria</label><input class="ef-cat"></div>
+        <div><label>Grupo terceiro</label><input class="ef-terc" placeholder="Ex.: GEONOR - TERCEIRO"></div>
+      </div>`;
+    div.querySelector('.ef-nome').value = v.colaborador || '';
+    div.querySelector('.ef-pres').value = v.presente === false ? '0' : '1';
+    opcoes(div.querySelector('.ef-mot'), MOTIVOS_AUS, 'Selecione', v.motivo_ausencia || '');
+    div.querySelector('.ef-cat').value = v.categoria || '';
+    div.querySelector('.ef-terc').value = v.grupo_terceiro || '';
+    const ajustaMot = () => div.querySelector('.ef-mot-bloco').classList.toggle('oculto', div.querySelector('.ef-pres').value === '1');
+    div.querySelector('.ef-pres').addEventListener('change', ajustaMot);
+    ajustaMot();
+    div.appendChild(botaoRemover(div));
+    return div;
+  }
+
+  function linhaEquipamento(v = {}) {
+    const div = document.createElement('div');
+    div.className = 'item-ck linha-rdo';
+    div.innerHTML = `
+      <div class="linha-campos">
+        <div><label>Código *</label><input class="eq-cod"></div>
+        <div><label>Operador</label><input class="eq-op"></div>
+        <div><label>Status</label><select class="eq-st"></select></div>
+        <div><label>Horímetro</label><input class="eq-hor" inputmode="decimal"></div>
+        <div><label>Descrição</label><input class="eq-desc"></div>
+      </div>`;
+    div.querySelector('.eq-cod').value = v.equipamento_codigo || '';
+    div.querySelector('.eq-op').value = v.operador || '';
+    opcoes(div.querySelector('.eq-st'), STATUS_EQ, null, v.status || 'operando');
+    div.querySelector('.eq-hor').value = v.horimetro != null ? String(v.horimetro) : '';
+    div.querySelector('.eq-desc').value = v.descricao || '';
+    div.appendChild(botaoRemover(div));
+    return div;
+  }
+
+  function linhaAtividade(v = {}) {
+    const div = document.createElement('div');
+    div.className = 'item-ck linha-rdo';
+    div.innerHTML = `
+      <div class="linha-campos">
+        <div><label>Atividade *</label><input class="at-nome"></div>
+        <div><label>Unidade</label><select class="at-un"></select></div>
+        <div><label>Local</label><select class="at-local"></select></div>
+        <div><label>Quantidade</label><input class="at-qtd" inputmode="decimal"></div>
+        <div><label><input class="at-par" type="checkbox" style="width:auto"> Paralisada</label></div>
+        <div><label>Descrição</label><input class="at-desc"></div>
+      </div>`;
+    div.querySelector('.at-nome').value = v.atividade || '';
+    opcoes(div.querySelector('.at-un'), rdoUnidades.map((u) => [u.id, u.sigla]), 'Selecione', v.unidade_id || '');
+    opcoes(div.querySelector('.at-local'), rdoLocais.map((l) => [l.id, l.nome]), 'Selecione', v.local_id || '');
+    div.querySelector('.at-qtd').value = v.quantidade != null ? String(v.quantidade) : '';
+    div.querySelector('.at-par').checked = !!v.paralisada;
+    div.querySelector('.at-desc').value = v.descricao || '';
+    div.appendChild(botaoRemover(div));
+    return div;
+  }
+
+  async function carregarRdoView() {
+    const { data: projs, error } = await sb.from('projetos').select('id, nome').order('nome');
+    if (error) return setMsg($('msg-rdo'), 'Erro: ' + error.message, 'erro');
+    const atual = $('r-proj').value || (projs[0] && projs[0].id);
+    opcoes($('r-proj'), projs.map((p) => [p.id, p.nome]), 'Selecione a obra', atual);
+    if (!$('r-data').value) $('r-data').value = chaveData(new Date());
+    if (!$('r-mes').value) $('r-mes').value = chaveData(new Date()).slice(0, 7);
+    const { data: un } = await sb.from('unidades_medida').select('id, sigla');
+    rdoUnidades = (un || []).sort((a, b) => collator.compare(a.sigla, b.sigla));
+    await carregarLocaisRdo();
+    carregarListaRdo();
+  }
+
+  async function carregarLocaisRdo() {
+    const pid = $('r-proj').value;
+    rdoLocais = [];
+    if (pid) {
+      const { data } = await sb.from('locais').select('id, nome').eq('projeto_id', pid);
+      rdoLocais = (data || []).sort((a, b) => collator.compare(a.nome, b.nome));
+    }
+    document.querySelectorAll('#r-ativ .linha-rdo').forEach((d) => {
+      const sel = d.querySelector('.at-local');
+      opcoes(sel, rdoLocais.map((l) => [l.id, l.nome]), 'Selecione', sel.value);
+    });
+  }
+
+  async function carregarListaRdo() {
+    const tb = $('lista-rdo');
+    const [ano, mes] = $('r-mes').value.split('-').map(Number);
+    const ini = chaveData(new Date(ano, mes - 1, 1));
+    const fim = chaveData(new Date(ano, mes, 0));
+    const { data, error } = await sb.rpc('rdo_listar', { p_ini: ini, p_fim: fim });
+    if (error) return mostrarErroTabela(tb, 6, error.message);
+    tb.innerHTML = '';
+    if (!data.length) {
+      tb.innerHTML = '<tr><td colspan="6">Nenhum RDO neste mês.</td></tr>';
+      return;
+    }
+    for (const r of data) {
+      const tr = document.createElement('tr');
+      const celulas = [dataBr(r.data), r.frente, r.encarregado, r.apontador, r.atrasado ? 'Atrasado' : 'No prazo'];
+      for (const c of celulas) {
+        const td = document.createElement('td');
+        td.textContent = c;
+        tr.appendChild(td);
+      }
+      const acao = document.createElement('td');
+      acao.appendChild(botao('Abrir', () => abrirRdo(r.id)));
+      tr.appendChild(acao);
+      tb.appendChild(tr);
+    }
+  }
+
+  function preencherItens(det) {
+    $('r-efetivo').innerHTML = '';
+    $('r-equip').innerHTML = '';
+    $('r-ativ').innerHTML = '';
+    for (const e of det.efetivo) $('r-efetivo').appendChild(linhaEfetivo(e));
+    for (const q of det.equipamentos) $('r-equip').appendChild(linhaEquipamento(q));
+    for (const a of det.atividades) $('r-ativ').appendChild(linhaAtividade(a));
+  }
+
+  async function abrirRdo(id) {
+    const { data, error } = await sb.rpc('rdo_detalhe', { p_id: id });
+    if (error) return setMsg($('msg-rdo'), 'Erro: ' + error.message, 'erro');
+    $('r-data').value = data.data;
+    $('r-frente').value = data.frente;
+    $('r-enc').value = data.encarregado;
+    $('r-apt').value = data.apontador;
+    opcoes($('r-proj'), [...$('r-proj').options].filter((o) => o.value).map((o) => [o.value, o.textContent]), 'Selecione a obra', data.projeto_id);
+    await carregarLocaisRdo();
+    preencherItens(data);
+    setMsg($('msg-rdo'), 'RDO carregado. Ao salvar, cria um novo RDO e substitui este.', '');
+    $('form-rdo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function copiarUltimo() {
+    const pid = $('r-proj').value;
+    const msg = $('msg-rdo');
+    if (!pid) return setMsg(msg, 'Escolha a obra antes de copiar.', 'erro');
+    const { data: id, error } = await sb.rpc('rdo_ultimo', { p_projeto: pid });
+    if (error) return setMsg(msg, 'Erro: ' + error.message, 'erro');
+    if (!id) return setMsg(msg, 'Não há RDO anterior nesta obra.', 'erro');
+    const { data, error: e2 } = await sb.rpc('rdo_detalhe', { p_id: id });
+    if (e2) return setMsg(msg, 'Erro: ' + e2.message, 'erro');
+    preencherItens(data);
+    setMsg(msg, 'Efetivo, equipamentos e atividades copiados do último diário. Nada foi salvo ainda.', 'ok');
+  }
+
+  const lerLinhas = (sel) => [...document.querySelectorAll(sel + ' .linha-rdo')];
+
+  function coletarEfetivo() {
+    return lerLinhas('#r-efetivo').map((d) => ({
+      colaborador: d.querySelector('.ef-nome').value.trim(),
+      presente: d.querySelector('.ef-pres').value === '1',
+      motivo_ausencia: d.querySelector('.ef-pres').value === '1' ? null : (d.querySelector('.ef-mot').value || null),
+      categoria: d.querySelector('.ef-cat').value.trim() || null,
+      grupo_terceiro: d.querySelector('.ef-terc').value.trim() || null,
+    }));
+  }
+
+  function coletarEquipamentos() {
+    return lerLinhas('#r-equip').map((d) => ({
+      codigo: d.querySelector('.eq-cod').value.trim(),
+      operador: d.querySelector('.eq-op').value.trim() || null,
+      status: d.querySelector('.eq-st').value,
+      horimetro: d.querySelector('.eq-hor').value.trim() || null,
+      descricao: d.querySelector('.eq-desc').value.trim() || null,
+    }));
+  }
+
+  function coletarAtividades() {
+    return lerLinhas('#r-ativ').map((d) => ({
+      atividade: d.querySelector('.at-nome').value.trim(),
+      unidade_id: d.querySelector('.at-un').value || null,
+      local_id: d.querySelector('.at-local').value || null,
+      quantidade: d.querySelector('.at-qtd').value.trim() || null,
+      paralisada: d.querySelector('.at-par').checked,
+      descricao: d.querySelector('.at-desc').value.trim() || null,
+    }));
+  }
+
+  const ERROS_RDO = {
+    campos_obrigatorios: 'Preencha data, obra, frente, encarregado e apontador.',
+    colaborador_obrigatorio: 'Informe o nome em todas as linhas do efetivo.',
+    codigo_equipamento_obrigatorio: 'Informe o código em todas as linhas de equipamento.',
+    atividade_obrigatoria: 'Informe a atividade em todas as linhas.',
+    sem_permissao: 'Seu perfil não pode lançar RDO.',
+  };
+
+  $('r-proj').addEventListener('change', carregarLocaisRdo);
+  $('r-mes').addEventListener('change', carregarListaRdo);
+  $('r-copiar').addEventListener('click', copiarUltimo);
+  $('r-add-ef').addEventListener('click', () => $('r-efetivo').appendChild(linhaEfetivo()));
+  $('r-add-eq').addEventListener('click', () => $('r-equip').appendChild(linhaEquipamento()));
+  $('r-add-at').addEventListener('click', () => $('r-ativ').appendChild(linhaAtividade()));
+
+  $('form-rdo').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-rdo');
+    const cab = {
+      data: $('r-data').value,
+      projeto_id: $('r-proj').value,
+      frente: $('r-frente').value.trim(),
+      encarregado: $('r-enc').value.trim(),
+      apontador: $('r-apt').value.trim(),
+    };
+    if (!cab.data || !cab.projeto_id || !cab.frente || !cab.encarregado || !cab.apontador) {
+      return setMsg(msg, ERROS_RDO.campos_obrigatorios, 'erro');
+    }
+    const efetivo = coletarEfetivo();
+    const equipamentos = coletarEquipamentos();
+    const atividades = coletarAtividades();
+    if (efetivo.some((x) => !x.colaborador)) return setMsg(msg, ERROS_RDO.colaborador_obrigatorio, 'erro');
+    if (equipamentos.some((x) => !x.codigo)) return setMsg(msg, ERROS_RDO.codigo_equipamento_obrigatorio, 'erro');
+    if (atividades.some((x) => !x.atividade)) return setMsg(msg, ERROS_RDO.atividade_obrigatoria, 'erro');
+
+    setMsg(msg, 'Salvando…');
+    const { error } = await sb.rpc('rdo_salvar', { p: { ...cab, efetivo, equipamentos, atividades } });
+    if (error) return setMsg(msg, ERROS_RDO[error.message] || error.message, 'erro');
+    setMsg(msg, 'RDO salvo.', 'ok');
+    carregarListaRdo();
   });
 
   // ---------- Eventos de navegação ----------
