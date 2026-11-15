@@ -110,6 +110,10 @@
   .seg-op button.on[data-v="sem_operacao"] { background: var(--erro); border-color: var(--erro); }
   .seg-op button.on[data-v="operacao"] { background: var(--ok); border-color: var(--ok); }
   .paralisadas-lista { font-size: 14px; margin-bottom: 6px; }
+  .efetivo-cat { font-weight: 700; color: var(--azul); margin: 12px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .efetivo-row { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--borda); }
+  @media (min-width: 700px) { .efetivo-row { grid-template-columns: 1fr 190px; align-items: center; } }
+  .efetivo-row select { margin: 0; }
   .modal { position: fixed; inset: 0; background: rgba(36, 55, 75, .45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
   .caixa-modal { background: var(--branco); border-radius: 12px; padding: 18px; width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0, 0, 0, .2); }
   .acoes-modal { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -230,6 +234,7 @@
         <button type="button" class="aba" data-cad="locais">Locais</button>
         <button type="button" class="aba" data-cad="motivos">Motivos de justificativa</button>
         <button type="button" class="aba" data-cad="lideres">Líderes da Pauta</button>
+        <button type="button" class="aba" data-cad="efetivo">Efetivo</button>
       </nav>
 
       <section id="cad-unidades" class="card oculto">
@@ -317,6 +322,44 @@
           <datalist id="lista-setores"></datalist>
           <button type="submit">Acrescentar líder</button>
           <div id="msg-lider" class="msg"></div>
+        </form>
+      </section>
+
+      <section id="cad-efetivo" class="card oculto">
+        <h1>Efetivo</h1>
+        <p class="texto-apoio">Cadastro de quem pode ser marcado no RDO. Dar baixa tira a pessoa dos RDOs a partir de hoje; os RDOs anteriores continuam com ela.</p>
+        <div class="tabela-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>Matrícula</th><th>Função</th><th>Categoria</th><th>Situação</th><th></th></tr></thead>
+            <tbody id="lista-colab"></tbody>
+          </table>
+        </div>
+        <form id="form-colab">
+          <div class="grid">
+            <div>
+              <label for="c-nome">Nome *</label>
+              <input id="c-nome" required>
+            </div>
+            <div>
+              <label for="c-mat">Matrícula</label>
+              <input id="c-mat">
+            </div>
+            <div>
+              <label for="c-funcao">Função</label>
+              <input id="c-funcao">
+            </div>
+            <div>
+              <label for="c-cat">Categoria *</label>
+              <input id="c-cat" list="lista-cats" required>
+              <datalist id="lista-cats"></datalist>
+            </div>
+            <div class="full">
+              <label for="c-terc">Grupo terceiro (opcional: nome da empresa)</label>
+              <input id="c-terc" placeholder="Ex.: GEONOR - TERCEIRO">
+            </div>
+          </div>
+          <button type="submit">Acrescentar colaborador</button>
+          <div id="msg-colab" class="msg"></div>
         </form>
       </section>
     </div>
@@ -407,8 +450,7 @@
 
           <section class="rdo-card">
             <h2>Efetivo</h2>
-            <div id="r-efetivo"></div>
-            <button type="button" id="r-add-ef" class="sec">+ Pessoa</button>
+            <div id="r-efetivo" class="efetivo-lista"></div>
           </section>
 
           <section class="rdo-card">
@@ -781,7 +823,7 @@
   }
 
   function mostrarCad(c) {
-    ['unidades', 'locais', 'motivos', 'lideres'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
+    ['unidades', 'locais', 'motivos', 'lideres', 'efetivo'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
     document.querySelectorAll('[data-cad]').forEach((b) => b.classList.toggle('ativa', b.dataset.cad === c));
   }
 
@@ -814,6 +856,7 @@
   }
 
   function carregarCadastros() {
+    carregarColaboradores();
     carregarUnidades();
     carregarProjetosSelect();
     carregarMotivos();
@@ -1651,6 +1694,7 @@
     const { data: un } = await sb.from('unidades_medida').select('id, sigla');
     rdoUnidades = (un || []).sort((a, b) => collator.compare(a.sigla, b.sigla));
     await carregarLocaisRdo();
+    await carregarEfetivoRDO();
     carregarListaRdo();
   }
 
@@ -1695,10 +1739,9 @@
   }
 
   function preencherItens(det) {
-    $('r-efetivo').innerHTML = '';
     $('r-equip').innerHTML = '';
     $('r-ativ').innerHTML = '';
-    for (const e of det.efetivo) $('r-efetivo').appendChild(linhaEfetivo(e));
+    aplicarEfetivoDet(det.efetivo);
     for (const q of det.equipamentos) $('r-equip').appendChild(linhaEquipamento(q));
     for (const a of det.atividades) $('r-ativ').appendChild(linhaAtividade(a));
     atualizarParalisadas();
@@ -1745,15 +1788,165 @@
 
   const lerLinhas = (sel) => [...document.querySelectorAll(sel + ' .linha-rdo')];
 
-  function coletarEfetivo() {
-    return lerLinhas('#r-efetivo').map((d) => ({
-      colaborador: d.querySelector('.ef-nome').value.trim(),
-      presente: d.querySelector('.ef-pres').value === '1',
-      motivo_ausencia: d.querySelector('.ef-pres').value === '1' ? null : (d.querySelector('.ef-mot').value || null),
-      categoria: d.querySelector('.ef-cat').value.trim() || null,
-      grupo_terceiro: d.querySelector('.ef-terc').value.trim() || null,
-    }));
+  // ---------- Efetivo: cadastro e marcação no RDO ----------
+  let rdoColab = [];
+
+  // Vigente no dia: sem baixa, ou dia anterior à baixa (a baixa vale a partir do dia dela)
+  const vigenteNoDia = (c, dia) => !c.inativo_em || dia < c.inativo_em;
+
+  async function carregarColaboradores() {
+    const tb = $('lista-colab');
+    const { data, error } = await sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em');
+    if (error) return mostrarErroTabela(tb, 6, error.message);
+    const lista = data.slice().sort((a, b) => collator.compare(a.categoria + ' ' + a.nome, b.categoria + ' ' + b.nome));
+    const dl = $('lista-cats');
+    dl.innerHTML = '';
+    for (const cat of [...new Set(lista.map((c) => c.categoria))]) {
+      const o = document.createElement('option');
+      o.value = cat;
+      dl.appendChild(o);
+    }
+    tb.innerHTML = '';
+    if (!lista.length) {
+      tb.innerHTML = '<tr><td colspan="6">Nenhum colaborador cadastrado.</td></tr>';
+      return;
+    }
+    for (const c of lista) {
+      const tr = document.createElement('tr');
+      const celulas = [c.nome, c.matricula || '', c.funcao || '',
+        c.categoria + (c.grupo_terceiro ? ' · ' + c.grupo_terceiro : ''),
+        c.inativo_em ? 'Baixa em ' + dataBr(c.inativo_em) : 'Ativo'];
+      for (const t of celulas) {
+        const td = document.createElement('td');
+        td.textContent = t;
+        tr.appendChild(td);
+      }
+      const acao = document.createElement('td');
+      if (!c.inativo_em) {
+        const b = botao('Dar baixa', () => darBaixaColab(c));
+        b.classList.add('perigo');
+        acao.appendChild(b);
+      }
+      tr.appendChild(acao);
+      tb.appendChild(tr);
+    }
   }
+
+  async function darBaixaColab(c) {
+    if (!confirm('Dar baixa em ' + c.nome + '? Ele sai dos RDOs a partir de hoje. Os RDOs anteriores continuam com ele.')) return;
+    const { error } = await sb.from('colaboradores').update({ inativo_em: chaveData(new Date()) }).eq('id', c.id);
+    if (error) return alert('Erro: ' + error.message);
+    carregarColaboradores();
+  }
+
+  $('form-colab').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-colab');
+    const nome = $('c-nome').value.trim();
+    const categoria = $('c-cat').value.trim();
+    if (!nome || !categoria) return setMsg(msg, 'Informe nome e categoria.', 'erro');
+    setMsg(msg, 'Salvando…');
+    const dados = {
+      nome,
+      matricula: $('c-mat').value.trim() || null,
+      funcao: $('c-funcao').value.trim() || null,
+      categoria,
+      grupo_terceiro: $('c-terc').value.trim() || null,
+    };
+    const { error } = await sb.from('colaboradores').insert(dados);
+    if (error) return setMsg(msg, error.message, 'erro');
+    ['c-nome', 'c-mat', 'c-funcao', 'c-cat', 'c-terc'].forEach((id) => { $(id).value = ''; });
+    setMsg(msg, 'Colaborador acrescentado.', 'ok');
+    carregarColaboradores();
+  });
+
+  function statusEfetivoAtual() {
+    const map = {};
+    document.querySelectorAll('#r-efetivo .efetivo-row').forEach((row) => {
+      const v = row.querySelector('.ef-status').value;
+      if (v) map[row.dataset.nome] = v;
+    });
+    return map;
+  }
+
+  async function carregarEfetivoRDO(mapa) {
+    const dia = $('r-data').value;
+    const box = $('r-efetivo');
+    if (!dia) {
+      box.textContent = 'Escolha a data do RDO.';
+      return;
+    }
+    const estado = mapa || statusEfetivoAtual();
+    const { data, error } = await sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em');
+    if (error) {
+      box.textContent = 'Erro: ' + error.message;
+      return;
+    }
+    rdoColab = data.filter((c) => vigenteNoDia(c, dia));
+    renderEfetivoRDO(estado);
+  }
+
+  function renderEfetivoRDO(map) {
+    const box = $('r-efetivo');
+    box.innerHTML = '';
+    if (!rdoColab.length) {
+      box.textContent = 'Nenhum colaborador vigente nesta data. Cadastre em Cadastros → Efetivo.';
+      return;
+    }
+    const grupos = {};
+    for (const c of rdoColab) {
+      const chave = c.grupo_terceiro ? c.categoria + ' · ' + c.grupo_terceiro : c.categoria;
+      (grupos[chave] = grupos[chave] || []).push(c);
+    }
+    for (const chave of Object.keys(grupos).sort((a, b) => collator.compare(a, b))) {
+      const h = document.createElement('div');
+      h.className = 'efetivo-cat';
+      h.textContent = chave + ' (' + grupos[chave].length + ')';
+      box.appendChild(h);
+      for (const c of grupos[chave].slice().sort((a, b) => collator.compare(a.nome, b.nome))) {
+        const row = document.createElement('div');
+        row.className = 'efetivo-row';
+        row.dataset.nome = c.nome;
+        row.dataset.cat = c.categoria;
+        row.dataset.terc = c.grupo_terceiro || '';
+        const info = document.createElement('div');
+        const nomeEl = document.createElement('strong');
+        nomeEl.textContent = c.nome;
+        const meta = document.createElement('span');
+        meta.className = 'texto-apoio';
+        meta.textContent = [c.matricula, c.funcao].filter(Boolean).join(' · ');
+        info.append(nomeEl, meta);
+        const sel = document.createElement('select');
+        sel.className = 'ef-status';
+        opcoes(sel, [['presente', 'Presente']].concat(MOTIVOS_AUS), 'Não lançado', map[c.nome] || '');
+        row.append(info, sel);
+        box.appendChild(row);
+      }
+    }
+  }
+
+  function aplicarEfetivoDet(efetivo) {
+    const map = {};
+    for (const e of efetivo || []) map[e.colaborador] = e.presente ? 'presente' : (e.motivo_ausencia || 'falta');
+    carregarEfetivoRDO(map);
+  }
+
+  function coletarEfetivo() {
+    return [...document.querySelectorAll('#r-efetivo .efetivo-row')]
+      .filter((row) => row.querySelector('.ef-status').value)
+      .map((row) => {
+        const v = row.querySelector('.ef-status').value;
+        return {
+          colaborador: row.dataset.nome,
+          presente: v === 'presente',
+          motivo_ausencia: v === 'presente' ? null : v,
+          categoria: row.dataset.cat || null,
+          grupo_terceiro: row.dataset.terc || null,
+        };
+      });
+  }
+
+  $('r-data').addEventListener('change', () => carregarEfetivoRDO());
 
   function coletarEquipamentos() {
     return lerLinhas('#r-equip').map((d) => ({
@@ -1791,7 +1984,6 @@
   $('r-proj').addEventListener('change', carregarLocaisRdo);
   $('r-mes').addEventListener('change', carregarListaRdo);
   $('r-copiar').addEventListener('click', copiarUltimo);
-  $('r-add-ef').addEventListener('click', () => $('r-efetivo').appendChild(linhaEfetivo()));
   $('r-add-eq').addEventListener('click', () => $('r-equip').appendChild(linhaEquipamento()));
   $('r-add-at').addEventListener('click', () => { $('r-ativ').appendChild(linhaAtividade()); atualizarParalisadas(); });
 
