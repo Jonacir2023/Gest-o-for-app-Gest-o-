@@ -243,6 +243,7 @@
         <button type="button" class="aba" data-cad="locais">Locais</button>
         <button type="button" class="aba" data-cad="motivos">Motivos de justificativa</button>
         <button type="button" class="aba" data-cad="lideres">Líderes da Pauta</button>
+        <button type="button" class="aba" data-cad="categorias">Categorias e funções</button>
         <button type="button" class="aba" data-cad="efetivo">Efetivo</button>
       </nav>
 
@@ -334,6 +335,31 @@
         </form>
       </section>
 
+      <section id="cad-categorias" class="oculto">
+        <div class="card">
+          <h1>Categorias de efetivo</h1>
+          <p class="texto-apoio">Lista usada para escolher a categoria de cada colaborador. Toque no + para acrescentar.</p>
+          <div class="tabela-wrap">
+            <table>
+              <thead><tr><th>Categoria</th></tr></thead>
+              <tbody id="lista-categorias"></tbody>
+            </table>
+          </div>
+          <button id="btn-nova-cat" type="button" class="btn-add-round" aria-label="Nova categoria">+</button>
+        </div>
+        <div class="card">
+          <h1>Funções</h1>
+          <p class="texto-apoio">Lista usada para escolher a função de cada colaborador. Toque no + para acrescentar.</p>
+          <div class="tabela-wrap">
+            <table>
+              <thead><tr><th>Função</th></tr></thead>
+              <tbody id="lista-funcoes"></tbody>
+            </table>
+          </div>
+          <button id="btn-nova-funcao" type="button" class="btn-add-round" aria-label="Nova função">+</button>
+        </div>
+      </section>
+
       <section id="cad-efetivo" class="card oculto">
         <h1>Efetivo</h1>
         <p class="texto-apoio">Cadastro de quem pode ser marcado no RDO. Dar baixa tira a pessoa dos RDOs a partir de hoje; os RDOs anteriores continuam com ela.</p>
@@ -355,12 +381,11 @@
             </div>
             <div>
               <label for="c-funcao">Função</label>
-              <input id="c-funcao">
+              <select id="c-funcao"></select>
             </div>
             <div>
               <label for="c-cat">Categoria *</label>
-              <input id="c-cat" list="lista-cats" required>
-              <datalist id="lista-cats"></datalist>
+              <select id="c-cat" required></select>
             </div>
             <div class="full">
               <label for="c-terc">Grupo terceiro (opcional: nome da empresa)</label>
@@ -607,6 +632,19 @@
   </section>
 </main>
 
+<div id="modal-cat" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="cat-titulo">
+  <form id="form-cat" class="caixa-modal">
+    <h2 id="cat-titulo">Nova categoria</h2>
+    <label for="cat-nome">Nome *</label>
+    <input id="cat-nome" required>
+    <div class="acoes-modal">
+      <button type="submit">Salvar</button>
+      <button type="button" id="cat-cancelar" class="sec">Cancelar</button>
+    </div>
+    <div id="msg-cat" class="msg"></div>
+  </form>
+</div>
+
 <div id="modal-colab" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="colab-titulo">
   <form id="form-colab-rapido" class="caixa-modal">
     <h2 id="colab-titulo">Novo colaborador</h2>
@@ -615,9 +653,9 @@
     <label for="cr-mat">Matrícula</label>
     <input id="cr-mat">
     <label for="cr-funcao">Função</label>
-    <input id="cr-funcao">
+    <select id="cr-funcao"></select>
     <label for="cr-cat">Categoria *</label>
-    <input id="cr-cat" list="lista-cats" required>
+    <select id="cr-cat" required></select>
     <label for="cr-terc">Grupo terceiro (opcional)</label>
     <input id="cr-terc" placeholder="Ex.: GEONOR - TERCEIRO">
     <div class="acoes-modal">
@@ -859,7 +897,7 @@
   }
 
   function mostrarCad(c) {
-    ['unidades', 'locais', 'motivos', 'lideres', 'efetivo'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
+    ['unidades', 'locais', 'motivos', 'lideres', 'efetivo', 'categorias'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
     document.querySelectorAll('[data-cad]').forEach((b) => b.classList.toggle('ativa', b.dataset.cad === c));
   }
 
@@ -892,6 +930,7 @@
   }
 
   function carregarCadastros() {
+    carregarListasEfetivo();
     carregarColaboradores();
     carregarUnidades();
     carregarProjetosSelect();
@@ -1835,13 +1874,6 @@
     const { data, error } = await sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em');
     if (error) return mostrarErroTabela(tb, 6, error.message);
     const lista = data.slice().sort((a, b) => collator.compare(a.categoria + ' ' + a.nome, b.categoria + ' ' + b.nome));
-    const dl = $('lista-cats');
-    dl.innerHTML = '';
-    for (const cat of [...new Set(lista.map((c) => c.categoria))]) {
-      const o = document.createElement('option');
-      o.value = cat;
-      dl.appendChild(o);
-    }
     tb.innerHTML = '';
     if (!lista.length) {
       tb.innerHTML = '<tr><td colspan="6">Nenhum colaborador cadastrado.</td></tr>';
@@ -1994,8 +2026,85 @@
   $('r-efetivo').addEventListener('change', atualizarTiles);
   $('r-data').addEventListener('change', () => carregarEfetivoRDO());
 
+  // ---------- Categorias e funções do efetivo (listas suspensas) ----------
+  const TABELAS_LISTA = { categorias_efetivo: 'Categoria', funcoes_efetivo: 'Função' };
+  let listaTipoAtual = null;
+
+  function preencherSelectLista(sel, nomes, rotuloVazio, atual) {
+    sel.innerHTML = '';
+    const v0 = document.createElement('option');
+    v0.value = '';
+    v0.textContent = rotuloVazio;
+    sel.appendChild(v0);
+    for (const n of nomes) {
+      const o = document.createElement('option');
+      o.value = n;
+      o.textContent = n;
+      sel.appendChild(o);
+    }
+    sel.value = atual || '';
+  }
+
+  async function carregarListasEfetivo() {
+    const [cats, funcs] = await Promise.all([
+      sb.from('categorias_efetivo').select('nome').order('nome'),
+      sb.from('funcoes_efetivo').select('nome').order('nome'),
+    ]);
+    const nomesCat = (cats.data || []).map((x) => x.nome);
+    const nomesFun = (funcs.data || []).map((x) => x.nome);
+    const erroTb = (tb, msg, colunas) => { tb.innerHTML = '<tr><td colspan="' + colunas + '" class="erro"></td></tr>'; tb.querySelector('td').textContent = 'Erro: ' + msg; };
+    if (cats.error) erroTb($('lista-categorias'), cats.error.message, 1);
+    if (funcs.error) erroTb($('lista-funcoes'), funcs.error.message, 1);
+    const preencherTabela = (tb, nomes, vazio) => {
+      tb.innerHTML = '';
+      if (!nomes.length) {
+        tb.innerHTML = '<tr><td>' + vazio + '</td></tr>';
+        return;
+      }
+      for (const n of nomes) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.textContent = n;
+        tr.appendChild(td);
+        tb.appendChild(tr);
+      }
+    };
+    preencherTabela($('lista-categorias'), nomesCat, 'Nenhuma categoria cadastrada.');
+    preencherTabela($('lista-funcoes'), nomesFun, 'Nenhuma função cadastrada.');
+    preencherSelectLista($('c-cat'), nomesCat, 'Selecione a categoria', $('c-cat').value);
+    preencherSelectLista($('cr-cat'), nomesCat, 'Selecione a categoria', $('cr-cat').value);
+    preencherSelectLista($('c-funcao'), nomesFun, 'Sem função', $('c-funcao').value);
+    preencherSelectLista($('cr-funcao'), nomesFun, 'Sem função', $('cr-funcao').value);
+  }
+
+  function abrirModalLista(tipo) {
+    listaTipoAtual = tipo;
+    $('cat-titulo').textContent = 'Nova ' + TABELAS_LISTA[tipo].toLowerCase();
+    $('cat-nome').value = '';
+    setMsg($('msg-cat'), '');
+    $('modal-cat').classList.remove('oculto');
+    $('cat-nome').focus();
+  }
+
+  $('btn-nova-cat').addEventListener('click', () => abrirModalLista('categorias_efetivo'));
+  $('btn-nova-funcao').addEventListener('click', () => abrirModalLista('funcoes_efetivo'));
+  $('cat-cancelar').addEventListener('click', () => $('modal-cat').classList.add('oculto'));
+  $('modal-cat').addEventListener('click', (ev) => { if (ev.target.id === 'modal-cat') $('modal-cat').classList.add('oculto'); });
+  $('form-cat').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('msg-cat');
+    const nome = $('cat-nome').value.trim();
+    if (!nome) return setMsg(msg, 'Informe o nome.', 'erro');
+    setMsg(msg, 'Salvando…');
+    const { error } = await sb.from(listaTipoAtual).insert({ nome });
+    if (error) return setMsg(msg, error.code === '23505' ? 'Já existe com esse nome.' : error.message, 'erro');
+    $('modal-cat').classList.add('oculto');
+    carregarListasEfetivo();
+  });
+
   $('r-add-colab').addEventListener('click', () => {
     $('form-colab-rapido').reset();
+    carregarListasEfetivo();
     setMsg($('msg-colab-rapido'), '');
     $('modal-colab').classList.remove('oculto');
     $('cr-nome').focus();
