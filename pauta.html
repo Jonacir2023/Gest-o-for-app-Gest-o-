@@ -110,20 +110,20 @@
       <input type="hidden" id="i-id">
       <div class="grid">
         <div>
-          <label for="i-criador">Criador</label>
-          <input id="i-criador" readonly>
-        </div>
-        <div>
-          <label for="i-setor-criador">Setor do criador</label>
-          <input id="i-setor-criador" readonly>
+          <label for="i-criador">Criador *</label>
+          <select id="i-criador" required></select>
         </div>
         <div>
           <label for="i-resp">Responsável *</label>
           <select id="i-resp" required></select>
         </div>
-        <div class="full">
-          <label for="i-setor">Setor (do responsável)</label>
-          <input id="i-setor" readonly>
+        <div>
+          <label for="i-setor-criador">Setor do criador</label>
+          <select id="i-setor-criador"></select>
+        </div>
+        <div>
+          <label for="i-setor">Setor do responsável</label>
+          <select id="i-setor"></select>
         </div>
         <div>
           <label for="i-area">Área *</label>
@@ -223,6 +223,7 @@
     $('sair').classList.remove('oculto');
     $('nome-lider').textContent = liderNome;
     await carregarLideres();
+    await carregarSetores();
     await carregarItens();
     clearInterval(timer);
     timer = setInterval(carregarItens, SYNC_MS);
@@ -299,7 +300,7 @@
   // ---------- Itens ----------
   async function carregarItens() {
     if (!token) return;
-    const { data, error } = await sb.rpc('pauta_listar_v4', { p_token: token });
+    const { data, error } = await sb.rpc('pauta_listar_v5', { p_token: token });
     if (error) {
       if (error.message.includes('sessao_invalida')) { sair(); return setMsg($('msg-entrar'), traduz('sessao_invalida'), 'erro'); }
       return;
@@ -339,8 +340,31 @@
     }
   }
 
-  function preencherResponsaveis(selecionado) {
-    const sel = $('i-resp');
+  // Setores vêm da lista do cadastro (Setores e funções)
+  let setores = [];
+
+  async function carregarSetores() {
+    const { data, error } = await sb.rpc('pauta_lista_setores');
+    if (!error) setores = (data || []).map((x) => x.nome);
+  }
+
+  function preencherSelectSetor(sel, atual) {
+    sel.innerHTML = '';
+    const v0 = document.createElement('option');
+    v0.value = '';
+    v0.textContent = 'Selecione o setor';
+    sel.appendChild(v0);
+    const lista = atual && !setores.includes(atual) ? [...setores, atual] : setores;
+    for (const n of lista) {
+      const o = document.createElement('option');
+      o.value = n;
+      o.textContent = n;
+      sel.appendChild(o);
+    }
+    sel.value = atual || '';
+  }
+
+  function preencherLideresSelect(sel, selecionado) {
     sel.innerHTML = '';
     for (const l of lideres) {
       const opt = document.createElement('option');
@@ -349,24 +373,24 @@
       if (l.id === selecionado) opt.selected = true;
       sel.appendChild(opt);
     }
-    atualizarSetor();
   }
 
-  // O setor vem do cadastro do líder escolhido como responsável
-  function atualizarSetor() {
-    const l = lideres.find((x) => x.id === $('i-resp').value);
-    $('i-setor').value = l && l.setor ? l.setor : 'Sem setor cadastrado';
-  }
-  $('i-resp').addEventListener('change', atualizarSetor);
+  // Ao escolher criador ou responsável, o setor vem do cadastro desse líder (pode trocar na lista)
+  const setorDoLider = (id) => {
+    const l = lideres.find((x) => x.id === id);
+    return l && l.setor ? l.setor : '';
+  };
+  $('i-criador').addEventListener('change', () => preencherSelectSetor($('i-setor-criador'), setorDoLider($('i-criador').value)));
+  $('i-resp').addEventListener('change', () => preencherSelectSetor($('i-setor'), setorDoLider($('i-resp').value)));
 
   function abrirForm(it) {
     $('form-item').classList.remove('oculto');
     $('titulo-item').textContent = it ? 'Editar item' : 'Novo item';
     $('i-id').value = it ? it.id : '';
-    preencherResponsaveis(it ? it.responsavel_id : liderId);
-    $('i-criador').value = it ? it.criador_nome : liderNome;
-    const eu = lideres.find((x) => x.id === liderId);
-    $('i-setor-criador').value = it ? (it.criador_setor || 'Sem setor cadastrado') : (eu && eu.setor ? eu.setor : 'Sem setor cadastrado');
+    preencherLideresSelect($('i-criador'), it ? it.criador_id : liderId);
+    preencherLideresSelect($('i-resp'), it ? it.responsavel_id : liderId);
+    preencherSelectSetor($('i-setor-criador'), it ? (it.criador_setor || '') : setorDoLider(liderId));
+    preencherSelectSetor($('i-setor'), it ? (it.responsavel_setor || '') : setorDoLider(liderId));
     $('i-area').value = it?.area || '';
     $('i-assunto').value = it?.assunto || '';
     $('i-desc').value = it?.descricao || '';
@@ -384,10 +408,13 @@
     e.preventDefault();
     const msg = $('msg-item');
     setMsg(msg, 'Salvando…');
-    const { error } = await sb.rpc('pauta_salvar', {
+    const { error } = await sb.rpc('pauta_salvar_v2', {
       p_token: token,
       p_id: $('i-id').value || null,
+      p_criador_id: $('i-criador').value,
       p_responsavel_id: $('i-resp').value,
+      p_criador_setor: $('i-setor-criador').value || null,
+      p_responsavel_setor: $('i-setor').value || null,
       p_area: $('i-area').value.trim(),
       p_assunto: $('i-assunto').value.trim(),
       p_descricao: $('i-desc').value.trim() || null,
