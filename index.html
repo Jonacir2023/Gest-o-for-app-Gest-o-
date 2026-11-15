@@ -133,6 +133,8 @@
   .pill { background: var(--fundo); color: var(--azul); border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
   .colab-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--borda); }
   .colab-row button { margin: 0; padding: 6px 10px; font-size: 13px; }
+  .acoes-colab { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .acoes-colab button { margin: 0; padding: 4px 8px; font-size: 13px; }
   .btn-dash { width: 100%; margin: 10px 0 0; padding: 10px; background: var(--branco); color: #1C94C4; border: 1px dashed #1C94C4; border-radius: 8px; font-weight: 600; cursor: pointer; }
   .btn-dash:hover { background: #D5E4E6; }
   .modal { position: fixed; inset: 0; background: rgba(36, 55, 75, .45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
@@ -1932,9 +1934,17 @@
         meta.className = 'texto-apoio';
         meta.textContent = [c.funcao, c.grupo_terceiro || 'Empresa própria'].filter(Boolean).join(' · ');
         info.append(linha, meta);
-        const b = botao('Dar baixa', () => darBaixaColab(c));
-        b.classList.add('perigo');
-        row.append(info, b);
+        const acoes = document.createElement('div');
+        acoes.className = 'acoes-colab';
+        const lapis = botao('✏️', () => abrirModalColab(cat, c));
+        lapis.setAttribute('aria-label', 'Editar colaborador');
+        const lixeira = botao('🗑️', () => darExcluirColab(c));
+        lixeira.classList.add('perigo');
+        lixeira.setAttribute('aria-label', 'Excluir colaborador');
+        const baixa = botao('Dar baixa', () => darBaixaColab(c));
+        baixa.classList.add('perigo');
+        acoes.append(lapis, lixeira, baixa);
+        row.append(info, acoes);
         bloco.appendChild(row);
       }
       if (baixados) {
@@ -1953,6 +1963,14 @@
       bloco.appendChild(add);
       box.appendChild(bloco);
     }
+  }
+
+  async function darExcluirColab(c) {
+    if (!confirm('Excluir ' + c.nome + ' do cadastro? Os RDOs antigos continuam com o nome dele. Para tirar a pessoa só dos próximos dias, use Dar baixa.')) return;
+    const { error } = await sb.from('colaboradores').delete().eq('id', c.id);
+    if (error) return alert('Erro: ' + error.message);
+    carregarColaboradores();
+    carregarEfetivoRDO(statusEfetivoAtual());
   }
 
   async function darBaixaColab(c) {
@@ -2208,10 +2226,24 @@
     carregarColaboradores();
   });
 
-  function abrirModalColab(categoria) {
+  // Mesma janela para incluir e para editar (c = colaborador a editar)
+  let colabEditandoId = null;
+
+  function abrirModalColab(categoria, c = null) {
     $('form-colab-rapido').reset();
+    colabEditandoId = c ? c.id : null;
+    $('colab-titulo').textContent = c ? 'Editar Colaborador' : 'Novo Colaborador';
+    $('cr-mat').value = c ? (c.matricula || '') : '';
+    $('cr-nome').value = c ? c.nome : '';
+    $('cr-terc').value = c ? (c.grupo_terceiro || '') : '';
+    $('cr-apto').checked = c ? !!c.apto_rdo : false;
     carregarListasEfetivo().then(() => {
-      if (categoria) $('cr-cat').value = categoria;
+      if (c) {
+        $('cr-cat').value = c.categoria || '';
+        $('cr-funcao').value = c.funcao || '';
+      } else if (categoria) {
+        $('cr-cat').value = categoria;
+      }
     });
     setMsg($('msg-colab-rapido'), '');
     $('modal-colab').classList.remove('oculto');
@@ -2238,16 +2270,20 @@
       grupo_terceiro: $('cr-terc').value.trim() || null,
       apto_rdo: $('cr-apto').checked,
     };
-    // Matrícula já existente: se estiver com baixa, reativa em vez de duplicar
+    // Matrícula já existente em outro colaborador: se estiver com baixa, reativa em vez de duplicar
     const { data: iguais, error: eBusca } = await sb.from('colaboradores').select('id, inativo_em').eq('matricula', mat);
     if (eBusca) return setMsg(msg, eBusca.message, 'erro');
-    const ativo = (iguais || []).find((x) => !x.inativo_em);
+    const outros = (iguais || []).filter((x) => x.id !== colabEditandoId);
+    const ativo = outros.find((x) => !x.inativo_em);
     if (ativo) return setMsg(msg, 'Já existe um colaborador ativo com essa matrícula.', 'erro');
-    const baixado = (iguais || [])[0];
-    const { error } = baixado
-      ? await sb.from('colaboradores').update({ ...dados, inativo_em: null }).eq('id', baixado.id)
-      : await sb.from('colaboradores').insert(dados);
+    const baixado = outros[0];
+    const { error } = colabEditandoId
+      ? await sb.from('colaboradores').update(dados).eq('id', colabEditandoId)
+      : baixado
+        ? await sb.from('colaboradores').update({ ...dados, inativo_em: null }).eq('id', baixado.id)
+        : await sb.from('colaboradores').insert(dados);
     if (error) return setMsg(msg, error.message, 'erro');
+    colabEditandoId = null;
     $('modal-colab').classList.add('oculto');
     carregarColaboradores();
     carregarEfetivoRDO(statusEfetivoAtual());
