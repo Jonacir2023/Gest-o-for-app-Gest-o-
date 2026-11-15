@@ -89,6 +89,26 @@
   .cal-dia:disabled { color: var(--muted); opacity: .55; cursor: default; }
   .cal-dia.hoje { border: 2px solid var(--azul); }
   .linha-rdo { position: relative; }
+  .rdo-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 700px) { .rdo-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1100px) { .rdo-grid { grid-template-columns: repeat(3, 1fr); } }
+  .rdo-full { grid-column: 1 / -1; }
+  .rdo-card { background: var(--branco); border: 1px solid var(--borda); border-radius: 12px; padding: 14px; min-width: 0; }
+  .rdo-card h2 { font-size: 15px; color: var(--azul); margin: 0 0 10px; }
+  .rdo-card button.sec { margin-top: 10px; }
+  .rdo-acoes { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .rdo-acoes button[type="submit"] { margin-top: 0; }
+  .clima-resumo { font-size: 13px; background: var(--fundo); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; color: var(--texto); }
+  .clima-periodo { border-top: 1px solid var(--borda); padding-top: 10px; margin-top: 10px; }
+  .clima-titulo { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+  .seg-op { grid-template-columns: repeat(2, 1fr); }
+  .seg button { margin: 0; background: var(--branco); color: var(--texto); border: 1px solid var(--borda); padding: 9px 4px; font-size: 13px; font-weight: 500; }
+  .seg button.on { background: var(--azul); color: var(--branco); border-color: var(--azul); }
+  .seg-op button.on[data-v="sem_operacao"] { background: var(--erro); border-color: var(--erro); }
+  .seg-op button.on[data-v="operacao"] { background: var(--ok); border-color: var(--ok); }
+  .fotos-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 8px; }
+  .fotos-lista img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--borda); }
   .campos-rdo { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
   @media (min-width: 900px) {
     .campos-rdo { grid-template-columns: repeat(4, 1fr); }
@@ -291,46 +311,126 @@
     </div>
 
     <div id="view-rdo" class="oculto">
-      <form id="form-rdo" class="card">
-        <h1>RDO</h1>
-        <div class="campos-rdo">
-          <div class="full">
-            <label for="r-proj">Obra *</label>
-            <select id="r-proj" required></select>
-          </div>
-          <div>
-            <label for="r-data">Data *</label>
-            <input id="r-data" type="date" required>
-          </div>
-          <div>
-            <label for="r-frente">Frente *</label>
-            <input id="r-frente" required>
-          </div>
-          <div>
-            <label for="r-enc">Encarregado *</label>
-            <input id="r-enc" required>
-          </div>
-          <div>
-            <label for="r-apt">Apontador *</label>
-            <input id="r-apt" required>
-          </div>
+      <form id="form-rdo">
+        <div class="rdo-grid">
+
+          <section class="rdo-card rdo-full">
+            <h2>Identificação</h2>
+            <div class="campos-rdo">
+              <div class="full">
+                <label for="r-proj">Obra *</label>
+                <select id="r-proj" required></select>
+              </div>
+              <div>
+                <label for="r-data">Data *</label>
+                <input id="r-data" type="date" required>
+              </div>
+              <div>
+                <label for="r-frente">Frente *</label>
+                <input id="r-frente" required>
+              </div>
+              <div>
+                <label for="r-enc">Encarregado *</label>
+                <input id="r-enc" required>
+              </div>
+              <div>
+                <label for="r-apt">Apontador *</label>
+                <input id="r-apt" required>
+              </div>
+            </div>
+            <button type="button" id="r-copiar" class="sec">Copiar do último diário</button>
+          </section>
+
+          <section class="rdo-card">
+            <h2>Local da obra</h2>
+            <label for="r-local">Local</label>
+            <select id="r-local"></select>
+            <label for="r-local-desc">O que foi executado no local</label>
+            <textarea id="r-local-desc" rows="3"></textarea>
+          </section>
+
+          <section class="rdo-card">
+            <h2>Condições do tempo</h2>
+            <div id="clima-resumo" class="clima-resumo"></div>
+            <div class="clima-periodo" data-periodo="manha">
+              <div class="clima-titulo">Manhã <span class="texto-apoio">07h–12h</span></div>
+              <div class="seg seg-clima">
+                <button type="button" data-v="sol">☀️ Sol</button>
+                <button type="button" data-v="nublado">⛅ Nublado</button>
+                <button type="button" data-v="chuva">🌧️ Chuva</button>
+              </div>
+              <div class="seg seg-op">
+                <button type="button" data-v="operacao">✅ Operação</button>
+                <button type="button" data-v="sem_operacao">⛔ Sem operação</button>
+              </div>
+              <div class="motivo-bloco oculto">
+                <label>Motivo da paralisação</label>
+                <select class="motivo-sel"></select>
+              </div>
+            </div>
+            <div class="clima-periodo" data-periodo="tarde">
+              <div class="clima-titulo">Tarde <span class="texto-apoio">13h–17h</span></div>
+              <div class="seg seg-clima">
+                <button type="button" data-v="sol">☀️ Sol</button>
+                <button type="button" data-v="nublado">⛅ Nublado</button>
+                <button type="button" data-v="chuva">🌧️ Chuva</button>
+              </div>
+              <div class="seg seg-op">
+                <button type="button" data-v="operacao">✅ Operação</button>
+                <button type="button" data-v="sem_operacao">⛔ Sem operação</button>
+              </div>
+              <div class="motivo-bloco oculto">
+                <label>Motivo da paralisação</label>
+                <select class="motivo-sel"></select>
+              </div>
+            </div>
+          </section>
+
+          <section class="rdo-card">
+            <h2>Efetivo</h2>
+            <div id="r-efetivo"></div>
+            <button type="button" id="r-add-ef" class="sec">+ Pessoa</button>
+          </section>
+
+          <section class="rdo-card">
+            <h2>Equipamentos</h2>
+            <div id="r-equip"></div>
+            <button type="button" id="r-add-eq" class="sec">+ Equipamento</button>
+          </section>
+
+          <section class="rdo-card">
+            <h2>Eventos de segurança do trabalho (SST)</h2>
+            <div id="r-ev-sst"></div>
+            <button type="button" id="r-add-sst" class="sec">+ Evento SST</button>
+          </section>
+
+          <section class="rdo-card">
+            <h2>Eventos de meio ambiente (MA)</h2>
+            <div id="r-ev-ma"></div>
+            <button type="button" id="r-add-ma" class="sec">+ Evento MA</button>
+          </section>
+
+          <section class="rdo-card rdo-full">
+            <h2>Atividades</h2>
+            <div id="r-ativ"></div>
+            <button type="button" id="r-add-at" class="sec">+ Atividade</button>
+          </section>
+
+          <section class="rdo-card rdo-full">
+            <h2>Observações e fotos</h2>
+            <label for="r-obs">Observações</label>
+            <textarea id="r-obs" rows="3"></textarea>
+            <label for="r-fotos">Fotos (podem ser várias)</label>
+            <input id="r-fotos" type="file" accept="image/*" multiple>
+            <div id="r-fotos-lista" class="fotos-lista"></div>
+          </section>
+
         </div>
-        <button type="button" id="r-copiar" class="sec">Copiar do último diário</button>
 
-        <h2>Efetivo</h2>
-        <div id="r-efetivo"></div>
-        <button type="button" id="r-add-ef" class="sec">+ Pessoa</button>
-
-        <h2>Equipamentos</h2>
-        <div id="r-equip"></div>
-        <button type="button" id="r-add-eq" class="sec">+ Equipamento</button>
-
-        <h2>Atividades</h2>
-        <div id="r-ativ"></div>
-        <button type="button" id="r-add-at" class="sec">+ Atividade</button>
-
-        <div><button type="submit">Salvar RDO</button></div>
-        <div id="msg-rdo" class="msg"></div>
+        <div class="rdo-acoes">
+          <button type="submit">Salvar RDO</button>
+          <div id="msg-rdo" class="msg"></div>
+        </div>
       </form>
 
       <div class="card">
@@ -1268,6 +1368,15 @@
       for (const r of data) {
         itens.push({ chave: r.rdo.data, titulo: r.colaborador, detalhe: r.presente ? 'Presente' : 'Ausente', editavel: editavelNo(r.rdo.data), abrir: null });
       }
+    } else if (calTipo === 'Eventos SST' || calTipo === 'Eventos MA') {
+      const tipo = calTipo === 'Eventos SST' ? 'SST' : 'MA';
+      const { data, error } = await sb.from('rdo_eventos')
+        .select('id, descricao, rdo:rdo_id!inner(data, substituido_por)')
+        .eq('tipo', tipo).gte('rdo.data', dIni).lt('rdo.data', dFim).is('rdo.substituido_por', null);
+      if (error) throw error;
+      for (const r of data) {
+        itens.push({ chave: r.rdo.data, titulo: r.descricao, detalhe: '', editavel: editavelNo(r.rdo.data), abrir: null });
+      }
     } else if (calTipo === 'Equipamentos parados') {
       const { data, error } = await sb.from('rdo_equipamentos')
         .select('id, equipamento_codigo, rdo:rdo_id!inner(data, substituido_por)')
@@ -1286,11 +1395,6 @@
     $('cal-lista').classList.add('oculto');
     const msg = $('msg-cal');
     calMapa = {};
-
-    if (calTipo === 'Eventos SST' || calTipo === 'Eventos MA') {
-      setMsg(msg, 'Este tipo ainda não tem campos definidos. Defina os campos para liberar o calendário.');
-      return renderCalendario();
-    }
 
     setMsg(msg, 'Carregando…');
     try {
@@ -1469,6 +1573,9 @@
     opcoes($('r-proj'), projs.map((p) => [p.id, p.nome]), 'Selecione a obra', atual);
     if (!$('r-data').value) $('r-data').value = chaveData(new Date());
     if (!$('r-mes').value) $('r-mes').value = chaveData(new Date()).slice(0, 7);
+    const { data: mot } = await sb.from('motivos_justificativa').select('id, descricao').eq('tipo', 'dia_sem_execucao');
+    rdoMotivosDia = (mot || []).sort((a, b) => collator.compare(a.descricao, b.descricao));
+    refreshMotivoOptions();
     const { data: un } = await sb.from('unidades_medida').select('id, sigla');
     rdoUnidades = (un || []).sort((a, b) => collator.compare(a.sigla, b.sigla));
     await carregarLocaisRdo();
@@ -1482,6 +1589,7 @@
       const { data } = await sb.from('locais').select('id, nome').eq('projeto_id', pid);
       rdoLocais = (data || []).sort((a, b) => collator.compare(a.nome, b.nome));
     }
+    opcoes($('r-local'), rdoLocais.map((l) => [l.id, l.nome]), 'Nenhum local', $('r-local').value);
     document.querySelectorAll('#r-ativ .linha-rdo').forEach((d) => {
       const sel = d.querySelector('.at-local');
       opcoes(sel, rdoLocais.map((l) => [l.id, l.nome]), 'Selecione', sel.value);
@@ -1533,7 +1641,15 @@
     $('r-apt').value = data.apontador;
     opcoes($('r-proj'), [...$('r-proj').options].filter((o) => o.value).map((o) => [o.value, o.textContent]), 'Selecione a obra', data.projeto_id);
     await carregarLocaisRdo();
+    $('r-local').value = data.local_id || '';
+    $('r-local-desc').value = data.local_descricao || '';
+    $('r-obs').value = data.observacoes || '';
+    aplicarClima(data);
     preencherItens(data);
+    $('r-ev-sst').innerHTML = '';
+    $('r-ev-ma').innerHTML = '';
+    for (const ev of data.eventos) (ev.tipo === 'SST' ? $('r-ev-sst') : $('r-ev-ma')).appendChild(linhaEvento(ev.tipo, ev));
+    await mostrarFotosExistentes(data.fotos);
     setMsg($('msg-rdo'), 'RDO carregado. Ao salvar, cria um novo RDO e substitui este.', '');
     $('form-rdo').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -1619,12 +1735,166 @@
     if (equipamentos.some((x) => !x.codigo)) return setMsg(msg, ERROS_RDO.codigo_equipamento_obrigatorio, 'erro');
     if (atividades.some((x) => !x.atividade)) return setMsg(msg, ERROS_RDO.atividade_obrigatoria, 'erro');
 
+    const eventos = coletarEventos();
+    if (eventos.some((x) => !x.descricao)) return setMsg(msg, 'Descreva todos os eventos de SST e MA.', 'erro');
+
     setMsg(msg, 'Salvando…');
-    const { error } = await sb.rpc('rdo_salvar', { p: { ...cab, efetivo, equipamentos, atividades } });
+    const payload = {
+      ...cab, efetivo, equipamentos, atividades, eventos,
+      clima_manha: climaEstado.manha.clima,
+      operacao_manha: climaEstado.manha.op,
+      motivo_manha_id: climaEstado.manha.op === 'sem_operacao' ? climaEstado.manha.motivo : null,
+      clima_tarde: climaEstado.tarde.clima,
+      operacao_tarde: climaEstado.tarde.op,
+      motivo_tarde_id: climaEstado.tarde.op === 'sem_operacao' ? climaEstado.tarde.motivo : null,
+      local_id: $('r-local').value || null,
+      local_descricao: $('r-local-desc').value.trim() || null,
+      observacoes: $('r-obs').value.trim() || null,
+    };
+    const { data: novoId, error } = await sb.rpc('rdo_salvar', { p: payload });
     if (error) return setMsg(msg, ERROS_RDO[error.message] || error.message, 'erro');
-    setMsg(msg, 'RDO salvo.', 'ok');
+    let fotos = 0;
+    try {
+      fotos = await enviarFotos(novoId);
+    } catch (err) {
+      setMsg(msg, 'RDO salvo, mas o envio de fotos falhou: ' + err.message, 'erro');
+      return carregarListaRdo();
+    }
+    setMsg(msg, 'RDO salvo' + (fotos ? ' com ' + fotos + ' foto(s).' : '.'), 'ok');
     carregarListaRdo();
   });
+
+  // ---------- RDO: clima, local, eventos e fotos ----------
+  const climaEstado = { manha: { clima: null, op: null, motivo: null }, tarde: { clima: null, op: null, motivo: null } };
+  const ROTULO_CLIMA = { sol: 'Sol', nublado: 'Nublado', chuva: 'Chuva' };
+  let rdoMotivosDia = [];
+  let rdoFotosNovas = [];
+
+  function refreshMotivoOptions() {
+    document.querySelectorAll('.clima-periodo .motivo-sel').forEach((sel) => {
+      opcoes(sel, rdoMotivosDia.map((m) => [m.id, m.descricao]), 'Selecione o motivo', sel.value);
+    });
+  }
+
+  function renderClima() {
+    for (const per of ['manha', 'tarde']) {
+      const box = document.querySelector('.clima-periodo[data-periodo="' + per + '"]');
+      const est = climaEstado[per];
+      box.querySelectorAll('.seg-clima button').forEach((b) => b.classList.toggle('on', b.dataset.v === est.clima));
+      box.querySelectorAll('.seg-op button').forEach((b) => b.classList.toggle('on', b.dataset.v === est.op));
+      box.querySelector('.motivo-bloco').classList.toggle('oculto', est.op !== 'sem_operacao');
+      box.querySelector('.motivo-sel').value = est.motivo || '';
+    }
+    const resumo = (per, nome) => {
+      const e = climaEstado[per];
+      if (!e.clima && !e.op) return nome + ': não informado';
+      let s = nome + ': ' + (e.clima ? ROTULO_CLIMA[e.clima] : '—') + ' · ' +
+        (e.op === 'sem_operacao' ? 'Sem operação' : e.op === 'operacao' ? 'Operação' : '—');
+      if (e.op === 'sem_operacao' && e.motivo) {
+        const m = rdoMotivosDia.find((x) => x.id === e.motivo);
+        if (m) s += ' (' + m.descricao + ')';
+      }
+      return s;
+    };
+    $('clima-resumo').textContent = resumo('manha', 'Manhã') + '   |   ' + resumo('tarde', 'Tarde');
+  }
+
+  function aplicarClima(det) {
+    climaEstado.manha = { clima: det.clima_manha || null, op: det.operacao_manha || null, motivo: det.motivo_manha_id || null };
+    climaEstado.tarde = { clima: det.clima_tarde || null, op: det.operacao_tarde || null, motivo: det.motivo_tarde_id || null };
+    renderClima();
+  }
+
+  function configurarClima() {
+    document.querySelectorAll('.clima-periodo').forEach((box) => {
+      const per = box.dataset.periodo;
+      box.querySelectorAll('.seg-clima button').forEach((b) => b.addEventListener('click', () => {
+        climaEstado[per].clima = climaEstado[per].clima === b.dataset.v ? null : b.dataset.v;
+        renderClima();
+      }));
+      box.querySelectorAll('.seg-op button').forEach((b) => b.addEventListener('click', () => {
+        climaEstado[per].op = climaEstado[per].op === b.dataset.v ? null : b.dataset.v;
+        if (climaEstado[per].op !== 'sem_operacao') climaEstado[per].motivo = null;
+        renderClima();
+      }));
+      box.querySelector('.motivo-sel').addEventListener('change', (ev) => {
+        climaEstado[per].motivo = ev.target.value || null;
+        renderClima();
+      });
+    });
+    renderClima();
+  }
+
+  function linhaEvento(tipo, v = {}) {
+    const div = document.createElement('div');
+    div.className = 'item-ck linha-rdo';
+    div.dataset.tipo = tipo;
+    div.innerHTML = `
+      <div class="linha-campos">
+        <div><label>Descrição *</label><textarea class="ev-desc" rows="2"></textarea></div>
+        <div><label>Providências</label><textarea class="ev-prov" rows="2"></textarea></div>
+      </div>`;
+    div.querySelector('.ev-desc').value = v.descricao || '';
+    div.querySelector('.ev-prov').value = v.providencias || '';
+    div.appendChild(botaoRemover(div));
+    return div;
+  }
+
+  function coletarEventos() {
+    return [...document.querySelectorAll('#r-ev-sst .linha-rdo, #r-ev-ma .linha-rdo')].map((d) => ({
+      tipo: d.dataset.tipo,
+      descricao: d.querySelector('.ev-desc').value.trim(),
+      providencias: d.querySelector('.ev-prov').value.trim() || null,
+    }));
+  }
+
+  function mostrarPrevias(arquivos) {
+    const lista = $('r-fotos-lista');
+    lista.innerHTML = '';
+    for (const f of arquivos) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      img.alt = f.name;
+      lista.appendChild(img);
+    }
+  }
+
+  async function mostrarFotosExistentes(fotos) {
+    const lista = $('r-fotos-lista');
+    lista.innerHTML = '';
+    for (const f of fotos) {
+      const { data } = await sb.storage.from('rdo-fotos').createSignedUrl(f.caminho, 3600);
+      if (!data) continue;
+      const img = document.createElement('img');
+      img.src = data.signedUrl;
+      img.alt = f.caminho;
+      lista.appendChild(img);
+    }
+  }
+
+  async function enviarFotos(rdoId) {
+    let enviadas = 0;
+    for (const [i, f] of rdoFotosNovas.entries()) {
+      const nome = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const caminho = rdoId + '/' + Date.now() + '-' + i + '-' + nome;
+      const { error } = await sb.storage.from('rdo-fotos').upload(caminho, f, { contentType: f.type || 'image/jpeg' });
+      if (error) throw error;
+      const { error: e2 } = await sb.from('rdo_fotos').insert({ rdo_id: rdoId, caminho });
+      if (e2) throw e2;
+      enviadas++;
+    }
+    rdoFotosNovas = [];
+    $('r-fotos').value = '';
+    return enviadas;
+  }
+
+  $('r-fotos').addEventListener('change', () => {
+    rdoFotosNovas = [...$('r-fotos').files];
+    mostrarPrevias(rdoFotosNovas);
+  });
+  $('r-add-sst').addEventListener('click', () => $('r-ev-sst').appendChild(linhaEvento('SST')));
+  $('r-add-ma').addEventListener('click', () => $('r-ev-ma').appendChild(linhaEvento('MA')));
+  configurarClima();
 
   // ---------- Eventos de navegação ----------
   document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => mostrarView(b.dataset.view)));
