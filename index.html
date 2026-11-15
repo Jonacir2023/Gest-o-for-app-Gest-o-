@@ -404,8 +404,8 @@
                 <select id="r-enc" required></select>
               </div>
               <div>
-                <label for="r-apt">Apontador *</label>
-                <input id="r-apt" required>
+                <label for="r-apt">Criador RDO *</label>
+                <select id="r-apt" required></select>
               </div>
             </div>
             <button type="button" id="r-copiar" class="sec">Copiar do último diário</button>
@@ -535,7 +535,7 @@
         <input id="r-mes" type="month">
         <div class="tabela-wrap">
           <table>
-            <thead><tr><th>Data</th><th>Frente</th><th>Encarregado</th><th>Apontador</th><th>Situação</th><th></th></tr></thead>
+            <thead><tr><th>Data</th><th>Local</th><th>Responsável</th><th>Criador RDO</th><th>Situação</th><th></th></tr></thead>
             <tbody id="lista-rdo"></tbody>
           </table>
         </div>
@@ -1823,7 +1823,7 @@
     if (error) return setMsg($('msg-rdo'), 'Erro: ' + error.message, 'erro');
     $('r-data').value = data.data;
     rdoResponsavelPendente = data.encarregado;
-    $('r-apt').value = data.apontador;
+    rdoApontadorPendente = data.apontador;
     opcoes($('r-proj'), [...$('r-proj').options].filter((o) => o.value).map((o) => [o.value, o.textContent]), 'Selecione a obra', data.projeto_id);
     await carregarLocaisRdo();
     const locAbre = rdoLocais.find((l) => l.nome === data.frente);
@@ -1960,19 +1960,26 @@
     return { ...efetivoEstado };
   }
 
-  // Responsável pelo local: só quem tem função de encarregado, supervisor, coordenador ou engenheiro
+  // Listas de pessoas do efetivo filtradas por função:
+  // Responsável pelo local (encarregado, supervisor, coordenador, engenheiro) e Criador RDO (acrescenta apontador)
   let rdoResponsavelPendente = null;
+  let rdoApontadorPendente = null;
 
-  function refreshResponsaveisLocal() {
-    const sel = $('r-enc');
-    const atual = rdoResponsavelPendente || sel.value || '';
-    rdoResponsavelPendente = null;
-    const re = /encarregado|supervisor|coordenador|engenheiro/i;
+  function refreshSelectFuncao(sel, regex, atual, rotulo) {
     const pares = rdoColab
-      .filter((c) => re.test(c.funcao || ''))
+      .filter((c) => regex.test(c.funcao || ''))
       .map((c) => [c.nome, c.nome + (c.funcao ? ' · ' + c.funcao : '')]);
     if (atual && !pares.some((p) => p[0] === atual)) pares.push([atual, atual]);
-    opcoes(sel, pares, 'Selecione o responsável', atual);
+    opcoes(sel, pares, rotulo, atual);
+  }
+
+  function refreshResponsaveisLocal() {
+    const atualResp = rdoResponsavelPendente || $('r-enc').value || '';
+    rdoResponsavelPendente = null;
+    refreshSelectFuncao($('r-enc'), /encarregado|supervisor|coordenador|engenheiro/i, atualResp, 'Selecione o responsável');
+    const atualCriador = rdoApontadorPendente || $('r-apt').value || '';
+    rdoApontadorPendente = null;
+    refreshSelectFuncao($('r-apt'), /encarregado|supervisor|coordenador|engenheiro|apontador/i, atualCriador, 'Selecione o criador');
   }
 
   async function carregarEfetivoRDO(mapa) {
@@ -2279,7 +2286,7 @@
       projeto_id: $('r-proj').value,
       frente: (rdoLocais.find((l) => l.id === $('r-frente').value) || {}).nome || '',
       encarregado: $('r-enc').value || '',
-      apontador: $('r-apt').value.trim(),
+      apontador: $('r-apt').value || '',
     };
     if (!cab.data || !cab.projeto_id || !cab.frente || !cab.encarregado || !cab.apontador) {
       return setMsg(msg, ERROS_RDO.campos_obrigatorios, 'erro');
