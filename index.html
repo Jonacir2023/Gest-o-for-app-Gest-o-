@@ -89,6 +89,11 @@
   .cal-dia:disabled { color: var(--muted); opacity: .55; cursor: default; }
   .cal-dia.hoje { border: 2px solid var(--azul); }
   .linha-rdo { position: relative; }
+  .campos-rdo { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+  @media (min-width: 900px) {
+    .campos-rdo { grid-template-columns: repeat(4, 1fr); }
+    .campos-rdo .full { grid-column: 1 / -1; }
+  }
   .linha-campos { display: grid; grid-template-columns: 1fr; gap: 0 10px; }
   @media (min-width: 640px) { .linha-campos { grid-template-columns: repeat(3, 1fr); } }
   .linha-campos label { margin-top: 6px; }
@@ -288,14 +293,14 @@
     <div id="view-rdo" class="oculto">
       <form id="form-rdo" class="card">
         <h1>RDO</h1>
-        <div class="grid">
+        <div class="campos-rdo">
+          <div class="full">
+            <label for="r-proj">Obra *</label>
+            <select id="r-proj" required></select>
+          </div>
           <div>
             <label for="r-data">Data *</label>
             <input id="r-data" type="date" required>
-          </div>
-          <div>
-            <label for="r-proj">Obra *</label>
-            <select id="r-proj" required></select>
           </div>
           <div>
             <label for="r-frente">Frente *</label>
@@ -305,7 +310,7 @@
             <label for="r-enc">Encarregado *</label>
             <input id="r-enc" required>
           </div>
-          <div class="full">
+          <div>
             <label for="r-apt">Apontador *</label>
             <input id="r-apt" required>
           </div>
