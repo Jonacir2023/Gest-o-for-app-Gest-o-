@@ -123,6 +123,11 @@
   .efetivo-row { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--borda); }
   @media (min-width: 700px) { .efetivo-row { grid-template-columns: 1fr 190px; align-items: center; } }
   .efetivo-row select { margin: 0; }
+  .caixa-larga { max-width: 640px; max-height: 80vh; overflow-y: auto; }
+  .resumo-cat-linha { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--borda); }
+  .resumo-cat-nome { font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: .04em; color: var(--azul); }
+  .resumo-cat-num { font-weight: 800; font-size: 18px; color: var(--azul); font-variant-numeric: tabular-nums; }
+  .efetivo-row select.ef-sel { width: 100%; }
   .bloco-cat { margin-bottom: 12px; }
   .cat-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--borda); }
   .pill { background: var(--fundo); color: var(--azul); border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
@@ -609,6 +614,19 @@
     </div>
   </section>
 </main>
+
+<div id="modal-ef" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="ef-titulo">
+  <div class="caixa-modal caixa-larga">
+    <h2 id="ef-titulo">Selecionar efetivo do dia</h2>
+    <p class="texto-apoio">Marque o status de cada colaborador. O resumo por categoria é atualizado ao salvar.</p>
+    <div id="ef-lista"></div>
+    <div class="acoes-modal">
+      <button type="button" id="ef-salvar">Salvar</button>
+      <button type="button" id="ef-cancelar" class="sec">Cancelar</button>
+    </div>
+    <div id="msg-ef" class="msg"></div>
+  </div>
+</div>
 
 <div id="modal-cat" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="cat-titulo">
   <form id="form-cat" class="caixa-modal">
@@ -1934,13 +1952,11 @@
     carregarColaboradores();
   }
 
+  // Estado do efetivo do dia: nome -> 'presente' ou motivo de ausência
+  let efetivoEstado = {};
+
   function statusEfetivoAtual() {
-    const map = {};
-    document.querySelectorAll('#r-efetivo .efetivo-row').forEach((row) => {
-      const v = row.querySelector('.ef-status').value;
-      if (v) map[row.dataset.nome] = v;
-    });
-    return map;
+    return { ...efetivoEstado };
   }
 
   async function carregarEfetivoRDO(mapa) {
@@ -1950,40 +1966,70 @@
       box.textContent = 'Escolha a data do RDO.';
       return;
     }
-    const estado = mapa || statusEfetivoAtual();
+    if (mapa) efetivoEstado = { ...mapa };
     const { data, error } = await sb.from('colaboradores').select('id, nome, matricula, funcao, categoria, grupo_terceiro, inativo_em');
     if (error) {
       box.textContent = 'Erro: ' + error.message;
       return;
     }
     rdoColab = data.filter((c) => vigenteNoDia(c, dia));
-    renderEfetivoRDO(estado);
+    renderEfetivoRDO();
     atualizarTiles();
   }
 
-  function renderEfetivoRDO(map) {
+  // Resumo por categoria: só contagem de presentes (sem nomes)
+  function renderEfetivoRDO() {
     const box = $('r-efetivo');
     box.innerHTML = '';
     if (!rdoColab.length) {
       box.textContent = 'Nenhum colaborador vigente nesta data. Cadastre em Cadastros → Efetivo.';
       return;
     }
+    const porCat = {};
+    for (const c of rdoColab) {
+      const chave = c.categoria || 'Sem categoria';
+      const p = (porCat[chave] = porCat[chave] || { presentes: 0, total: 0 });
+      p.total++;
+      if (efetivoEstado[c.nome] === 'presente') p.presentes++;
+    }
+    const cats = Object.keys(porCat).sort((a, b) => collator.compare(a, b));
+    if (!cats.length) return;
+    for (const cat of cats) {
+      const linha = document.createElement('div');
+      linha.className = 'resumo-cat-linha';
+      const nome = document.createElement('span');
+      nome.className = 'resumo-cat-nome';
+      nome.textContent = cat;
+      const num = document.createElement('span');
+      num.className = 'resumo-cat-num';
+      num.textContent = porCat[cat].presentes + ' / ' + porCat[cat].total;
+      linha.append(nome, num);
+      box.appendChild(linha);
+    }
+  }
+
+  // Janela de seleção dos presentes (o + do cartão de efetivo)
+  function abrirSelecaoEfetivo() {
+    const dia = $('r-data').value;
+    if (!dia) return alert('Escolha a data do RDO antes de selecionar o efetivo.');
+    const lista = $('ef-lista');
+    lista.innerHTML = '';
+    if (!rdoColab.length) {
+      lista.textContent = 'Nenhum colaborador vigente nesta data. Cadastre em Cadastros → Efetivo.';
+    }
     const grupos = {};
     for (const c of rdoColab) {
-      const chave = c.grupo_terceiro ? c.categoria + ' · ' + c.grupo_terceiro : c.categoria;
+      const chave = c.categoria || 'Sem categoria';
       (grupos[chave] = grupos[chave] || []).push(c);
     }
-    for (const chave of Object.keys(grupos).sort((a, b) => collator.compare(a, b))) {
+    for (const cat of Object.keys(grupos).sort((a, b) => collator.compare(a, b))) {
       const h = document.createElement('div');
       h.className = 'efetivo-cat';
-      h.textContent = chave + ' (' + grupos[chave].length + ')';
-      box.appendChild(h);
-      for (const c of grupos[chave].slice().sort((a, b) => collator.compare(a.nome, b.nome))) {
+      h.textContent = cat;
+      lista.appendChild(h);
+      for (const c of grupos[cat].slice().sort((a, b) => collator.compare(a.nome, b.nome))) {
         const row = document.createElement('div');
         row.className = 'efetivo-row';
-        row.dataset.nome = c.nome;
-        row.dataset.cat = c.categoria;
-        row.dataset.terc = c.grupo_terceiro || '';
         const info = document.createElement('div');
         const nomeEl = document.createElement('strong');
         nomeEl.textContent = c.nome;
@@ -1992,13 +2038,31 @@
         meta.textContent = [c.matricula, c.funcao].filter(Boolean).join(' · ');
         info.append(nomeEl, meta);
         const sel = document.createElement('select');
-        sel.className = 'ef-status';
-        opcoes(sel, [['presente', 'Presente']].concat(MOTIVOS_AUS), 'Não lançado', map[c.nome] || '');
+        sel.className = 'ef-sel';
+        sel.dataset.nome = c.nome;
+        opcoes(sel, [['presente', 'Presente']].concat(MOTIVOS_AUS), 'Não lançado', efetivoEstado[c.nome] || '');
         row.append(info, sel);
-        box.appendChild(row);
+        lista.appendChild(row);
       }
     }
+    setMsg($('msg-ef'), '');
+    $('modal-ef').classList.remove('oculto');
   }
+
+  function salvarSelecaoEfetivo() {
+    document.querySelectorAll('#ef-lista .ef-sel').forEach((sel) => {
+      const nome = sel.dataset.nome;
+      if (sel.value) efetivoEstado[nome] = sel.value;
+      else delete efetivoEstado[nome];
+    });
+    $('modal-ef').classList.add('oculto');
+    renderEfetivoRDO();
+    atualizarTiles();
+  }
+
+  $('ef-cancelar').addEventListener('click', () => $('modal-ef').classList.add('oculto'));
+  $('ef-salvar').addEventListener('click', salvarSelecaoEfetivo);
+  $('modal-ef').addEventListener('click', (ev) => { if (ev.target.id === 'modal-ef') $('modal-ef').classList.add('oculto'); });
 
   function aplicarEfetivoDet(efetivo) {
     const map = {};
@@ -2007,16 +2071,16 @@
   }
 
   function coletarEfetivo() {
-    return [...document.querySelectorAll('#r-efetivo .efetivo-row')]
-      .filter((row) => row.querySelector('.ef-status').value)
-      .map((row) => {
-        const v = row.querySelector('.ef-status').value;
+    return rdoColab
+      .filter((c) => efetivoEstado[c.nome])
+      .map((c) => {
+        const v = efetivoEstado[c.nome];
         return {
-          colaborador: row.dataset.nome,
+          colaborador: c.nome,
           presente: v === 'presente',
           motivo_ausencia: v === 'presente' ? null : v,
-          categoria: row.dataset.cat || null,
-          grupo_terceiro: row.dataset.terc || null,
+          categoria: c.categoria || null,
+          grupo_terceiro: c.grupo_terceiro || null,
         };
       });
   }
@@ -2029,7 +2093,6 @@
     $('t-cad').textContent = rdoColab.length;
   }
 
-  $('r-efetivo').addEventListener('change', atualizarTiles);
   $('r-data').addEventListener('change', () => carregarEfetivoRDO());
 
   // ---------- Categorias e funções do efetivo (listas suspensas) ----------
@@ -2116,7 +2179,7 @@
     $('cr-mat').focus();
   }
 
-  $('r-add-colab').addEventListener('click', () => abrirModalColab(null));
+  $('r-add-colab').addEventListener('click', abrirSelecaoEfetivo);
   $('cr-cancelar').addEventListener('click', () => $('modal-colab').classList.add('oculto'));
   $('modal-colab').addEventListener('click', (ev) => { if (ev.target.id === 'modal-colab') $('modal-colab').classList.add('oculto'); });
   $('form-colab-rapido').addEventListener('submit', async (e) => {
