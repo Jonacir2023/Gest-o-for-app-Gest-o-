@@ -66,6 +66,9 @@
   .aba { background: transparent; color: var(--azul); border: 1px solid var(--azul); margin-top: 0; padding: 8px 12px; font-size: 14px; }
   .aba.ativa { background: var(--azul); color: var(--branco); }
   button.pequeno { margin-top: 0; padding: 6px 10px; font-size: 13px; }
+  button.perigo { color: var(--erro); border-color: var(--erro); }
+  .acoes-tabela { white-space: nowrap; }
+  .acoes-tabela button { margin-right: 6px; }
   .filtros { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
   @media (min-width: 640px) { .filtros { grid-template-columns: 1fr 1fr; } }
   .kanban { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
@@ -559,7 +562,7 @@
   }
 
   // ---------- Tabelas com botão Editar ----------
-  function preencherComEdicao(tb, itens, colunas, vazio, onEdit) {
+  function preencherComEdicao(tb, itens, colunas, vazio, onEdit, onExcluir) {
     tb.innerHTML = '';
     const n = colunas.length + 1;
     if (!itens.length) {
@@ -575,7 +578,11 @@
         tr.appendChild(td);
       }
       const acao = document.createElement('td');
+      acao.className = 'acoes-tabela';
       acao.appendChild(botao('Editar', () => onEdit(it)));
+      const bx = botao('Excluir', () => onExcluir(it));
+      bx.classList.add('perigo');
+      acao.appendChild(bx);
       tr.appendChild(acao);
       tb.appendChild(tr);
     }
@@ -589,7 +596,7 @@
     const { data, error } = await sb.from('unidades_medida').select('id, sigla, descricao');
     if (error) return mostrarErroTabela(tb, 3, error.message);
     data.sort((a, b) => collator.compare(a.sigla, b.sigla));
-    preencherComEdicao(tb, data, [(u) => u.sigla, (u) => u.descricao || ''], 'Nenhuma unidade cadastrada.', editarUnidade);
+    preencherComEdicao(tb, data, [(u) => u.sigla, (u) => u.descricao || ''], 'Nenhuma unidade cadastrada.', editarUnidade, excluirUnidade);
   }
 
   function editarUnidade(u) {
@@ -609,6 +616,15 @@
     $('u-submit').textContent = 'Acrescentar unidade';
     $('u-cancelar').classList.add('oculto');
     setMsg($('msg-unidade'), '');
+  }
+
+  async function excluirUnidade(u) {
+    if (!confirm('Excluir a unidade ' + u.sigla + '?')) return;
+    const { error } = await sb.from('unidades_medida').delete().eq('id', u.id);
+    if (error) return setMsg($('msg-unidade'), error.code === '23503' ? 'Esta unidade está em uso e não pode ser excluída.' : error.message, 'erro');
+    if (editUnidade && editUnidade.id === u.id) cancelarUnidade();
+    setMsg($('msg-unidade'), 'Unidade excluída.', 'ok');
+    carregarUnidades();
   }
 
   $('u-cancelar').addEventListener('click', cancelarUnidade);
@@ -650,11 +666,11 @@
   async function carregarLocais() {
     const tb = $('lista-locais');
     const pid = $('loc-obra').value;
-    if (!pid) return preencherComEdicao(tb, [], [(l) => l.nome], 'Cadastre uma obra antes de incluir locais.', editarLocal);
+    if (!pid) return preencherComEdicao(tb, [], [(l) => l.nome], 'Cadastre uma obra antes de incluir locais.', editarLocal, excluirLocal);
     const { data, error } = await sb.from('locais').select('id, nome').eq('projeto_id', pid);
     if (error) return mostrarErroTabela(tb, 2, error.message);
     data.sort((a, b) => collator.compare(a.nome, b.nome));
-    preencherComEdicao(tb, data, [(l) => l.nome], 'Nenhum local nesta obra.', editarLocal);
+    preencherComEdicao(tb, data, [(l) => l.nome], 'Nenhum local nesta obra.', editarLocal, excluirLocal);
   }
 
   function editarLocal(l) {
@@ -672,6 +688,15 @@
     $('l-submit').textContent = 'Acrescentar local';
     $('l-cancelar').classList.add('oculto');
     setMsg($('msg-local'), '');
+  }
+
+  async function excluirLocal(l) {
+    if (!confirm('Excluir o local ' + l.nome + '?')) return;
+    const { error } = await sb.from('locais').delete().eq('id', l.id);
+    if (error) return setMsg($('msg-local'), error.code === '23503' ? 'Este local está em uso e não pode ser excluído.' : error.message, 'erro');
+    if (editLocal && editLocal.id === l.id) cancelarLocal();
+    setMsg($('msg-local'), 'Local excluído.', 'ok');
+    carregarLocais();
   }
 
   $('l-cancelar').addEventListener('click', cancelarLocal);
@@ -718,7 +743,7 @@
     const { data, error } = await sb.from('motivos_justificativa').select('id, descricao').eq('tipo', $('mot-tipo').value);
     if (error) return mostrarErroTabela(tb, 2, error.message);
     data.sort((a, b) => collator.compare(a.descricao, b.descricao));
-    preencherComEdicao(tb, data, [(m) => m.descricao], 'Nenhum motivo deste tipo.', editarMotivo);
+    preencherComEdicao(tb, data, [(m) => m.descricao], 'Nenhum motivo deste tipo.', editarMotivo, excluirMotivo);
   }
 
   function editarMotivo(m) {
@@ -736,6 +761,15 @@
     $('m-submit').textContent = 'Acrescentar motivo';
     $('m-cancelar').classList.add('oculto');
     setMsg($('msg-motivo'), '');
+  }
+
+  async function excluirMotivo(m) {
+    if (!confirm('Excluir o motivo "' + m.descricao + '"?')) return;
+    const { error } = await sb.from('motivos_justificativa').delete().eq('id', m.id);
+    if (error) return setMsg($('msg-motivo'), error.code === '23503' ? 'Este motivo está em uso e não pode ser excluído.' : error.message, 'erro');
+    if (editMotivo && editMotivo.id === m.id) cancelarMotivo();
+    setMsg($('msg-motivo'), 'Motivo excluído.', 'ok');
+    carregarMotivos();
   }
 
   $('m-cancelar').addEventListener('click', cancelarMotivo);
