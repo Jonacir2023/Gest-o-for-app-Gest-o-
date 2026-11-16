@@ -181,6 +181,7 @@
   .resumo-eqc { font-weight: 700; color: var(--azul); margin: 0 0 8px; }
   .legenda-eqc { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
   .tabela-eqc select.c-per, .tabela-eqc select.c-mot { min-width: 110px; }
+  .cab-eqc { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 </style>
 </head>
 <body>
@@ -591,7 +592,7 @@
           </section>
 
           <section class="rdo-card">
-            <h2>Equipamentos e Veículos</h2>
+            <div class="cab-eqc"><h2>Equipamentos e Veículos</h2><button type="button" class="btn-add-round" id="r-novo-eq" aria-label="Cadastrar equipamento ou veículo">+</button></div>
             <p class="texto-apoio">Equipamentos e veículos ativos. Marque status, operador e medição de cada um.</p>
             <div id="r-equip">
               <p class="resumo-eqc" id="r-eq-resumo"></p>
@@ -3358,6 +3359,13 @@
   $('opc-novo').addEventListener('click', () => { eqcEditOp = 'novo'; renderOpsC(); });
   $('eqc-novo-pesado').addEventListener('click', () => { eqcEditEq = 'novo-pesado'; renderEqsC('pesados'); });
   $('eqc-novo-leve').addEventListener('click', () => { eqcEditEq = 'novo-leve'; renderEqsC('leves'); });
+  $('r-novo-eq').addEventListener('click', () => {
+    eqcEditEq = 'novo-pesado';
+    mostrarView('cadastros');
+    mostrarCad('equipamentos');
+    renderEqsC('pesados');
+    window.scrollTo(0, 0);
+  });
   ['pe', 'lv'].forEach(p => {
     $('conf-' + p + '-data').addEventListener('change', () => carregarConfDia(p));
     $('conf-' + p + '-local').addEventListener('change', () => renderConf(p));
