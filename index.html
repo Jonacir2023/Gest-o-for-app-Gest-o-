@@ -624,7 +624,7 @@
 
           <section class="rdo-card rdo-full">
             <h2>Atividades</h2>
-            <div id="r-ativ"></div>
+            <div class="tabela-wrap"><table class="tabela-eqc" style="min-width:980px"><thead><tr><th>Local</th><th>Descrição</th><th>Atividade *</th><th>Unidade</th><th>Quantidade</th><th>Paralisada</th><th>Motivo da paralisação</th><th></th></tr></thead><tbody id="r-ativ"></tbody></table></div>
             <button type="button" id="r-add-at" class="btn-add-round" aria-label="Adicionar atividade">+</button>
           </section>
 
@@ -1838,18 +1838,17 @@
   }
 
   function linhaAtividade(v = {}) {
-    const div = document.createElement('div');
-    div.className = 'item-ck linha-rdo';
+    const div = document.createElement('tr');
+    div.className = 'linha-rdo';
     div.innerHTML = `
-      <div class="linha-campos">
-        <div><label>Local</label><select class="at-local"></select></div>
-        <div><label>Descrição</label><input class="at-desc"></div>
-        <div><label>Atividade *</label><input class="at-nome"></div>
-        <div><label>Unidade</label><select class="at-un"></select></div>
-        <div><label>Quantidade</label><input class="at-qtd" inputmode="decimal"></div>
-        <div><label><input class="at-par" type="checkbox" style="width:auto"> Paralisada</label></div>
-        <div class="at-motivo-bloco oculto"><label>Motivo da paralisação</label><select class="at-motivo"></select></div>
-      </div>`;
+      <td><select class="at-local"></select></td>
+      <td><input class="at-desc"></td>
+      <td><input class="at-nome"></td>
+      <td><select class="at-un"></select></td>
+      <td><input class="at-qtd" inputmode="decimal"></td>
+      <td style="text-align:center"><input class="at-par" type="checkbox" style="width:auto"></td>
+      <td><select class="at-motivo"></select></td>
+      <td></td>`;
     div.querySelector('.at-nome').value = v.atividade || '';
     opcoes(div.querySelector('.at-un'), rdoUnidades.map((u) => [u.id, u.sigla]), 'Selecione', v.unidade_id || '');
     opcoes(div.querySelector('.at-local'), rdoLocais.map((l) => [l.id, l.nome]), 'Selecione', v.local_id || '');
@@ -1858,15 +1857,15 @@
     div.querySelector('.at-desc').value = v.descricao || '';
     opcoes(div.querySelector('.at-motivo'), rdoMotivosAtiv.map((m) => [m.id, m.descricao]), 'Selecione o motivo', v.justificativa_id || '');
     const par = div.querySelector('.at-par');
-    const bloco = div.querySelector('.at-motivo-bloco');
-    const ajustaPar = () => { bloco.classList.toggle('oculto', !par.checked); atualizarParalisadas(); };
+    const mot = div.querySelector('.at-motivo');
+    const ajustaPar = () => { mot.disabled = !par.checked; atualizarParalisadas(); };
     par.addEventListener('change', ajustaPar);
-    div.querySelector('.at-motivo').addEventListener('change', atualizarParalisadas);
+    mot.addEventListener('change', atualizarParalisadas);
     div.querySelector('.at-nome').addEventListener('input', atualizarParalisadas);
-    bloco.classList.toggle('oculto', !par.checked);
+    mot.disabled = !par.checked;
     const remover = botao('Remover', () => { div.remove(); atualizarParalisadas(); });
     remover.classList.add('perigo');
-    div.appendChild(remover);
+    div.querySelector('td:last-child').appendChild(remover);
     return div;
   }
 
