@@ -431,7 +431,7 @@
         <button type="button" class="btn-dash" id="eqc-novo-pesado">+ Equipamento ou caminhão</button>
         <div class="tabela-wrap">
           <table>
-            <thead><tr><th>Código</th><th>Descrição</th><th>Tipo</th><th>Origem</th><th>Entrada</th><th>Ano</th><th>Horímetro de entrada</th><th>Próxima preventiva</th><th>Locação mensal (30 dias)</th><th>Próxima lavação</th><th>Operadores habilitados</th><th>Histórico</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Código</th><th>Descrição</th><th>Tipo</th><th>Origem</th><th>Entrada</th><th>Ano</th><th>Horímetro de entrada</th><th>Próxima preventiva</th><th>Locação mensal (30 dias)</th><th>Diária (÷ 30)</th><th>Utilização do mês</th><th>Próxima lavação</th><th>Operadores habilitados</th><th>Histórico</th><th>Ações</th></tr></thead>
             <tbody id="eqc-corpo-pesados"></tbody>
           </table>
         </div>
@@ -439,7 +439,7 @@
         <button type="button" class="btn-dash" id="eqc-novo-leve">+ Veículo leve</button>
         <div class="tabela-wrap">
           <table>
-            <thead><tr><th>Placa ou código</th><th>Descrição</th><th>Origem</th><th>Entrada</th><th>Ano</th><th>Km de entrada</th><th>Próxima preventiva</th><th>Locação mensal (30 dias)</th><th>Próxima lavação</th><th>Histórico</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Placa ou código</th><th>Descrição</th><th>Origem</th><th>Entrada</th><th>Ano</th><th>Km de entrada</th><th>Próxima preventiva</th><th>Locação mensal (30 dias)</th><th>Diária (÷ 30)</th><th>Utilização do mês</th><th>Próxima lavação</th><th>Histórico</th><th>Ações</th></tr></thead>
             <tbody id="eqc-corpo-leves"></tbody>
           </table>
         </div>
@@ -2865,6 +2865,8 @@
   let eqcEditOp = null;
   let eqcEditEq = null;
   let eqcHistEq = null;
+  let eqcUtil = {};
+  const EQC_HORAS_MES = 220;
 
   const eqcHoje = () => new Date().toLocaleDateString('sv-SE');
   const eqcData = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
@@ -2893,18 +2895,23 @@
   }
 
   async function carregarEquipamentosCad() {
-    const [a, b, c, d] = await Promise.all([
+    const agora = new Date();
+    const mesIni = agora.toLocaleDateString('sv-SE').slice(0, 8) + '01';
+    const mesFim = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).toLocaleDateString('sv-SE');
+    const [a, b, c, d, u] = await Promise.all([
       sb.from('operadores').select('*').order('nome'),
       sb.from('equipamentos').select('*').order('codigo'),
       sb.from('equipamento_operadores').select('*'),
       sb.from('equipamento_historico').select('*').order('data', { ascending: false }),
+      sb.rpc('equipamento_utilizacao', { p_ini: mesIni, p_fim: mesFim }),
     ]);
-    const erro = a.error || b.error || c.error || d.error;
+    const erro = a.error || b.error || c.error || d.error || u.error;
     if (erro) return setMsg($('eqc-msg'), 'Erro: ' + erro.message, 'erro');
     eqcOps = a.data;
     eqcEqs = b.data;
     eqcVinc = c.data;
     eqcHist = d.data;
+    eqcUtil = Object.fromEntries((u.data || []).map((x) => [x.equipamento_id, x]));
     renderOpsC();
     renderEqsC('pesados');
     renderEqsC('leves');
@@ -3034,7 +3041,7 @@
     const corpo = $(leves ? 'eqc-corpo-leves' : 'eqc-corpo-pesados');
     const lista = eqcEqs.filter(e => (leves ? e.tipo === 'Leve' : e.tipo !== 'Leve'));
     corpo.innerHTML = '';
-    if (!lista.length) { corpo.innerHTML = '<tr><td colspan="' + (leves ? 11 : 13) + '">Nenhum cadastro.</td></tr>'; return; }
+    if (!lista.length) { corpo.innerHTML = '<tr><td colspan="' + (leves ? 13 : 15) + '">Nenhum cadastro.</td></tr>'; return; }
     for (const e of lista) {
       const tr = document.createElement('tr');
       if (e.baixa_em) tr.className = 'baixado';
@@ -3048,6 +3055,9 @@
       cel(eqcMed(e));
       cel(eqcData(e.prox_preventiva));
       cel(eqcReais(e.locacao_mensal));
+      cel(e.locacao_mensal ? eqcReais(e.locacao_mensal / 30) : '—');
+      const ut = eqcUtil[e.id];
+      cel(ut ? Number(ut.horas).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' h · ' + (Number(ut.horas) / EQC_HORAS_MES * 100).toFixed(0) + '% de ' + EQC_HORAS_MES + ' h' : '—');
       cel(eqcData(e.prox_lavacao));
       if (!leves) {
         const habil = eqcOps.filter(o => eqcOpHabilitado(o, e)).map(o => o.nome);
