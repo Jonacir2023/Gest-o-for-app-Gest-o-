@@ -266,6 +266,8 @@
         <button type="button" class="aba" data-cad="lideres">Líderes da Pauta</button>
         <button type="button" class="aba" data-cad="categorias">Setores e funções</button>
         <button type="button" class="aba" data-cad="efetivo">Efetivo</button>
+        <button type="button" class="aba" data-cad="operadores">Operadores e motoristas</button>
+        <button type="button" class="aba" data-cad="equipamentos">Equipamentos e veículos</button>
       </nav>
 
       <section id="cad-unidades" class="card oculto">
@@ -405,6 +407,45 @@
         </div>
         <div id="efetivo-blocos" class="oculto"></div>
       </section>
+
+      <section id="cad-operadores" class="oculto">
+        <div class="card">
+          <h1>Operadores e motoristas</h1>
+          <p class="texto-apoio">Operador só aparece na confirmação do equipamento em que está especializado. Todo motorista precisa de CNH em dia e de direção defensiva em dia.</p>
+        </div>
+        <button type="button" class="btn-dash" id="opc-novo">+ Operador ou motorista</button>
+        <div class="tabela-wrap">
+          <table>
+            <thead><tr><th>Matrícula</th><th>Nome</th><th>Função</th><th>Empresa</th><th>CNH (validade)</th><th>Direção defensiva</th><th>Especializado em</th><th>Situação</th><th>Ações</th></tr></thead>
+            <tbody id="opc-corpo"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="cad-equipamentos" class="oculto">
+        <div class="card">
+          <h1>Equipamentos e veículos</h1>
+          <p class="texto-apoio">Preventiva e lavação são datas marcadas pelo DMV. Locação mensal cobre 30 dias. Lápis edita, lixeira exclui do cadastro, Dar baixa retira da obra mantendo o histórico.</p>
+        </div>
+        <p class="texto-apoio"><strong>Equipamentos e caminhões</strong></p>
+        <button type="button" class="btn-dash" id="eqc-novo-pesado">+ Equipamento ou caminhão</button>
+        <div class="tabela-wrap">
+          <table>
+            <thead><tr><th>Código</th><th>Descrição</th><th>Tipo</th><th>Origem</th><th>Entrada</th><th>Ano</th><th>Horímetro de entrada</th><th>Próxima preventiva</th><th>Locação mensal (30 dias)</th><th>Próxima lavação</th><th>Operadores habilitados</th><th>Histórico</th><th>Ações</th></tr></thead>
+            <tbody id="eqc-corpo-pesados"></tbody>
+          </table>
+        </div>
+        <p class="texto-apoio"><strong>Veículos leves</strong></p>
+        <button type="button" class="btn-dash" id="eqc-novo-leve">+ Veículo leve</button>
+        <div class="tabela-wrap">
+          <table>
+            <thead><tr><th>Placa ou código</th><th>Descrição</th><th>Origem</th><th>Entrada</th><th>Ano</th><th>Km de entrada</th><th>Próxima preventiva</th><th>Locação mensal (30 dias)</th><th>Próxima lavação</th><th>Histórico</th><th>Ações</th></tr></thead>
+            <tbody id="eqc-corpo-leves"></tbody>
+          </table>
+        </div>
+        <div id="eqc-msg" class="msg"></div>
+      </section>
+
     </div>
 
     <div id="view-rdo" class="oculto">
@@ -503,9 +544,9 @@
           </section>
 
           <section class="rdo-card">
-            <h2>Equipamentos</h2>
+            <h2>Equipamentos e Veículos</h2>
+            <p class="texto-apoio">Equipamentos e veículos ativos. Marque status, operador e medição de cada um.</p>
             <div id="r-equip"></div>
-            <button type="button" id="r-add-eq" class="btn-add-round" aria-label="Adicionar equipamento">+</button>
           </section>
 
           <section class="rdo-card">
@@ -690,6 +731,93 @@
     </div>
     <div id="msg-colab-rapido" class="msg"></div>
   </form>
+</div>
+
+<div id="modal-opc" class="modal oculto" role="dialog" aria-modal="true">
+  <form id="form-opc" class="caixa-modal">
+    <h2 id="opc-titulo">Operador ou motorista</h2>
+    <label for="opc-mat">Matrícula *</label>
+    <input id="opc-mat" required>
+    <label for="opc-nome">Nome *</label>
+    <input id="opc-nome" required>
+    <label for="opc-funcao">Função *</label>
+    <select id="opc-funcao" required>
+      <option>Operador de equipamento</option><option>Motorista de caminhão</option><option>Motorista de veículo leve</option>
+    </select>
+    <label for="opc-empresa">Empresa (vazio = própria)</label>
+    <input id="opc-empresa">
+    <label for="opc-cnh">Número da CNH</label>
+    <input id="opc-cnh">
+    <label for="opc-cnhval">Validade da CNH (obrigatória para motoristas)</label>
+    <input type="date" id="opc-cnhval">
+    <label for="opc-defval">Validade da direção defensiva (obrigatória para motoristas)</label>
+    <input type="date" id="opc-defval">
+    <label>Especializado em</label>
+    <div id="opc-quals" class="texto-apoio"></div>
+    <div class="acoes-modal">
+      <button type="submit">Salvar</button>
+      <button type="button" id="opc-cancelar" class="sec">Cancelar</button>
+    </div>
+    <div id="msg-opc" class="msg"></div>
+  </form>
+</div>
+
+<div id="modal-eqc" class="modal oculto" role="dialog" aria-modal="true">
+  <form id="form-eqc" class="caixa-modal">
+    <h2 id="eqc-titulo">Equipamento</h2>
+    <label for="eqc-tipo">Tipo *</label>
+    <select id="eqc-tipo" required><option>Equipamento</option><option>Caminhão</option><option>Leve</option></select>
+    <label for="eqc-codigo">Código ou placa *</label>
+    <input id="eqc-codigo" required>
+    <label for="eqc-desc">Descrição *</label>
+    <input id="eqc-desc" required>
+    <label for="eqc-origem">Origem</label>
+    <select id="eqc-origem"><option>Própria</option><option>Terceiro</option><option>Locado</option></select>
+    <label for="eqc-empresa">Empresa (se não for própria)</label>
+    <input id="eqc-empresa">
+    <label for="eqc-entrada">Data de entrada</label>
+    <input type="date" id="eqc-entrada">
+    <label for="eqc-ano">Ano de fabricação *</label>
+    <input type="number" min="1950" max="2100" id="eqc-ano" required>
+    <label id="eqc-med-lbl" for="eqc-med">Horímetro de entrada (h) *</label>
+    <input type="number" step="0.1" min="0" id="eqc-med" required>
+    <label for="eqc-prev">Próxima preventiva (DMV)</label>
+    <input type="date" id="eqc-prev">
+    <label for="eqc-loc">Locação mensal (R$, 30 dias)</label>
+    <input type="number" step="0.01" min="0" id="eqc-loc">
+    <label for="eqc-lav">Próxima lavação (DMV)</label>
+    <input type="date" id="eqc-lav">
+    <div class="acoes-modal">
+      <button type="submit">Salvar</button>
+      <button type="button" id="eqc-cancelar" class="sec">Cancelar</button>
+    </div>
+    <div id="msg-eqc" class="msg"></div>
+  </form>
+</div>
+
+<div id="modal-eqh" class="modal oculto" role="dialog" aria-modal="true">
+  <div class="caixa-modal">
+    <h2 id="eqh-titulo">Histórico</h2>
+    <div class="tabela-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Operador ou motorista</th><th>Custo</th><th>Horímetro ou km</th></tr></thead><tbody id="eqh-corpo"></tbody></table></div>
+    <h3 style="margin:14px 0 6px;font-size:14px">Novo registro</h3>
+    <label for="eqh-data">Data *</label>
+    <input type="date" id="eqh-data">
+    <label for="eqh-tipo">Tipo *</label>
+    <select id="eqh-tipo"><option>Preventiva</option><option>Quebra</option><option>Corretiva</option><option>Lavação</option><option>Outra</option></select>
+    <label for="eqh-desc">Descrição *</label>
+    <input id="eqh-desc">
+    <label for="eqh-op">Operador ou motorista</label>
+    <select id="eqh-op"></select>
+    <label for="eqh-custo">Custo (R$)</label>
+    <input type="number" step="0.01" min="0" id="eqh-custo">
+    <label for="eqh-medida">Horímetro ou km</label>
+    <input id="eqh-medida" inputmode="decimal">
+    <div class="acoes-modal">
+      <button type="button" id="eqh-add">Adicionar</button>
+      <button type="button" id="eqh-fechar" class="sec">Fechar</button>
+    </div>
+    <div id="msg-eqh" class="msg"></div>
+  </div>
 </div>
 
 <div id="modal-imp" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="imp-titulo">
@@ -938,8 +1066,9 @@
   }
 
   function mostrarCad(c) {
-    ['unidades', 'locais', 'motivos', 'lideres', 'efetivo', 'categorias'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
+    ['unidades', 'locais', 'motivos', 'lideres', 'efetivo', 'categorias', 'operadores', 'equipamentos'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
     document.querySelectorAll('[data-cad]').forEach((b) => b.classList.toggle('ativa', b.dataset.cad === c));
+    if (c === 'operadores' || c === 'equipamentos') carregarEquipamentosCad();
   }
 
   function preencherLinhas(tb, linhas, colunas, vazio) {
@@ -1740,24 +1869,96 @@
     return div;
   }
 
-  function linhaEquipamento(v = {}) {
+  // ---------- RDO: equipamentos e veículos (confirmação do dia) ----------
+  const RDO_MANUT = ['Preventiva', 'Lavação', 'Outra manutenção programada'];
+  const RDO_STATUS = [['operando', 'Operando'], ['parado', 'Parado (quebra)'], ['manutencao', 'Em manutenção']];
+
+  function renderEquipamentosRdo(salvos, copia) {
+    const box = $('r-equip');
+    box.innerHTML = '';
+    const ativos = eqcEqs.filter((e) => !e.baixa_em);
+    if (!ativos.length) {
+      box.textContent = 'Nenhum equipamento ou veículo ativo. Cadastre em Cadastros › Equipamentos e veículos.';
+      return;
+    }
+    for (const e of ativos) {
+      const s = (salvos || []).find((x) => x.equipamento_id === e.id) || null;
+      box.appendChild(linhaEquipamentoRdo(e, s, copia));
+    }
+  }
+
+  function linhaEquipamentoRdo(e, s, copia) {
+    const usa = s && !copia ? s : null;
     const div = document.createElement('div');
     div.className = 'item-ck linha-rdo';
+    div.dataset.eq = e.id;
+    div.dataset.codigo = e.codigo;
     div.innerHTML = `
       <div class="linha-campos">
-        <div><label>Código *</label><input class="eq-cod"></div>
-        <div><label>Operador</label><input class="eq-op"></div>
-        <div><label>Status</label><select class="eq-st"></select></div>
-        <div><label>Horímetro</label><input class="eq-hor" inputmode="decimal"></div>
-        <div><label>Descrição</label><input class="eq-desc"></div>
+        <div><label>Equipamento</label><input class="eq-nome" disabled></div>
+        <div><label>Status *</label><select class="eq-st"></select></div>
+        <div><label>Operador ou motorista</label><select class="eq-op"></select></div>
+        <div><label>Inicial (h ou km)</label><input class="eq-ini" inputmode="decimal"></div>
+        <div><label>Final (h ou km)</label><input class="eq-fim" inputmode="decimal"></div>
+        <div><label>Horas trabalhadas</label><input class="eq-hrs" disabled></div>
+        <div><label>Motivo</label><select class="eq-mot"></select></div>
+        <div><label>Observação</label><input class="eq-desc"></div>
       </div>`;
-    div.querySelector('.eq-cod').value = v.equipamento_codigo || '';
-    div.querySelector('.eq-op').value = v.operador || '';
-    opcoes(div.querySelector('.eq-st'), STATUS_EQ, null, v.status || 'operando');
-    div.querySelector('.eq-hor').value = v.horimetro != null ? String(v.horimetro) : '';
-    div.querySelector('.eq-desc').value = v.descricao || '';
-    div.appendChild(botaoRemover(div));
+    const st = div.querySelector('.eq-st');
+    const op = div.querySelector('.eq-op');
+    const ini = div.querySelector('.eq-ini');
+    const fim = div.querySelector('.eq-fim');
+    const hrs = div.querySelector('.eq-hrs');
+    const mot = div.querySelector('.eq-mot');
+    div.querySelector('.eq-nome').value = e.codigo + ' · ' + e.descricao + ' (' + e.tipo + ')';
+    opcoes(st, RDO_STATUS, null, usa ? usa.status : 'operando');
+    opcoes(op, eqcOps.filter((o) => eqcOpHabilitado(o, e)).map((o) => [o.id, o.nome]), '', usa && usa.operador_id ? usa.operador_id : '');
+    ini.value = usa && usa.medicao_inicial != null ? String(usa.medicao_inicial) : '';
+    fim.value = usa && usa.medicao_final != null ? String(usa.medicao_final) : '';
+    div.querySelector('.eq-desc').value = usa ? (usa.descricao || '') : '';
+    const atualizaMot = () => {
+      const v = st.value;
+      const lista = v === 'parado' ? rdoMotivosEq.map((m) => [m.id, m.descricao]) : v === 'manutencao' ? RDO_MANUT.map((t) => [t, t]) : [];
+      const atual = usa ? (v === 'parado' ? (usa.justificativa_id || '') : (usa.manutencao_tipo || '')) : '';
+      opcoes(mot, lista, '', atual);
+      mot.disabled = v === 'operando';
+      ini.disabled = v !== 'operando';
+      fim.disabled = v !== 'operando';
+    };
+    const atualizaHrs = () => {
+      const a = parseFloat(ini.value.replace(',', '.'));
+      const b = parseFloat(fim.value.replace(',', '.'));
+      hrs.value = !isNaN(a) && !isNaN(b) && b >= a ? (b - a).toFixed(1).replace('.', ',') + ' h' : '—';
+    };
+    ini.addEventListener('input', atualizaHrs);
+    fim.addEventListener('input', atualizaHrs);
+    st.addEventListener('change', () => { atualizaMot(); atualizaHrs(); });
+    atualizaMot();
+    atualizaHrs();
     return div;
+  }
+
+  function coletarEquipamentos() {
+    return lerLinhas('#r-equip').map((d) => {
+      const st = d.querySelector('.eq-st').value;
+      const ini = d.querySelector('.eq-ini').value.trim().replace(',', '.') || null;
+      const fim = d.querySelector('.eq-fim').value.trim().replace(',', '.') || null;
+      const mot = d.querySelector('.eq-mot').value || null;
+      const opSel = d.querySelector('.eq-op');
+      return {
+        equipamento_id: d.dataset.eq,
+        codigo: d.dataset.codigo,
+        operador_id: opSel.value || null,
+        operador: opSel.value ? opSel.options[opSel.selectedIndex].textContent : null,
+        status: st,
+        medicao_inicial: st === 'operando' ? ini : null,
+        medicao_final: st === 'operando' ? fim : null,
+        horimetro: st === 'operando' ? fim : null,
+        justificativa_id: st === 'parado' ? mot : null,
+        manutencao_tipo: st === 'manutencao' ? mot : null,
+        descricao: d.querySelector('.eq-desc').value.trim() || null,
+      };
+    });
   }
 
   function linhaAtividade(v = {}) {
@@ -1811,6 +2012,8 @@
     rdoUnidades = (un || []).sort((a, b) => collator.compare(a.sigla, b.sigla));
     await carregarLocaisRdo();
     await carregarEfetivoRDO();
+    await carregarEquipamentosCad();
+    renderEquipamentosRdo([], false);
     carregarListaRdo();
   }
 
@@ -1855,11 +2058,11 @@
     }
   }
 
-  function preencherItens(det) {
+  function preencherItens(det, copia = false) {
     $('r-equip').innerHTML = '';
     $('r-ativ').innerHTML = '';
     aplicarEfetivoDet(det.efetivo);
-    for (const q of det.equipamentos) $('r-equip').appendChild(linhaEquipamento(q));
+    renderEquipamentosRdo(det.equipamentos, copia);
     for (const a of det.atividades) $('r-ativ').appendChild(linhaAtividade(a));
     atualizarParalisadas();
   }
@@ -1900,7 +2103,7 @@
     if (!id) return setMsg(msg, 'Não há RDO anterior nesta obra.', 'erro');
     const { data, error: e2 } = await sb.rpc('rdo_detalhe', { p_id: id });
     if (e2) return setMsg(msg, 'Erro: ' + e2.message, 'erro');
-    preencherItens(data);
+    preencherItens(data, true);
     setMsg(msg, 'Efetivo, equipamentos e atividades copiados do último diário. Nada foi salvo ainda.', 'ok');
   }
 
@@ -2651,15 +2854,348 @@
     carregarEfetivoRDO(statusEfetivoAtual());
   });
 
-  function coletarEquipamentos() {
-    return lerLinhas('#r-equip').map((d) => ({
-      codigo: d.querySelector('.eq-cod').value.trim(),
-      operador: d.querySelector('.eq-op').value.trim() || null,
-      status: d.querySelector('.eq-st').value,
-      horimetro: d.querySelector('.eq-hor').value.trim() || null,
-      descricao: d.querySelector('.eq-desc').value.trim() || null,
-    }));
+  // ---------- Cadastro de operadores, equipamentos e veículos ----------
+  const EQC_FUNCAO = { 'Equipamento': 'Operador de equipamento', 'Caminhão': 'Motorista de caminhão', 'Leve': 'Motorista de veículo leve' };
+  const EQC_OP = 'Operador de equipamento';
+  const EQC_LEVE = 'Motorista de veículo leve';
+  let eqcOps = [];
+  let eqcEqs = [];
+  let eqcVinc = [];
+  let eqcHist = [];
+  let eqcEditOp = null;
+  let eqcEditEq = null;
+  let eqcHistEq = null;
+
+  const eqcHoje = () => new Date().toLocaleDateString('sv-SE');
+  const eqcData = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
+  const eqcReais = (v) => (v ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—');
+  const eqcMed = (e) => (e.medicao_entrada == null ? '—' : Number(e.medicao_entrada).toLocaleString('pt-BR') + (e.tipo === 'Equipamento' ? ' h' : ' km'));
+  const eqcNomeOp = (id) => { const o = eqcOps.find(x => x.id === id); return o ? o.nome : '—'; };
+  const eqcOpCnhOk = (o) => !!o.cnh_validade && o.cnh_validade >= eqcHoje();
+  const eqcOpDefOk = (o) => !!o.direcao_defensiva_validade && o.direcao_defensiva_validade >= eqcHoje();
+  const eqcOpsDoEquip = (eqId) => eqcVinc.filter(v => v.equipamento_id === eqId).map(v => v.operador_id);
+  const eqcEquipsDoOp = (opId) => eqcVinc.filter(v => v.operador_id === opId).map(v => v.equipamento_id);
+
+  // Pode ser escolhido na confirmação deste equipamento?
+  function eqcOpHabilitado(o, e) {
+    if (o.baixa_em || o.funcao !== EQC_FUNCAO[e.tipo]) return false;
+    if (o.funcao !== EQC_OP && !(eqcOpCnhOk(o) && eqcOpDefOk(o))) return false;
+    if (o.funcao === EQC_LEVE) return true;
+    return eqcOpsDoEquip(e.id).includes(o.id);
   }
+
+  function eqcSituacaoOp(o) {
+    if (o.baixa_em) return 'Em baixa';
+    if (o.funcao !== EQC_OP && !eqcOpCnhOk(o)) return 'Bloqueado: CNH vencida ou sem data';
+    if (o.funcao !== EQC_OP && !eqcOpDefOk(o)) return 'Bloqueado: direção defensiva vencida ou sem data';
+    if (o.funcao !== EQC_LEVE && !eqcEquipsDoOp(o.id).length) return 'Sem equipamento vinculado';
+    return 'Habilitado';
+  }
+
+  async function carregarEquipamentosCad() {
+    const [a, b, c, d] = await Promise.all([
+      sb.from('operadores').select('*').order('nome'),
+      sb.from('equipamentos').select('*').order('codigo'),
+      sb.from('equipamento_operadores').select('*'),
+      sb.from('equipamento_historico').select('*').order('data', { ascending: false }),
+    ]);
+    const erro = a.error || b.error || c.error || d.error;
+    if (erro) return setMsg($('eqc-msg'), 'Erro: ' + erro.message, 'erro');
+    eqcOps = a.data;
+    eqcEqs = b.data;
+    eqcVinc = c.data;
+    eqcHist = d.data;
+    renderOpsC();
+    renderEqsC('pesados');
+    renderEqsC('leves');
+  }
+
+  function renderOpsC() {
+    const corpo = $('opc-corpo');
+    corpo.innerHTML = '';
+    if (!eqcOps.length) { corpo.innerHTML = '<tr><td colspan="9">Nenhum operador ou motorista.</td></tr>'; return; }
+    for (const o of eqcOps) {
+      const tr = document.createElement('tr');
+      if (o.baixa_em) tr.className = 'baixado';
+      const cel = (t) => { const td = document.createElement('td'); td.textContent = t; tr.appendChild(td); };
+      cel(o.matricula || '—');
+      cel(o.nome);
+      cel(o.funcao);
+      cel(o.empresa || 'Empresa própria');
+      cel(o.funcao === EQC_OP ? '—' : eqcData(o.cnh_validade));
+      cel(o.funcao === EQC_OP ? '—' : eqcData(o.direcao_defensiva_validade));
+      const esp = o.funcao === EQC_LEVE ? 'Veículos leves'
+        : (eqcEquipsDoOp(o.id).map(id => (eqcEqs.find(x => x.id === id) || {}).codigo).filter(Boolean).join(', ') || '—');
+      cel(esp);
+      cel(eqcSituacaoOp(o));
+      const tdA = document.createElement('td');
+      tdA.className = 'acoes';
+      if (!o.baixa_em) tdA.append(botao('✏️', () => abrirOpC(o)), botao('🗑️', () => excluirOpC(o)), botao('Dar baixa', () => baixaOpC(o)));
+      tr.appendChild(tdA);
+      corpo.appendChild(tr);
+    }
+  }
+
+  function mostraQualsOpC(funcao, marcados) {
+    const box = $('opc-quals');
+    box.innerHTML = '';
+    if (funcao === EQC_LEVE) { box.textContent = 'Habilitado para todos os veículos leves com CNH e direção defensiva em dia.'; return; }
+    const tipo = Object.keys(EQC_FUNCAO).find(t => EQC_FUNCAO[t] === funcao);
+    const lista = eqcEqs.filter(e => e.tipo === tipo && !e.baixa_em);
+    if (!lista.length) { box.textContent = 'Nenhum cadastro desse tipo ainda. Cadastre antes.'; return; }
+    for (const e of lista) {
+      const lab = document.createElement('label');
+      lab.style.display = 'flex';
+      lab.style.gap = '8px';
+      lab.style.alignItems = 'center';
+      lab.style.margin = '4px 0';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = e.id;
+      cb.checked = marcados.includes(e.id);
+      cb.style.width = 'auto';
+      lab.append(cb, ' ' + e.codigo + ' · ' + e.descricao);
+      box.appendChild(lab);
+    }
+  }
+
+  function abrirOpC(o) {
+    eqcEditOp = o ? o.id : null;
+    $('opc-titulo').textContent = o ? 'Editar operador ou motorista' : 'Novo operador ou motorista';
+    $('opc-mat').value = o ? (o.matricula || '') : '';
+    $('opc-nome').value = o ? o.nome : '';
+    $('opc-funcao').value = o ? o.funcao : EQC_OP;
+    $('opc-empresa').value = o ? (o.empresa || '') : '';
+    $('opc-cnh').value = o ? (o.cnh_numero || '') : '';
+    $('opc-cnhval').value = o ? (o.cnh_validade || '') : '';
+    $('opc-defval').value = o ? (o.direcao_defensiva_validade || '') : '';
+    mostraQualsOpC($('opc-funcao').value, o ? eqcEquipsDoOp(o.id) : []);
+    setMsg($('msg-opc'), '');
+    $('modal-opc').classList.remove('oculto');
+    $('opc-mat').focus();
+  }
+
+  $('opc-funcao').addEventListener('change', () => mostraQualsOpC($('opc-funcao').value, []));
+
+  $('form-opc').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const msg = $('msg-opc');
+    const funcao = $('opc-funcao').value;
+    const dados = {
+      matricula: $('opc-mat').value.trim() || null,
+      nome: $('opc-nome').value.trim(),
+      funcao,
+      empresa: $('opc-empresa').value.trim() || null,
+      cnh_numero: $('opc-cnh').value.trim() || null,
+      cnh_validade: $('opc-cnhval').value || null,
+      direcao_defensiva_validade: $('opc-defval').value || null,
+    };
+    if (!dados.nome) return setMsg(msg, 'Informe o nome.', 'erro');
+    if (funcao !== EQC_OP && (!dados.cnh_validade || !dados.direcao_defensiva_validade)) return setMsg(msg, 'Motoristas precisam de CNH e de direção defensiva com validade.', 'erro');
+    const quals = funcao === EQC_LEVE ? [] : [...$('opc-quals').querySelectorAll('input:checked')].map(i => i.value);
+    if (funcao !== EQC_LEVE && !quals.length) return setMsg(msg, 'Marque pelo menos um equipamento ou caminhão.', 'erro');
+    setMsg(msg, 'Salvando…');
+    let opId = eqcEditOp;
+    let error;
+    if (opId) {
+      ({ error } = await sb.from('operadores').update(dados).eq('id', opId));
+    } else {
+      const r = await sb.from('operadores').insert(dados).select('id').single();
+      error = r.error;
+      opId = r.data ? r.data.id : null;
+    }
+    if (error) return setMsg(msg, error.message, 'erro');
+    const { error: eDel } = await sb.from('equipamento_operadores').delete().eq('operador_id', opId);
+    if (eDel) return setMsg(msg, eDel.message, 'erro');
+    if (quals.length) {
+      const { error: eIns } = await sb.from('equipamento_operadores').insert(quals.map(eid => ({ equipamento_id: eid, operador_id: opId })));
+      if (eIns) return setMsg(msg, eIns.message, 'erro');
+    }
+    $('modal-opc').classList.add('oculto');
+    carregarEquipamentosCad();
+  });
+
+  async function excluirOpC(o) {
+    if (!confirm('Excluir ' + o.nome + ' do cadastro? Os históricos que citam essa pessoa ficam sem nome. Para tirar da obra mantendo o histórico, use Dar baixa.')) return;
+    const { error } = await sb.from('operadores').delete().eq('id', o.id);
+    if (error) return setMsg($('eqc-msg'), 'Erro: ' + error.message, 'erro');
+    carregarEquipamentosCad();
+  }
+
+  async function baixaOpC(o) {
+    if (!confirm('Dar baixa em ' + o.nome + '? Ele sai das confirmações a partir de hoje.')) return;
+    const { error } = await sb.from('operadores').update({ baixa_em: eqcHoje() }).eq('id', o.id);
+    if (error) return setMsg($('eqc-msg'), 'Erro: ' + error.message, 'erro');
+    carregarEquipamentosCad();
+  }
+
+  function renderEqsC(modo) {
+    const leves = modo === 'leves';
+    const corpo = $(leves ? 'eqc-corpo-leves' : 'eqc-corpo-pesados');
+    const lista = eqcEqs.filter(e => (leves ? e.tipo === 'Leve' : e.tipo !== 'Leve'));
+    corpo.innerHTML = '';
+    if (!lista.length) { corpo.innerHTML = '<tr><td colspan="' + (leves ? 11 : 13) + '">Nenhum cadastro.</td></tr>'; return; }
+    for (const e of lista) {
+      const tr = document.createElement('tr');
+      if (e.baixa_em) tr.className = 'baixado';
+      const cel = (t) => { const td = document.createElement('td'); td.textContent = t; tr.appendChild(td); };
+      cel(e.codigo);
+      cel(e.descricao);
+      if (!leves) cel(e.tipo);
+      cel(e.origem + (e.empresa ? ' · ' + e.empresa : ''));
+      cel(eqcData(e.data_entrada));
+      cel(e.ano_fabricacao || '—');
+      cel(eqcMed(e));
+      cel(eqcData(e.prox_preventiva));
+      cel(eqcReais(e.locacao_mensal));
+      cel(eqcData(e.prox_lavacao));
+      if (!leves) {
+        const habil = eqcOps.filter(o => eqcOpHabilitado(o, e)).map(o => o.nome);
+        cel(habil.length ? habil.join(', ') : 'Sem operador habilitado');
+      }
+      const tdH = document.createElement('td');
+      tdH.appendChild(botao('Ver (' + eqcHist.filter(h => h.equipamento_id === e.id).length + ')', () => abrirEqh(e)));
+      tr.appendChild(tdH);
+      const tdA = document.createElement('td');
+      tdA.className = 'acoes';
+      if (!e.baixa_em) tdA.append(botao('✏️', () => abrirEqc(e)), botao('🗑️', () => excluirEqc(e)), botao('Dar baixa', () => baixaEqc(e)));
+      else tdA.textContent = 'Em baixa';
+      tr.appendChild(tdA);
+      corpo.appendChild(tr);
+    }
+  }
+
+  function atualizaMedLblEqc() {
+    $('eqc-med-lbl').textContent = $('eqc-tipo').value === 'Equipamento' ? 'Horímetro de entrada (h) *' : 'Km de entrada *';
+  }
+  $('eqc-tipo').addEventListener('change', atualizaMedLblEqc);
+
+  function abrirEqc(e, tipoPreset = 'Equipamento') {
+    eqcEditEq = e ? e.id : null;
+    $('eqc-titulo').textContent = e ? 'Editar equipamento' : 'Novo equipamento';
+    $('eqc-tipo').value = e ? e.tipo : tipoPreset;
+    $('eqc-codigo').value = e ? e.codigo : '';
+    $('eqc-desc').value = e ? e.descricao : '';
+    $('eqc-origem').value = e ? e.origem : 'Própria';
+    $('eqc-empresa').value = e ? (e.empresa || '') : '';
+    $('eqc-entrada').value = e ? (e.data_entrada || '') : '';
+    $('eqc-ano').value = e && e.ano_fabricacao ? e.ano_fabricacao : '';
+    $('eqc-med').value = e && e.medicao_entrada != null ? e.medicao_entrada : '';
+    $('eqc-prev').value = e ? (e.prox_preventiva || '') : '';
+    $('eqc-loc').value = e && e.locacao_mensal != null ? e.locacao_mensal : '';
+    $('eqc-lav').value = e ? (e.prox_lavacao || '') : '';
+    atualizaMedLblEqc();
+    setMsg($('msg-eqc'), '');
+    $('modal-eqc').classList.remove('oculto');
+    $('eqc-codigo').focus();
+  }
+
+  $('form-eqc').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const msg = $('msg-eqc');
+    const dados = {
+      tipo: $('eqc-tipo').value,
+      codigo: $('eqc-codigo').value.trim(),
+      descricao: $('eqc-desc').value.trim(),
+      origem: $('eqc-origem').value,
+      empresa: $('eqc-empresa').value.trim() || null,
+      data_entrada: $('eqc-entrada').value || null,
+      ano_fabricacao: Number($('eqc-ano').value) || null,
+      medicao_entrada: $('eqc-med').value === '' ? null : Number($('eqc-med').value),
+      prox_preventiva: $('eqc-prev').value || null,
+      prox_lavacao: $('eqc-lav').value || null,
+      locacao_mensal: $('eqc-loc').value === '' ? null : Number($('eqc-loc').value),
+    };
+    if (!dados.codigo || !dados.descricao || !dados.ano_fabricacao || dados.medicao_entrada == null) {
+      return setMsg(msg, 'Código, descrição, ano de fabricação e medição de entrada são obrigatórios.', 'erro');
+    }
+    setMsg(msg, 'Salvando…');
+    const { error } = eqcEditEq
+      ? await sb.from('equipamentos').update(dados).eq('id', eqcEditEq)
+      : await sb.from('equipamentos').insert(dados);
+    if (error) return setMsg(msg, error.message, 'erro');
+    $('modal-eqc').classList.add('oculto');
+    carregarEquipamentosCad();
+  });
+
+  async function excluirEqc(e) {
+    if (!confirm('Excluir ' + e.codigo + ' do cadastro? O histórico dele também some. Para tirar da obra mantendo o histórico, use Dar baixa.')) return;
+    const { error } = await sb.from('equipamentos').delete().eq('id', e.id);
+    if (error) return setMsg($('eqc-msg'), 'Erro: ' + error.message, 'erro');
+    carregarEquipamentosCad();
+  }
+
+  async function baixaEqc(e) {
+    if (!confirm('Dar baixa em ' + e.codigo + '? Sai das confirmações a partir de hoje. O histórico fica.')) return;
+    const { error } = await sb.from('equipamentos').update({ baixa_em: eqcHoje() }).eq('id', e.id);
+    if (error) return setMsg($('eqc-msg'), 'Erro: ' + error.message, 'erro');
+    carregarEquipamentosCad();
+  }
+
+  function renderEqh() {
+    const e = eqcEqs.find(x => x.id === eqcHistEq);
+    if (!e) return;
+    $('eqh-titulo').textContent = 'Histórico · ' + e.codigo + ' ' + e.descricao;
+    const corpo = $('eqh-corpo');
+    corpo.innerHTML = '';
+    const linhas = eqcHist.filter(h => h.equipamento_id === e.id);
+    if (!linhas.length) { corpo.innerHTML = '<tr><td colspan="6">Sem registros.</td></tr>'; return; }
+    for (const h of linhas) {
+      const tr = document.createElement('tr');
+      const valores = [eqcData(h.data), h.tipo, h.descricao, h.operador_id ? eqcNomeOp(h.operador_id) : '—', eqcReais(h.custo), h.medicao != null ? String(h.medicao) : '—'];
+      for (const v of valores) { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); }
+      corpo.appendChild(tr);
+    }
+  }
+
+  function abrirEqh(e) {
+    eqcHistEq = e.id;
+    $('eqh-data').value = eqcHoje();
+    $('eqh-tipo').value = 'Preventiva';
+    const sel = $('eqh-op');
+    sel.innerHTML = '';
+    sel.appendChild(new Option('', ''));
+    eqcOps.filter(o => !o.baixa_em && o.funcao === EQC_FUNCAO[e.tipo]).forEach(o => sel.appendChild(new Option(o.nome, o.id)));
+    $('eqh-desc').value = '';
+    $('eqh-custo').value = '';
+    $('eqh-medida').value = '';
+    setMsg($('msg-eqh'), '');
+    renderEqh();
+    $('modal-eqh').classList.remove('oculto');
+  }
+
+  $('eqh-add').addEventListener('click', async () => {
+    const msg = $('msg-eqh');
+    const desc = $('eqh-desc').value.trim();
+    if (!$('eqh-data').value || !desc) return setMsg(msg, 'Data e descrição são obrigatórias.', 'erro');
+    const medTxt = $('eqh-medida').value.trim();
+    const { error } = await sb.from('equipamento_historico').insert({
+      equipamento_id: eqcHistEq,
+      data: $('eqh-data').value,
+      tipo: $('eqh-tipo').value,
+      descricao: desc,
+      operador_id: $('eqh-op').value || null,
+      custo: Number($('eqh-custo').value) || 0,
+      medicao: medTxt === '' ? null : Number(medTxt.replace(',', '.')),
+    });
+    if (error) return setMsg(msg, error.message, 'erro');
+    $('eqh-desc').value = '';
+    $('eqh-custo').value = '';
+    $('eqh-medida').value = '';
+    setMsg(msg, 'Registrado.');
+    await carregarEquipamentosCad();
+    renderEqh();
+  });
+
+  $('opc-novo').addEventListener('click', () => abrirOpC(null));
+  $('opc-cancelar').addEventListener('click', () => $('modal-opc').classList.add('oculto'));
+  $('eqc-novo-pesado').addEventListener('click', () => abrirEqc(null, 'Equipamento'));
+  $('eqc-novo-leve').addEventListener('click', () => abrirEqc(null, 'Leve'));
+  $('eqc-cancelar').addEventListener('click', () => $('modal-eqc').classList.add('oculto'));
+  $('eqh-fechar').addEventListener('click', () => $('modal-eqh').classList.add('oculto'));
+  ['modal-opc', 'modal-eqc', 'modal-eqh'].forEach(id => $(id).addEventListener('click', (ev) => {
+    if (ev.target.id === id) $(id).classList.add('oculto');
+  }));
 
   function coletarAtividades() {
     return lerLinhas('#r-ativ').map((d) => ({
@@ -2677,6 +3213,9 @@
     campos_obrigatorios: 'Preencha data, obra, frente, encarregado e apontador.',
     colaborador_obrigatorio: 'Informe o nome em todas as linhas do efetivo.',
     codigo_equipamento_obrigatorio: 'Informe o código em todas as linhas de equipamento.',
+    medicao_equipamento_invalida: 'Equipamento operando: informe a medição inicial e a final. A final não pode ser menor que a inicial.',
+    justificativa_parada_obrigatoria: 'Informe a justificativa de cada equipamento parado.',
+    tipo_manutencao_obrigatorio: 'Informe o tipo de manutenção de cada equipamento em manutenção.',
     atividade_obrigatoria: 'Informe a atividade em todas as linhas.',
     sem_permissao: 'Seu perfil não pode lançar RDO.',
     chuva_mm_obrigatorio: 'Informe os milímetros de chuva do período em que choveu.',
@@ -2687,7 +3226,6 @@
   $('r-proj').addEventListener('change', carregarLocaisRdo);
   $('r-mes').addEventListener('change', carregarListaRdo);
   $('r-copiar').addEventListener('click', copiarUltimo);
-  $('r-add-eq').addEventListener('click', () => $('r-equip').appendChild(linhaEquipamento()));
   $('r-add-at').addEventListener('click', () => { $('r-ativ').appendChild(linhaAtividade()); atualizarParalisadas(); });
 
   $('form-rdo').addEventListener('submit', async (e) => {
@@ -2708,6 +3246,8 @@
     const atividades = coletarAtividades();
     if (efetivo.some((x) => !x.colaborador)) return setMsg(msg, ERROS_RDO.colaborador_obrigatorio, 'erro');
     if (equipamentos.some((x) => !x.codigo)) return setMsg(msg, ERROS_RDO.codigo_equipamento_obrigatorio, 'erro');
+    const eqSemOperador = equipamentos.find((x) => x.status === 'operando' && !x.operador_id);
+    if (eqSemOperador) return setMsg(msg, 'Informe o operador ou motorista de ' + eqSemOperador.codigo + '.', 'erro');
     if (atividades.some((x) => !x.atividade)) return setMsg(msg, ERROS_RDO.atividade_obrigatoria, 'erro');
 
     if ((climaEstado.manha.clima === 'chuva' && (!climaEstado.manha.ini || !climaEstado.manha.fim)) ||
