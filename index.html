@@ -394,6 +394,7 @@
           <div class="barra-ef">
             <select id="ef-filtro-setor" aria-label="Filtrar por setor"></select>
             <button type="button" id="ef-novo" class="sec">+ Colaborador</button>
+            <button type="button" id="ef-importar" class="sec">Importar planilha (RH)</button>
           </div>
           <div class="tabela-ef">
             <table class="tabela-planilha">
@@ -689,6 +690,21 @@
     </div>
     <div id="msg-colab-rapido" class="msg"></div>
   </form>
+</div>
+
+<div id="modal-imp" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="imp-titulo">
+  <div class="caixa-modal">
+    <h2 id="imp-titulo">Importar planilha do RH</h2>
+    <p class="texto-apoio">Arquivo CSV (no Excel: Salvar como → CSV UTF-8). A primeira linha é o cabeçalho. Confira o mapeamento antes de importar.</p>
+    <input type="file" id="imp-arquivo" accept=".csv,text/csv">
+    <div id="imp-mapa"></div>
+    <div id="imp-previa" class="texto-apoio" style="margin-top:12px"></div>
+    <div class="acoes-modal">
+      <button type="button" id="imp-confirmar" disabled>Importar</button>
+      <button type="button" id="imp-fechar" class="sec">Fechar</button>
+    </div>
+    <div id="msg-imp" class="msg"></div>
+  </div>
 </div>
 
 <div id="modal-par" class="modal oculto" role="dialog" aria-modal="true" aria-labelledby="par-titulo">
@@ -2441,6 +2457,196 @@
     if (error) return setMsg(msg, error.message, 'erro');
     colabEditandoId = null;
     $('modal-colab').classList.add('oculto');
+    carregarColaboradores();
+    carregarEfetivoRDO(statusEfetivoAtual());
+  });
+
+  // ---------- Importação da planilha do RH (CSV) ----------
+  const CAMPOS_IMP = [
+    { campo: 'matricula', rotulo: 'Matrícula *', alias: ['matricula', 'mat', 'registro', 'chapa'] },
+    { campo: 'nome', rotulo: 'Nome *', alias: ['nome', 'nome completo', 'colaborador'] },
+    { campo: 'funcao', rotulo: 'Função', alias: ['funcao', 'cargo'] },
+    { campo: 'categoria', rotulo: 'Setor *', alias: ['setor', 'categoria', 'departamento', 'area'] },
+    { campo: 'grupo_terceiro', rotulo: 'Empresa', alias: ['empresa', 'terceiro', 'grupo terceiro'] },
+    { campo: 'data_contrato', rotulo: 'Data do contrato', alias: ['data contrato', 'data de contrato', 'admissao', 'data admissao'] },
+  ];
+  const normaTxt = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[_-]+/g, ' ').trim();
+  let impDados = null;
+  let impMapa = {};
+  let impRegistros = [];
+
+  // CSV com vírgula ou ponto e vírgula, campos entre aspas
+  function lerCSV(texto) {
+    const sep = texto.split('\n', 1)[0].includes(';') ? ';' : ',';
+    const linhas = [];
+    let linha = [];
+    let campo = '';
+    let aspas = false;
+    for (let i = 0; i < texto.length; i++) {
+      const ch = texto[i];
+      if (aspas) {
+        if (ch === '"' && texto[i + 1] === '"') { campo += '"'; i++; }
+        else if (ch === '"') aspas = false;
+        else campo += ch;
+      } else if (ch === '"') {
+        aspas = true;
+      } else if (ch === sep) {
+        linha.push(campo);
+        campo = '';
+      } else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && texto[i + 1] === '\n') i++;
+        linha.push(campo);
+        campo = '';
+        if (linha.some((x) => x.trim() !== '')) linhas.push(linha);
+        linha = [];
+      } else {
+        campo += ch;
+      }
+    }
+    linha.push(campo);
+    if (linha.some((x) => x.trim() !== '')) linhas.push(linha);
+    return linhas;
+  }
+
+  // dd/mm/aaaa ou aaaa-mm-dd -> aaaa-mm-dd; vazio -> null; inválido -> ''
+  function impDataISO(s) {
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+    if (!m) return '';
+    const [, d, mes, a] = m;
+    if (+mes < 1 || +mes > 12 || +d < 1 || +d > 31) return '';
+    return `${a}-${mes.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  function fecharImport() { $('modal-imp').classList.add('oculto'); }
+
+  $('ef-importar').addEventListener('click', () => {
+    $('imp-arquivo').value = '';
+    $('imp-mapa').innerHTML = '';
+    $('imp-previa').textContent = '';
+    $('imp-confirmar').disabled = true;
+    setMsg($('msg-imp'), '');
+    impDados = null;
+    impRegistros = [];
+    $('modal-imp').classList.remove('oculto');
+  });
+  $('imp-fechar').addEventListener('click', fecharImport);
+  $('modal-imp').addEventListener('click', (ev) => { if (ev.target.id === 'modal-imp') fecharImport(); });
+
+  $('imp-arquivo').addEventListener('change', async () => {
+    const arq = $('imp-arquivo').files[0];
+    if (!arq) return;
+    const linhas = lerCSV((await arq.text()).replace(/^﻿/, ''));
+    if (linhas.length < 2) return setMsg($('msg-imp'), 'Arquivo sem dados.', 'erro');
+    const cabecalho = linhas[0].map((h) => h.trim());
+    impDados = { cabecalho, linhas: linhas.slice(1) };
+    impMapa = {};
+    const mapa = $('imp-mapa');
+    mapa.innerHTML = '';
+    for (const c of CAMPOS_IMP) {
+      const idx = cabecalho.findIndex((h) => c.alias.includes(normaTxt(h)));
+      impMapa[c.campo] = idx;
+      const lab = document.createElement('label');
+      lab.textContent = c.rotulo;
+      const sel = document.createElement('select');
+      sel.appendChild(new Option('— não importar —', '-1'));
+      cabecalho.forEach((h, i) => sel.appendChild(new Option(h || '(sem nome)', String(i))));
+      sel.value = String(idx);
+      sel.addEventListener('change', () => {
+        impMapa[c.campo] = Number(sel.value);
+        atualizarPreviaImport();
+      });
+      mapa.append(lab, sel);
+    }
+    atualizarPreviaImport();
+  });
+
+  // Valida cada linha e mostra o que vai ser inserido, atualizado ou ignorado
+  async function atualizarPreviaImport() {
+    const msg = $('msg-imp');
+    const previa = $('imp-previa');
+    $('imp-confirmar').disabled = true;
+    impRegistros = [];
+    if (!impDados) return;
+    if (impMapa.matricula < 0 || impMapa.nome < 0 || impMapa.categoria < 0) {
+      previa.textContent = 'Mapeie Matrícula, Nome e Setor para continuar.';
+      return;
+    }
+    const [cats, cols] = await Promise.all([
+      sb.from('categorias_efetivo').select('nome'),
+      sb.from('colaboradores').select('id, matricula, inativo_em'),
+    ]);
+    const erro = cats.error || cols.error;
+    if (erro) return setMsg(msg, erro.message, 'erro');
+    const setoresOk = new Set(cats.data.map((c) => c.nome));
+    const porMat = new Map(cols.data.filter((x) => x.matricula).map((x) => [x.matricula, x]));
+    const vistos = new Set();
+    const valor = (linha, idx) => (idx >= 0 ? (linha[idx] || '').trim() : '');
+
+    impRegistros = impDados.linhas.map((linha, n) => {
+      const dataTxt = valor(linha, impMapa.data_contrato);
+      const dataISO = impDataISO(dataTxt);
+      const r = {
+        linha: n + 2,
+        matricula: valor(linha, impMapa.matricula),
+        nome: valor(linha, impMapa.nome),
+        funcao: valor(linha, impMapa.funcao) || null,
+        categoria: valor(linha, impMapa.categoria),
+        grupo_terceiro: valor(linha, impMapa.grupo_terceiro) || null,
+        data_contrato: dataISO || null,
+        erros: [],
+        acao: '',
+      };
+      if (!r.matricula) r.erros.push('sem matrícula');
+      else if (vistos.has(r.matricula)) r.erros.push('matrícula repetida no arquivo');
+      vistos.add(r.matricula);
+      if (!r.nome) r.erros.push('sem nome');
+      if (!setoresOk.has(r.categoria)) r.erros.push('setor "' + r.categoria + '" não cadastrado');
+      if (dataTxt && dataISO === '') r.erros.push('data inválida');
+      if (!r.erros.length) {
+        const ex = porMat.get(r.matricula);
+        r.acao = !ex ? 'inserir' : ex.inativo_em ? 'ignorar (com baixa)' : 'atualizar';
+      }
+      return r;
+    });
+
+    const cont = (a) => impRegistros.filter((r) => r.acao === a).length;
+    const comErro = impRegistros.filter((r) => r.erros.length);
+    const linhasErro = comErro.slice(0, 20).map((r) => 'Linha ' + r.linha + ': ' + r.erros.join(', ')).join('\n');
+    previa.textContent =
+      'Inserir: ' + cont('inserir') + ' · Atualizar: ' + cont('atualizar') +
+      ' · Ignorar (com baixa): ' + cont('ignorar (com baixa)') + ' · Com erro: ' + comErro.length +
+      (linhasErro ? '\n' + linhasErro : '') +
+      (comErro.length > 20 ? '\n… e mais ' + (comErro.length - 20) + ' com erro' : '');
+    $('imp-confirmar').disabled = cont('inserir') + cont('atualizar') === 0;
+  }
+
+  $('imp-confirmar').addEventListener('click', async () => {
+    const msg = $('msg-imp');
+    const validos = impRegistros.filter((r) => r.acao === 'inserir' || r.acao === 'atualizar');
+    if (!validos.length) return;
+    if (!confirm('Importar ' + validos.length + ' registros do RH?')) return;
+    $('imp-confirmar').disabled = true;
+    setMsg(msg, 'Importando…');
+    let ok = 0;
+    const falhas = [];
+    for (const r of validos) {
+      const dados = {
+        nome: r.nome,
+        matricula: r.matricula,
+        funcao: r.funcao,
+        categoria: r.categoria,
+        grupo_terceiro: r.grupo_terceiro,
+        data_contrato: r.data_contrato,
+      };
+      const { error } = r.acao === 'inserir'
+        ? await sb.from('colaboradores').insert(dados)
+        : await sb.from('colaboradores').update(dados).eq('matricula', r.matricula).is('inativo_em', null);
+      if (error) falhas.push('linha ' + r.linha + ': ' + error.message);
+      else ok++;
+    }
+    setMsg(msg, ok + ' registros importados.' + (falhas.length ? ' Falhas: ' + falhas.slice(0, 5).join(' | ') : ''), falhas.length ? 'erro' : undefined);
     carregarColaboradores();
     carregarEfetivoRDO(statusEfetivoAtual());
   });
