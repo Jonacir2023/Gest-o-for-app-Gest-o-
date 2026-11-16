@@ -547,6 +547,7 @@
             <h2>Equipamentos e Veículos</h2>
             <p class="texto-apoio">Equipamentos e veículos ativos. Marque status, operador e medição de cada um.</p>
             <div id="r-equip"></div>
+            <button type="button" id="r-add-eq" class="btn-add-round" aria-label="Cadastrar equipamento">+</button>
           </section>
 
           <section class="rdo-card">
@@ -1873,6 +1874,13 @@
   const RDO_MANUT = ['Preventiva', 'Lavação', 'Outra manutenção programada'];
   const RDO_STATUS = [['operando', 'Operando'], ['parado', 'Parado (quebra)'], ['manutencao', 'Em manutenção']];
 
+  // Atualiza a lista do RDO preservando o que já foi digitado nas linhas
+  async function atualizarEquipRdo() {
+    const atuais = coletarEquipamentos();
+    await carregarEquipamentosCad();
+    renderEquipamentosRdo(atuais, false);
+  }
+
   function renderEquipamentosRdo(salvos, copia) {
     const box = $('r-equip');
     box.innerHTML = '';
@@ -3134,7 +3142,7 @@
       : await sb.from('equipamentos').insert(dados);
     if (error) return setMsg(msg, error.message, 'erro');
     $('modal-eqc').classList.add('oculto');
-    carregarEquipamentosCad();
+    atualizarEquipRdo();
   });
 
   async function excluirEqc(e) {
@@ -3210,6 +3218,7 @@
   $('opc-cancelar').addEventListener('click', () => $('modal-opc').classList.add('oculto'));
   $('eqc-novo-pesado').addEventListener('click', () => abrirEqc(null, 'Equipamento'));
   $('eqc-novo-leve').addEventListener('click', () => abrirEqc(null, 'Leve'));
+  $('r-add-eq').addEventListener('click', () => abrirEqc(null, 'Equipamento'));
   $('eqc-cancelar').addEventListener('click', () => $('modal-eqc').classList.add('oculto'));
   $('eqh-fechar').addEventListener('click', () => $('modal-eqh').classList.add('oculto'));
   ['modal-opc', 'modal-eqc', 'modal-eqh'].forEach(id => $(id).addEventListener('click', (ev) => {
