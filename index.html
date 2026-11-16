@@ -287,6 +287,7 @@
         <button type="button" class="aba" data-cad="efetivo">Efetivo</button>
         <button type="button" class="aba" data-cad="operadores">Operadores e motoristas</button>
         <button type="button" class="aba" data-cad="equipamentos">Equipamentos e veículos</button>
+        <button type="button" class="aba" data-cad="atividades">Atividades padrão</button>
       </nav>
 
       <section id="cad-unidades" class="card oculto">
@@ -437,6 +438,20 @@
           <table class="tabela-eqc" style="min-width:1100px">
             <thead><tr><th>Matrícula</th><th>Nome</th><th>Função</th><th>Empresa</th><th>CNH (validade)</th><th>Direção defensiva</th><th>Especializado em</th><th>Situação</th><th>Ações</th></tr></thead>
             <tbody id="opc-corpo"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="cad-atividades" class="oculto">
+        <div class="card">
+          <h1>Atividades padrão</h1>
+          <p class="texto-apoio">Lista usada no nome da atividade ao lançar o RDO do dia. Unidade padrão é preenchida sozinha ao escolher a atividade.</p>
+        </div>
+        <div class="barra-eqc"><button type="button" class="btn-dash" id="atv-novo">+ Atividade padrão</button><span class="msg" id="atv-msg"></span></div>
+        <div class="tabela-wrap">
+          <table class="tabela-eqc" style="min-width:520px">
+            <thead><tr><th>Atividade padrão</th><th>Unidade padrão</th><th>Ações</th></tr></thead>
+            <tbody id="atv-corpo"></tbody>
           </table>
         </div>
       </section>
@@ -624,7 +639,7 @@
 
           <section class="rdo-card rdo-full">
             <h2>Atividades</h2>
-            <div class="tabela-wrap"><table class="tabela-eqc" style="min-width:980px"><thead><tr><th>Local</th><th>Descrição</th><th>Atividade *</th><th>Unidade</th><th>Quantidade</th><th>Paralisada</th><th>Motivo da paralisação</th><th></th></tr></thead><tbody id="r-ativ"></tbody></table></div>
+            <div class="tabela-wrap"><table class="tabela-eqc" style="min-width:980px"><thead><tr><th>Local</th><th>Atividade *</th><th>Descrição</th><th>Unidade</th><th>Quantidade</th><th>Paralisada</th><th>Motivo da paralisação</th><th></th></tr></thead><tbody id="r-ativ"></tbody></table></div>
             <button type="button" id="r-add-at" class="btn-add-round" aria-label="Adicionar atividade">+</button>
           </section>
 
@@ -1034,9 +1049,10 @@
   }
 
   function mostrarCad(c) {
-    ['unidades', 'locais', 'motivos', 'lideres', 'efetivo', 'categorias', 'operadores', 'equipamentos'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
+    ['unidades', 'locais', 'motivos', 'lideres', 'efetivo', 'categorias', 'operadores', 'equipamentos', 'atividades'].forEach((x) => $('cad-' + x).classList.toggle('oculto', x !== c));
     document.querySelectorAll('[data-cad]').forEach((b) => b.classList.toggle('ativa', b.dataset.cad === c));
     if (c === 'operadores' || c === 'equipamentos') carregarEquipamentosCad();
+    if (c === 'atividades') carregarAtividadesPadrao();
   }
 
   function preencherLinhas(tb, linhas, colunas, vazio) {
@@ -1842,14 +1858,18 @@
     div.className = 'linha-rdo';
     div.innerHTML = `
       <td><select class="at-local"></select></td>
+      <td><select class="at-nome"></select></td>
       <td><input class="at-desc"></td>
-      <td><input class="at-nome"></td>
       <td><select class="at-un"></select></td>
       <td><input class="at-qtd" inputmode="decimal"></td>
       <td style="text-align:center"><input class="at-par" type="checkbox" style="width:auto"></td>
       <td><select class="at-motivo"></select></td>
       <td></td>`;
-    div.querySelector('.at-nome').value = v.atividade || '';
+    opcoesAtividade(div.querySelector('.at-nome'), v.atividade || '');
+    div.querySelector('.at-nome').addEventListener('change', () => {
+      const pad = (rdoAtivPadrao || []).find((x) => x.nome === div.querySelector('.at-nome').value);
+      if (pad && pad.unidade_id) div.querySelector('.at-un').value = pad.unidade_id;
+    });
     opcoes(div.querySelector('.at-un'), rdoUnidades.map((u) => [u.id, u.sigla]), 'Selecione', v.unidade_id || '');
     opcoes(div.querySelector('.at-local'), rdoLocais.map((l) => [l.id, l.nome]), 'Selecione', v.local_id || '');
     div.querySelector('.at-qtd').value = v.quantidade != null ? String(v.quantidade) : '';
@@ -1861,7 +1881,7 @@
     const ajustaPar = () => { mot.disabled = !par.checked; atualizarParalisadas(); };
     par.addEventListener('change', ajustaPar);
     mot.addEventListener('change', atualizarParalisadas);
-    div.querySelector('.at-nome').addEventListener('input', atualizarParalisadas);
+    div.querySelector('.at-nome').addEventListener('change', atualizarParalisadas);
     mot.disabled = !par.checked;
     const remover = botao('Remover', () => { div.remove(); atualizarParalisadas(); });
     remover.classList.add('perigo');
@@ -1882,13 +1902,14 @@
     const { data: motEq } = await sb.from('motivos_justificativa').select('id, descricao').eq('tipo', 'equipamento_parado');
     rdoMotivosEq = (motEq || []).sort((a, b) => collator.compare(a.descricao, b.descricao));
     const { data: motAt } = await sb.from('motivos_justificativa').select('id, descricao').eq('tipo', 'atividade_paralisada');
-    rdoMotivosAtiv = (motAt || []).sort((a, b) => collator.compare(a.descricao, b.descricao));
+    rdoMotivosAtiv = [...(motAt || []), ...rdoMotivosDia].sort((a, b) => collator.compare(a.descricao, b.descricao));
     const { data: un } = await sb.from('unidades_medida').select('id, sigla');
     rdoUnidades = (un || []).sort((a, b) => collator.compare(a.sigla, b.sigla));
     await carregarLocaisRdo();
     await carregarEfetivoRDO();
     await carregarEquipamentosCad();
     renderEquipamentosRdo([], false);
+    await carregarAtividadesPadrao();
     carregarListaRdo();
   }
 
@@ -2727,6 +2748,94 @@
     carregarColaboradores();
     carregarEfetivoRDO(statusEfetivoAtual());
   });
+
+  // ---------- Atividades padrão (cadastro e lista suspensa do RDO) ----------
+  let rdoAtivPadrao = [];
+  let atvUnidades = [];
+  let atvEditId = null;
+
+  async function carregarAtividadesPadrao() {
+    const [a, u] = await Promise.all([
+      sb.from('atividades_padrao').select('id, nome, unidade_id').order('nome'),
+      sb.from('unidades_medida').select('id, sigla').order('sigla'),
+    ]);
+    const erro = a.error || u.error;
+    if (erro) return setMsg($('atv-msg'), 'Erro: ' + erro.message, 'erro');
+    rdoAtivPadrao = a.data || [];
+    atvUnidades = u.data || [];
+    renderAtividadesPadrao();
+  }
+
+  function renderAtividadesPadrao() {
+    const corpo = $('atv-corpo');
+    corpo.innerHTML = '';
+    if (atvEditId === 'novo') corpo.appendChild(linhaAtvForm(null));
+    for (const x of rdoAtivPadrao) corpo.appendChild(atvEditId === x.id ? linhaAtvForm(x) : linhaAtvView(x));
+    if (!rdoAtivPadrao.length && atvEditId !== 'novo') corpo.innerHTML = '<tr><td colspan="3">Nenhuma atividade padrão. Use + Atividade padrão.</td></tr>';
+  }
+
+  function linhaAtvView(x) {
+    const tr = document.createElement('tr');
+    celula(tr, x.nome);
+    const un = atvUnidades.find((u) => u.id === x.unidade_id);
+    celula(tr, un ? un.sigla : '—');
+    const acoes = celula(tr, '');
+    acoes.className = 'acoes-eqc';
+    acoes.append(botao('✏️', () => { atvEditId = x.id; renderAtividadesPadrao(); }), botao('🗑️', () => excluirAtv(x)));
+    return tr;
+  }
+
+  function linhaAtvForm(x) {
+    const tr = document.createElement('tr');
+    tr.className = 'editando';
+    const nome = document.createElement('input');
+    nome.value = x ? x.nome : '';
+    const un = document.createElement('select');
+    un.appendChild(new Option('—', ''));
+    atvUnidades.forEach((u) => un.appendChild(new Option(u.sigla, u.id)));
+    un.value = x && x.unidade_id ? x.unidade_id : '';
+    celula(tr, nome);
+    celula(tr, un);
+    const acoes = celula(tr, '');
+    acoes.className = 'acoes-eqc';
+    acoes.append(
+      botao('Salvar', () => salvarAtv(x, nome.value.trim(), un.value || null)),
+      botao('Cancelar', () => { atvEditId = null; renderAtividadesPadrao(); }),
+    );
+    return tr;
+  }
+
+  async function salvarAtv(x, nome, unidade_id) {
+    const msg = $('atv-msg');
+    if (!nome) return setMsg(msg, 'Informe o nome da atividade.', 'erro');
+    const dados = { nome, unidade_id };
+    const { error } = x
+      ? await sb.from('atividades_padrao').update(dados).eq('id', x.id)
+      : await sb.from('atividades_padrao').insert(dados);
+    if (error) return setMsg(msg, error.code === '23505' ? 'Já existe uma atividade com esse nome.' : error.message, 'erro');
+    atvEditId = null;
+    setMsg(msg, 'Salvo.', 'ok');
+    carregarAtividadesPadrao();
+  }
+
+  async function excluirAtv(x) {
+    if (!confirm('Excluir a atividade padrão "' + x.nome + '"? Os RDOs já lançados continuam com o nome.')) return;
+    const { error } = await sb.from('atividades_padrao').delete().eq('id', x.id);
+    if (error) return setMsg($('atv-msg'), 'Erro: ' + error.message, 'erro');
+    carregarAtividadesPadrao();
+  }
+
+  $('atv-novo').addEventListener('click', () => { atvEditId = 'novo'; renderAtividadesPadrao(); });
+
+  // Lista suspensa da atividade no RDO; mantém o nome já lançado mesmo que tenha saído do cadastro
+  function opcoesAtividade(sel, atual) {
+    sel.innerHTML = '';
+    sel.appendChild(new Option('Selecione', ''));
+    const nomes = (rdoAtivPadrao || []).map((x) => x.nome);
+    if (atual && !nomes.includes(atual)) nomes.unshift(atual);
+    nomes.forEach((n) => sel.appendChild(new Option(n, n)));
+    sel.value = atual || '';
+  }
 
   // ---------- Equipamentos e veículos: tudo em tabela, sem popup ----------
   const EQC_FUNCAO = { 'Equipamento': 'Operador de equipamento', 'Caminhão': 'Motorista de caminhão', 'Leve': 'Motorista de veículo leve' };
