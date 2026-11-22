@@ -1295,7 +1295,7 @@
     locais: { titulo: 'Locais', campos: [{ c: 'nome', r: 'Nome', req: true }] },
     colaboradores: { titulo: 'Efetivo', baixa: 'inativo_em', campos: [
       { c: 'nome', r: 'Nome', req: true }, { c: 'matricula', r: 'Matrícula' }, { c: 'funcao', r: 'Função', lista: 'funcoes' },
-      { c: 'categoria', r: 'Setor', lista: 'categorias' }, { c: 'grupo_terceiro', r: 'Empresa' },
+      { c: 'categoria', r: 'Setor', lista: 'categorias' }, { c: 'grupo_terceiro', r: 'Empresa', lista: 'empresas' },
       { c: 'data_contrato', r: 'Data do contrato', tipo: 'date' }, { c: 'baixada_dias', r: 'Baixada (dias)', lista: 'colaboradores.baixada_dias' },
       { c: 'cnh_numero', r: 'CNH' }, { c: 'cnh_validade', r: 'Validade da CNH', tipo: 'date' },
       { c: 'direcao_defensiva_validade', r: 'Direção defensiva até', tipo: 'date' },
@@ -1305,7 +1305,7 @@
       { c: 'especialidade_3', r: 'Especialidade 3' }, { c: 'num_colaboradores', r: 'Nº de colaboradores', tipo: 'number' },
       { c: 'data_entrada', r: 'Entrada', tipo: 'date' }, { c: 'previsao_saida', r: 'Previsão de saída', tipo: 'date' }] },
     funcoes_efetivo: { titulo: 'Funções', campos: [{ c: 'nome', r: 'Função', req: true }] },
-    categorias_efetivo: { titulo: 'Setores', campos: [{ c: 'nome', r: 'Setor', req: true }, { c: 'empresa', r: 'Empresa', req: true }] },
+    categorias_efetivo: { titulo: 'Setores', campos: [{ c: 'nome', r: 'Setor', req: true }, { c: 'empresa', r: 'Empresa', req: true, lista: 'empresas' }] },
     equipamentos: { titulo: 'Equipamentos e veículos', baixa: 'baixa_em', semSituacao: true, campos: [
       { c: 'tipo', r: 'Tipo', req: true, lista: 'equipamentos.tipo' }, { c: 'especificacao', r: 'Especificação', catalogo: 'especificacao' },
       { c: 'codigo', r: 'Código', req: true }, { c: 'descricao', r: 'Marca', req: true, catalogo: 'marca' }, { c: 'modelo', r: 'Modelo', catalogo: 'modelo' },
