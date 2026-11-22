@@ -49,28 +49,30 @@ const TABELAS = {
 
 /**
  * Catálogo inicial de veículos leves (carros, SUVs e picapes vendidos no Brasil, modelos comuns em frotas de locadoras).
- * Lista base montada sem consulta às frotas da Localiza e da Movida (sites bloqueiam leitura automática).
+ * Lista base complementada com os modelos de referência das frotas Localiza e Movida (categorias "ou similar",
+ * levantadas pelo usuário em 22/11/2026).
  * Usada só para preencher a aba catalogo_veiculos quando ela está vazia; depois, edite em Cadastros > Marcas e modelos.
  */
 const CATALOGO_LEVES = {
   BYD: ['Dolphin', 'Dolphin Mini', 'King', 'Seal', 'Shark', 'Song Plus', 'Song Pro', 'Yuan Plus'],
   'Caoa Chery': ['Arrizo 6', 'Tiggo 5x', 'Tiggo 7', 'Tiggo 8'],
-  Chevrolet: ['Montana', 'Onix', 'Onix Plus', 'S10', 'Spin', 'Tracker', 'Trailblazer'],
-  'Citroën': ['Basalt', 'C3', 'C3 Aircross'],
-  Fiat: ['Argo', 'Cronos', 'Fastback', 'Fiorino', 'Mobi', 'Pulse', 'Strada', 'Titano', 'Toro'],
+  Chevrolet: ['Cruze', 'Montana', 'Onix', 'Onix Plus', 'S10', 'Spin', 'Tracker', 'Trailblazer'],
+  'Citroën': ['Basalt', 'C3', 'C3 Aircross', 'C4 Cactus'],
+  Fiat: ['500e', 'Argo', 'Cronos', 'Fastback', 'Fiorino', 'Grand Siena', 'Mobi', 'Pulse', 'Strada', 'Titano', 'Toro'],
   Ford: ['Bronco Sport', 'Maverick', 'Ranger', 'Territory'],
   GWM: ['Haval H6', 'Ora 03'],
   Honda: ['City', 'City Hatchback', 'Civic', 'HR-V', 'WR-V', 'ZR-V'],
   Hyundai: ['Creta', 'HB20', 'HB20S', 'Tucson'],
   Jeep: ['Commander', 'Compass', 'Renegade'],
   Kia: ['Sportage', 'Stonic'],
+  MINI: ['Cooper'],
   Mitsubishi: ['Eclipse Cross', 'L200 Triton', 'Outlander Sport', 'Pajero Sport'],
-  Nissan: ['Frontier', 'Kicks', 'Sentra', 'Versa'],
-  Peugeot: ['208', '2008', '3008'],
+  Nissan: ['Frontier', 'Kicks', 'Leaf', 'Sentra', 'Versa'],
+  Peugeot: ['208', '2008', '3008', 'e-Expert'],
   RAM: ['1500', 'Rampage'],
-  Renault: ['Duster', 'Kardian', 'Kwid', 'Oroch', 'Stepway'],
+  Renault: ['Duster', 'Kangoo', 'Kardian', 'Kwid', 'Oroch', 'Stepway'],
   Toyota: ['Corolla', 'Corolla Cross', 'Hilux', 'SW4', 'Yaris Cross'],
-  Volkswagen: ['Amarok', 'Nivus', 'Polo', 'Saveiro', 'T-Cross', 'Taos', 'Tera', 'Virtus'],
+  Volkswagen: ['Amarok', 'Gol', 'Nivus', 'Polo', 'Saveiro', 'T-Cross', 'Taos', 'Tera', 'Tiguan', 'Virtus', 'Voyage'],
 };
 
 /* ------------------------------------------------------------------
