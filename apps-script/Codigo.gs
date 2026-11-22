@@ -94,8 +94,38 @@ const CATALOGO_CAMINHOES = {
   XCMG: ['E7-18T', 'E7-29R', 'E7-49T'],
 };
 
+/**
+ * Máquinas e equipamentos de obra vendidos no Brasil (lista base, revisar em Cadastros > Marcas e modelos).
+ * O modelo leva o tipo da máquina no nome, para a lista sair agrupada (Escavadeira, Rolo, Trator...).
+ */
+const CATALOGO_EQUIPAMENTOS = {
+  Bobcat: ['Mini escavadeira E26', 'Minicarregadeira S450', 'Minicarregadeira S650'],
+  Bomag: ['Rolo de pneus BW 24 RH', 'Rolo liso BW 211 D', 'Rolo tandem BW 120'],
+  Case: ['Minicarregadeira SR175', 'Motoniveladora 845B', 'Motoniveladora 865B', 'Pá carregadeira 721F', 'Retroescavadeira 580N'],
+  Caterpillar: ['Escavadeira 320', 'Escavadeira 336', 'Mini escavadeira 302', 'Minicarregadeira 226', 'Minicarregadeira 262',
+    'Motoniveladora 120', 'Motoniveladora 140', 'Pá carregadeira 924', 'Pá carregadeira 950', 'Retroescavadeira 416',
+    'Rolo liso CS54', 'Trator de esteira D6', 'Trator de esteira D8'],
+  Dynapac: ['Rolo de pneus CP274', 'Rolo liso CA250', 'Rolo tandem CC1200'],
+  Grove: ['Guindaste GMK 5250', 'Guindaste RT540E'],
+  Hamm: ['Rolo de pneus GRW 280', 'Rolo liso 3411', 'Rolo tandem HD 14'],
+  Hyundai: ['Escavadeira HX220', 'Pá carregadeira HL760'],
+  JCB: ['Escavadeira JS220', 'Mini escavadeira 8026', 'Minicarregadeira 155', 'Retroescavadeira 3CX', 'Retroescavadeira 4CX'],
+  'John Deere': ['Escavadeira 210G', 'Escavadeira 250G', 'Minicarregadeira 332G', 'Motoniveladora 670G', 'Pá carregadeira 524K',
+    'Pá carregadeira 624K', 'Retroescavadeira 310L', 'Trator agrícola 5078E', 'Trator agrícola 6125J', 'Trator de esteira 750J'],
+  Komatsu: ['Escavadeira PC200', 'Escavadeira PC300', 'Motoniveladora GD555', 'Pá carregadeira WA320', 'Trator de esteira D61', 'Trator de esteira D65'],
+  Liebherr: ['Guindaste LTM 1060', 'Guindaste LTM 1100'],
+  LiuGong: ['Escavadeira 922F', 'Pá carregadeira 856H'],
+  'Massey Ferguson': ['Trator agrícola MF 4292', 'Trator agrícola MF 4707'],
+  'New Holland': ['Motoniveladora RG140B', 'Retroescavadeira B95B', 'Retroescavadeira B110B', 'Trator agrícola T6', 'Trator agrícola T7'],
+  Sany: ['Escavadeira SY135C', 'Escavadeira SY215C', 'Guindaste STC500'],
+  Tadano: ['Guindaste GR-500XL'],
+  Valtra: ['Trator agrícola A114', 'Trator agrícola BH180'],
+  Volvo: ['Escavadeira EC220', 'Escavadeira EC300', 'Pá carregadeira L90', 'Pá carregadeira L120'],
+  XCMG: ['Escavadeira XE215', 'Motoniveladora GR1803', 'Pá carregadeira LW300', 'Rolo liso XS123'],
+};
+
 /** Lista base por tipo: cada tipo é preenchido na aba catalogo_veiculos quando ainda não tem nenhum item. */
-const CATALOGO_PADRAO = { Leve: CATALOGO_LEVES, Pesado: CATALOGO_CAMINHOES };
+const CATALOGO_PADRAO = { Leve: CATALOGO_LEVES, Pesado: CATALOGO_CAMINHOES, Equipamento: CATALOGO_EQUIPAMENTOS };
 
 /* ------------------------------------------------------------------
  * 2. CHAVES E VALORES PERMITIDOS (checks do Supabase)
