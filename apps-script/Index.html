@@ -1305,6 +1305,7 @@
     equipamentos: { titulo: 'Equipamentos e veículos', baixa: 'baixa_em', semSituacao: true, campos: [
       { c: 'codigo', r: 'Código', req: true }, { c: 'descricao', r: 'Marca', req: true }, { c: 'modelo', r: 'Modelo' },
       { c: 'ano_fabricacao', r: 'Ano', tipo: 'number' }, { c: 'empresa', r: 'Empresa' }, { c: 'origem', r: 'Origem', lista: 'equipamentos.origem' },
+      { c: 'locacao_mensal', r: 'Locação mensal (R$)', tipo: 'number', ativoSe: { campo: 'origem', valores: ['Própria', 'Locado'] } },
       { c: 'tipo', r: 'Tipo', req: true, lista: 'equipamentos.tipo' }, { c: 'data_entrada', r: 'Entrada', tipo: 'date' }] },
     atividades_padrao: { titulo: 'Atividades padrão', campos: [{ c: 'nome', r: 'Atividade', req: true }, { c: 'unidade_id', r: 'Unidade', lista: 'unidades' }] },
     unidades_medida: { titulo: 'Unidades', campos: [{ c: 'sigla', r: 'Sigla', req: true }, { c: 'descricao', r: 'Descrição' }] },
@@ -1321,7 +1322,8 @@
     return (CADD.listas[nome] || []).map((v) => [String(v), nome === 'motivos_justificativa.tipo' ? (ROT_TIPO_MOTIVO[v] || v) : String(v)]);
   }
   const ehVerdade = (v) => v === true || String(v).toUpperCase() === 'TRUE';
-  function exibeTexto(f, v) {
+  function exibeTexto(f, v, x) {
+    if (f.ativoSe && x && !f.ativoSe.valores.includes(String(x[f.ativoSe.campo] ?? ''))) return 'Não se aplica';
     if (f.tipo === 'bool') return ehVerdade(v) ? 'Sim' : 'Não';
     if (v === '' || v === null || v === undefined) return '—';
     if (f.tipo === 'date') return dataBR(String(v).slice(0, 10));
@@ -1356,7 +1358,7 @@
     }
     if (baixado && cfg.semSituacao) acoes = '<span class="chip neutro">Baixa ' + dataBR(String(x[cfg.baixa]).slice(0, 10)) + '</span>';
     const situacao = comSituacao(cfg) ? `<td>${baixado ? '<span class="chip neutro">Baixa ' + dataBR(String(x[cfg.baixa]).slice(0, 10)) + '</span>' : '<span class="chip enviado">Ativo</span>'}</td>` : '';
-    return `<tr>${cfg.campos.map((f) => `<td>${esc(exibeTexto(f, x[f.c]))}</td>`).join('')}${situacao}<td class="acoes">${acoes}</td></tr>`;
+    return `<tr>${cfg.campos.map((f) => `<td>${esc(exibeTexto(f, x[f.c], x))}</td>`).join('')}${situacao}<td class="acoes">${acoes}</td></tr>`;
   }
   function linhaCadForm(cfg, x) {
     const celulas = cfg.campos.map((f) => {
@@ -1369,7 +1371,8 @@
       }
       const tipo = f.tipo === 'date' ? 'date' : f.tipo === 'number' ? 'number' : 'text';
       const valor = f.tipo === 'date' ? String(v).slice(0, 10) : v;
-      return `<td><input type="${tipo}"${tipo === 'number' ? ' step="any"' : ''} data-c="${f.c}" value="${esc(valor)}"></td>`;
+      const bloqueado = f.ativoSe && !f.ativoSe.valores.includes(String(x[f.ativoSe.campo] ?? '')) ? ' disabled title="Não se aplica a esta origem"' : '';
+      return `<td><input type="${tipo}"${tipo === 'number' ? ' step="any"' : ''} data-c="${f.c}" value="${bloqueado ? '' : esc(valor)}"${bloqueado}></td>`;
     }).join('');
     return `<tr data-id="${esc(x.id || '')}">${celulas}${comSituacao(cfg) ? '<td></td>' : ''}<td class="acoes"><button class="btn pequeno primario" data-salvar="1">Salvar</button> <button class="btn pequeno" data-cancelar="1">Cancelar</button></td></tr>`;
   }
@@ -1424,6 +1427,18 @@
   $('cadNovo').addEventListener('click', () => { CAD_EDITANDO = 'novo'; CAD_EXCLUINDO = null; $('cadMsg').textContent = ''; renderCad(); });
   $('cadBusca').addEventListener('input', () => { if (CADD) renderCad(); });
   $('cadBaixados').addEventListener('change', () => { if (CADD) renderCad(); });
+  $('cadCorpo').addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-c]');
+    if (!sel) return;
+    const tr = sel.closest('tr');
+    CAD[CAD_ATUAL].campos.filter((f) => f.ativoSe && f.ativoSe.campo === sel.dataset.c).forEach((f) => {
+      const alvo = tr.querySelector(`[data-c="${f.c}"]`);
+      const ativo = f.ativoSe.valores.includes(sel.value);
+      alvo.disabled = !ativo;
+      alvo.title = ativo ? '' : 'Não se aplica a esta origem';
+      if (!ativo) alvo.value = '';
+    });
+  });
   $('cadCorpo').addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;

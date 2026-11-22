@@ -91,7 +91,7 @@ const REGRAS = [
   'Importação RH (CSV): matrícula ativa existente atualiza nome, função, setor, empresa e data do contrato; com baixa é ignorada; quem não está no arquivo não muda; setor precisa existir. REGRA PADRÃO, A CONFIRMAR.',
   // Equipamentos
   'Diária do equipamento = locação mensal ÷ 30.',
-  'Locação mensal cobre 30 dias.',
+  'Locação mensal cobre 30 dias. Só se aplica a equipamento de origem Própria ou Locado; de Terceiro não é controlada.',
   'Parada por quebra (status parado): cada meio período parado (manhã ou tarde) desconta 0,5 diária.',
   'Medição do mês = (30 − dias parados) ÷ 30 × locação mensal.',
   'Manutenção (preventiva, lavação, outra manutenção programada): não desconta do valor integral da medição.',

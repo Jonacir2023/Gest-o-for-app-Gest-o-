@@ -586,6 +586,8 @@ function salvarCadastro(tabela, reg) {
     if (v !== '' && !valorPermitido(tabela + '.' + c, v)) throw new Error('Valor não permitido em ' + rotulo_(c, tabela) + ': ' + v + '.');
     dados[c] = v === null || v === undefined ? '' : v;
   });
+  // Equipamento de terceiro: locação não é controlada por nós
+  if (tabela === 'equipamentos' && dados.origem === 'Terceiro') dados.locacao_mensal = '';
   // Efetivo sem empresa informada: usa a empresa cadastrada no setor
   if (tabela === 'colaboradores' && !dados.grupo_terceiro && dados.categoria) {
     dados.grupo_terceiro = String((lerAba_('categorias_efetivo').find((x) => x.nome === dados.categoria) || {}).empresa || '');
