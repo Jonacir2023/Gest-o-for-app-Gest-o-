@@ -168,7 +168,7 @@ function salvarRdo(p) {
   const erro = validarRdo_(p);
   if (erro) throw new Error(erro);
 
-  // Operando: caminhão e leve exigem motorista; equipamento exige operador (do efetivo, ativo)
+  // Operando: veículo leve e pesado (caminhão) exigem motorista; equipamento exige operador (do efetivo, ativo)
   const pessoasCad = lerAba_('colaboradores').filter((x) => !x.inativo_em);
   const equipamentosCad = lerAba_('equipamentos');
   (p.equipamentos || []).forEach((q) => {
@@ -674,7 +674,7 @@ function classeFuncao_(funcao) {
   return '';
 }
 
-/** Caminhão e veículo leve: motorista. Máquinas e equipamentos: operador. */
+/** Veículo leve e pesado (caminhão): motorista. Máquinas e equipamentos: operador. */
 function classeExigida_(tipoEquipamento) {
   return tipoEquipamento === 'Equipamento' ? 'operador' : 'motorista';
 }
@@ -685,7 +685,7 @@ function cabecalho_(nome) {
   return aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0].map(String).filter(Boolean);
 }
 
-/** Cria a aba catalogo_veiculos e preenche com a lista base (CATALOGO_LEVES) se estiver vazia. */
+/** Cria a aba catalogo_veiculos e preenche cada tipo da lista base (CATALOGO_PADRAO) que ainda não tem itens. */
 function garantirCatalogo_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let aba = ss.getSheetByName('catalogo_veiculos');
@@ -694,13 +694,17 @@ function garantirCatalogo_() {
     aba.getRange(1, 1, 1, TABELAS.catalogo_veiculos.length).setValues([TABELAS.catalogo_veiculos]);
     aba.setFrozenRows(1);
   }
-  if (ultimaLinha_(aba) > 1) return;
+  const existentes = lerAba_('catalogo_veiculos');
   const agora = new Date().toISOString();
   const linhas = [];
-  Object.keys(CATALOGO_LEVES).forEach((marca) => {
-    CATALOGO_LEVES[marca].forEach((modelo) => linhas.push([Utilities.getUuid(), 'Leve', marca, modelo, agora]));
+  Object.keys(CATALOGO_PADRAO).forEach((tipo) => {
+    if (existentes.some((x) => x.tipo === tipo)) return;
+    const lista = CATALOGO_PADRAO[tipo];
+    Object.keys(lista).forEach((marca) => {
+      lista[marca].forEach((modelo) => linhas.push([Utilities.getUuid(), tipo, marca, modelo, agora]));
+    });
   });
-  aba.getRange(2, 1, linhas.length, 5).setValues(linhas);
+  if (linhas.length) aba.getRange(ultimaLinha_(aba) + 1, 1, linhas.length, 5).setValues(linhas);
 }
 
 function semDatas_(o) {

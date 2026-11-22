@@ -651,7 +651,7 @@
     linhas.forEach((tr) => { const ausente = tr.querySelector('.ef-pres').value === 'nao'; tr.querySelector('.ef-motivo').disabled = !ausente; if (!ausente) tr.querySelector('.ef-motivo').value = ''; });
   }
 
-  /** Caminhão e leve: motoristas. Máquinas e equipamentos: operadores. Ordem alfabética. */
+  /** Leve e pesado (caminhão): motoristas. Máquinas e equipamentos: operadores. Ordem alfabética. */
   function operadoresPara(tipo, atual) {
     const classe = tipo === 'Equipamento' ? 'operador' : 'motorista';
     const nomes = OPERADORES_BASE.filter((o) => o.classe === classe).map((o) => o.nome)

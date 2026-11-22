@@ -75,6 +75,28 @@ const CATALOGO_LEVES = {
   Volkswagen: ['Amarok', 'Gol', 'Nivus', 'Polo', 'Saveiro', 'T-Cross', 'Taos', 'Tera', 'Tiguan', 'Virtus', 'Voyage'],
 };
 
+/** Caminhões vendidos no Brasil (lista do usuário de 22/11/2026; Mercedes-Benz, Volkswagen, Scania e DAF completadas com as linhas atuais). */
+const CATALOGO_CAMINHOES = {
+  Agrale: ['A 7500', 'A 8700', 'A 10000', 'A 15.000', 'A 18.000', 'Marruá'],
+  BYD: ['eT3', 'eT5', 'eT7', 'eT8'],
+  DAF: ['CF', 'XF', 'XG', 'XG+'],
+  Foton: ['Aumark S', 'Auman D', 'eAumark', 'eGalaxus', 'eWonder', 'Galaxus R9'],
+  Hyundai: ['HD 80', 'HR'],
+  Iveco: ['Daily', 'eDaily', 'S-Way', 'T-Way', 'Tector', 'Trakker', 'X-Way'],
+  JAC: ['A 18.290', 'A 25.290', 'iEV1200T', 'N 9.170', 'N 13.210'],
+  Kia: ['Bongo K2500'],
+  MAN: ['TGX'],
+  'Mercedes-Benz': ['Accelo', 'Actros', 'Arocs', 'Atego', 'eActros'],
+  Scania: ['Série G', 'Série P', 'Série R', 'Série S', 'XT'],
+  Sitrak: ['C7H'],
+  Volkswagen: ['Constellation', 'Delivery', 'e-Delivery', 'Meteor'],
+  Volvo: ['FH', 'FH Electric', 'FM', 'FM Electric', 'FMX', 'VM'],
+  XCMG: ['E7-18T', 'E7-29R', 'E7-49T'],
+};
+
+/** Lista base por tipo: cada tipo é preenchido na aba catalogo_veiculos quando ainda não tem nenhum item. */
+const CATALOGO_PADRAO = { Leve: CATALOGO_LEVES, Pesado: CATALOGO_CAMINHOES };
+
 /* ------------------------------------------------------------------
  * 2. CHAVES E VALORES PERMITIDOS (checks do Supabase)
  * ------------------------------------------------------------------ */
@@ -95,9 +117,9 @@ const VALORES_PERMITIDOS = {
   'pauta_itens.status': ['a_fazer', 'fazendo', 'concluido', 'cancelado'],
   'cargos.perfil': ['acesso_total', 'lider'],
   'operadores.funcao': ['Operador de equipamento', 'Motorista de caminhão', 'Motorista de veículo leve'],
-  'equipamentos.tipo': ['Equipamento', 'Caminhão', 'Leve'],
+  'equipamentos.tipo': ['Leve', 'Pesado', 'Equipamento'],
   'equipamentos.origem': ['Própria', 'Terceiro', 'Locado'],
-  'catalogo_veiculos.tipo': ['Equipamento', 'Caminhão', 'Leve'],
+  'catalogo_veiculos.tipo': ['Leve', 'Pesado', 'Equipamento'],
   'equipamento_historico.tipo': ['Preventiva', 'Corretiva', 'Quebra', 'Lavação', 'Outra'],
   'equipamento_confirmacoes.status': ['operando', 'parado', 'manutencao'],
   'equipamento_confirmacoes.manutencao_tipo': ['Preventiva', 'Lavação', 'Outra manutenção programada'],
@@ -132,7 +154,7 @@ const REGRAS = [
   'Equipamento em manutenção exige o tipo de manutenção.',
   // Operadores
   'Operadores e motoristas são cadastrados no Efetivo. A função define o tipo: começa com "Operador" ou com "Motorista". A aba operadores não é mais usada.',
-  'No RDO, caminhão e veículo leve recebem motorista; máquinas e equipamentos recebem operador. Lista em ordem alfabética.',
+  'Tipos de veículo: Leve (carros e picapes), Pesado (caminhões) e Equipamento (máquinas). No RDO, Leve e Pesado recebem motorista; máquinas e equipamentos recebem operador. Lista em ordem alfabética.',
   'Operador de equipamento só pode ser escolhido para o equipamento em que está especializado (vínculo ainda não implementado).',
   'Motorista de caminhão: CNH em dia e especializado no caminhão.',
   'Todo motorista (caminhão ou veículo leve): CNH e direção defensiva em dia. Operador de equipamento não precisa de direção defensiva.',
