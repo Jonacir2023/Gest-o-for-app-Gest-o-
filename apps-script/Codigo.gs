@@ -39,7 +39,7 @@ const TABELAS = {
   categorias_efetivo: ['id', 'nome', 'criado_em', 'terceiro', 'empresa'],
   funcoes_efetivo: ['id', 'nome', 'criado_em'],
   operadores: ['id', 'matricula', 'nome', 'funcao', 'empresa', 'cnh_numero', 'cnh_validade', 'direcao_defensiva_validade', 'baixa_em', 'criado_em'],
-  equipamentos: ['id', 'codigo', 'descricao', 'tipo', 'origem', 'empresa', 'data_entrada', 'ano_fabricacao', 'medicao_entrada', 'prox_preventiva', 'prox_lavacao', 'locacao_mensal', 'baixa_em', 'criado_em', 'modelo', 'especificacao'],
+  equipamentos: ['id', 'codigo', 'descricao', 'tipo', 'origem', 'empresa', 'data_entrada', 'ano_fabricacao', 'medicao_entrada', 'prox_preventiva', 'prox_lavacao', 'locacao_mensal', 'baixa_em', 'criado_em', 'modelo', 'especificacao', 'operador_id'],
   equipamento_operadores: ['equipamento_id', 'operador_id'],
   equipamento_historico: ['id', 'equipamento_id', 'data', 'tipo', 'descricao', 'operador_id', 'custo', 'medicao', 'criado_em'],
   equipamento_confirmacoes: ['id', 'data', 'local_id', 'responsavel', 'equipamento_id', 'operador_id', 'status', 'justificativa_id', 'manutencao_tipo', 'parado_manha', 'parado_tarde', 'observacao', 'atualizado_em'],
@@ -201,6 +201,7 @@ const REGRAS = [
   'Motorista de caminhão: CNH em dia e especializado no caminhão.',
   'Todo motorista (caminhão ou veículo leve): CNH e direção defensiva em dia. Operador de equipamento não precisa de direção defensiva.',
   'Motorista de veículo leve: habilitado para todos os leves com CNH e direção defensiva em dia.',
+  'Equipamentos e veículos têm motorista/operador fixo (do Efetivo). Leve e Pesado: só motoristas com CNH e direção defensiva preenchidas e em dia. Equipamento: só operadores.',
   // Atividades
   'Atividade do RDO: escolhida da lista de atividades padrão. Unidade padrão preenche sozinha.',
   'Motivo de atividade paralisada: lista inclui atividade_paralisada e dia_sem_execucao (ex.: Chuva).',

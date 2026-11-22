@@ -576,7 +576,7 @@
     COLABORADORES = b.colaboradores.map((c) => ({ nome: c.nome, setor: c.categoria || '' }));
     RESPONSAVEIS = b.responsaveis.map((r) => r.nome);
     CRIADORES = b.colaboradores.map((c) => c.nome);
-    EQUIPAMENTOS = b.equipamentos.map((e) => ({ codigo: e.codigo, descricao: e.descricao, tipo: e.tipo }));
+    EQUIPAMENTOS = b.equipamentos.map((e) => ({ codigo: e.codigo, descricao: e.descricao, tipo: e.tipo, operador: e.operador || '' }));
     OPERADORES = b.operadores.map((o) => o.nome);
     OPERADORES_BASE = b.operadores;
     MOTIVOS_DIA = b.motivos.dia_sem_execucao.map((m) => m.descricao);
@@ -654,7 +654,7 @@
   /** Leve e pesado (caminhão): motoristas. Máquinas e equipamentos: operadores. Ordem alfabética. */
   function operadoresPara(tipo, atual) {
     const classe = tipo === 'Equipamento' ? 'operador' : 'motorista';
-    const nomes = OPERADORES_BASE.filter((o) => o.classe === classe).map((o) => o.nome)
+    const nomes = OPERADORES_BASE.filter((o) => o.classe === classe && (classe === 'operador' || o.apto)).map((o) => o.nome)
       .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
     return atual && !nomes.includes(atual) ? nomes.concat([atual]) : nomes;
   }
@@ -664,7 +664,7 @@
     tbOp.innerHTML = '';
     tbPar.innerHTML = '';
     EQUIPAMENTOS.forEach((e, i) => {
-      const s = salvos[e.codigo] || { situacao: 'operando', operador: '', ini: '', fim: '', periodo: '', motivo: '', obs: '' };
+      const s = salvos[e.codigo] || { situacao: 'operando', operador: e.operador || '', ini: '', fim: '', periodo: '', motivo: '', obs: '' };
       const tr = document.createElement('tr');
       tr.dataset.cod = e.codigo;
       tr.innerHTML = `
@@ -1309,6 +1309,7 @@
     equipamentos: { titulo: 'Equipamentos e veículos', baixa: 'baixa_em', semSituacao: true, campos: [
       { c: 'tipo', r: 'Tipo', req: true, lista: 'equipamentos.tipo' }, { c: 'especificacao', r: 'Especificação', catalogo: 'especificacao' },
       { c: 'codigo', r: 'Código', req: true }, { c: 'descricao', r: 'Marca', req: true, catalogo: 'marca' }, { c: 'modelo', r: 'Modelo', catalogo: 'modelo' },
+      { c: 'operador_id', r: 'Motorista/Operador', catalogo: 'condutor' }, { c: '_dd', r: 'Direção defensiva até', derivado: 'dd' },
       { c: 'ano_fabricacao', r: 'Ano', lista: 'anos' }, { c: 'empresa', r: 'Empresa', lista: 'empresas' }, { c: 'origem', r: 'Origem', lista: 'equipamentos.origem' },
       { c: 'locacao_mensal', r: 'Locação mensal (R$)', tipo: 'number', ativoSe: { campo: 'origem', valores: ['Própria', 'Locado'] } },
       { c: 'data_entrada', r: 'Entrada', tipo: 'date' }] },
@@ -1336,6 +1337,8 @@
   }
   const ehVerdade = (v) => v === true || String(v).toUpperCase() === 'TRUE';
   function exibeTexto(f, v, x) {
+    if (f.derivado) return textoDD(x || {});
+    if (f.catalogo === 'condutor') return v ? (nomeColaborador(v) || '—') : '—';
     if (f.ativoSe && x && !f.ativoSe.valores.includes(String(x[f.ativoSe.campo] ?? ''))) return 'Não se aplica';
     if (f.tipo === 'bool') return ehVerdade(v) ? 'Sim' : 'Não';
     if (v === '' || v === null || v === undefined) return '—';
@@ -1383,7 +1386,31 @@
     const lista = f.catalogo === 'marca' ? cat.map((c) => String(c.marca)) : cat.filter((c) => c.marca === x.descricao).map((c) => String(c.modelo));
     return [...new Set(lista)].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
   }
+  const nomeColaborador = (id) => ((CADD.colaboradores || []).find((c) => c.id === id) || {}).nome || '';
+  /** Leve e Pesado: motoristas com CNH e direção defensiva em dia. Equipamento: operadores. Só ativos. */
+  function condutoresPara(tipo) {
+    if (!tipo) return [];
+    const classe = tipo === 'Equipamento' ? 'operador' : 'motorista';
+    return (CADD.colaboradores || []).filter((c) => !c.inativo_em && c._classe === classe && (classe === 'operador' || c._apto))
+      .map((c) => [String(c.id), String(c.nome)]).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' }));
+  }
+  /** Data de direção defensiva do motorista escolhido (vem do Efetivo). */
+  function textoDD(x) {
+    if (x.tipo === 'Equipamento') return 'Não se aplica';
+    const c = (CADD.colaboradores || []).find((p) => p.id === x.operador_id);
+    const d = c ? String(c.direcao_defensiva_validade || '') : '';
+    if (!d) return '—';
+    return /^\d{4}-\d{2}-\d{2}/.test(d) ? dataBR(d.slice(0, 10)) : d;
+  }
   function controleCatalogo(f, x) {
+    if (f.catalogo === 'condutor') {
+      const v = String(x[f.c] ?? '');
+      if (!x.tipo) return `<select data-c="${f.c}" disabled><option value="">Escolha o tipo</option></select>`;
+      let ops = condutoresPara(x.tipo);
+      if (v && !ops.some((o) => o[0] === v)) ops = ops.concat([[v, nomeColaborador(v) + ' (fora do filtro)']]);
+      const vazio = ops.length ? 'Selecione' : (x.tipo === 'Equipamento' ? 'Nenhum operador no Efetivo' : 'Nenhum motorista apto no Efetivo');
+      return `<select data-c="${f.c}"><option value="">${vazio}</option>${ops.map(([ov, ol]) => `<option value="${esc(ov)}"${ov === v ? ' selected' : ''}>${esc(ol)}</option>`).join('')}</select>`;
+    }
     const v = String(x[f.c] ?? '');
     const fonte = f.catalogo === 'especificacao' ? CADD.especificacoes_veiculos : CADD.catalogo_veiculos;
     const temCatalogo = (fonte || []).some((c) => c.tipo === x.tipo);
@@ -1396,6 +1423,7 @@
   function linhaCadForm(cfg, x) {
     const celulas = cfg.campos.map((f) => {
       const v = x[f.c] === undefined || x[f.c] === null ? '' : x[f.c];
+      if (f.derivado) return `<td data-derivado="1" class="ajuda">${esc(textoDD(x))}</td>`;
       if (f.catalogo) return `<td data-cat="${f.c}">${controleCatalogo(f, x)}</td>`;
       if (f.tipo === 'bool') return `<td style="text-align:center;"><input type="checkbox" data-c="${f.c}" ${ehVerdade(v) ? 'checked' : ''}></td>`;
       if (f.lista) {
@@ -1466,7 +1494,7 @@
     if (!sel) return;
     const tr = sel.closest('tr');
     // Tipo muda a lista de marcas; marca muda a lista de modelos
-    const dependentes = { tipo: ['especificacao', 'descricao', 'modelo'], descricao: ['modelo'] };
+    const dependentes = { tipo: ['especificacao', 'descricao', 'modelo', 'operador_id'], descricao: ['modelo'] };
     if (CAD[CAD_ATUAL].campos.some((f) => f.catalogo) && dependentes[sel.dataset.c]) {
       const x = {};
       tr.querySelectorAll('[data-c]').forEach((el) => { x[el.dataset.c] = el.value; });
@@ -1475,6 +1503,12 @@
         const td = tr.querySelector(`[data-cat="${c}"]`);
         if (td) td.innerHTML = controleCatalogo(CAD[CAD_ATUAL].campos.find((k) => k.c === c), x);
       });
+    }
+    const der = tr.querySelector('[data-derivado]');
+    if (der) {
+      const x2 = {};
+      tr.querySelectorAll('[data-c]').forEach((el) => { x2[el.dataset.c] = el.value; });
+      der.textContent = textoDD(x2);
     }
     CAD[CAD_ATUAL].campos.filter((f) => f.ativoSe && f.ativoSe.campo === sel.dataset.c).forEach((f) => {
       const alvo = tr.querySelector(`[data-c="${f.c}"]`);

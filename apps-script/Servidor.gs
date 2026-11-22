@@ -75,9 +75,13 @@ function carregarBase() {
     // descricao (marca) + modelo, para mostrar no RDO
     equipamentos: lerAba_('equipamentos').filter((e) => !e.baixa_em).map((e) => ({
       id: e.id, codigo: e.codigo, descricao: [e.especificacao, e.descricao, e.modelo].filter(Boolean).join(' '), tipo: e.tipo,
+      operador: (colaboradores.find((c) => c.id === e.operador_id) || {}).nome || '',
     })),
     // Operadores e motoristas vêm do efetivo, pela função (começa com "Operador" ou "Motorista")
-    operadores: colaboradores.map((c) => ({ id: c.id, nome: c.nome, funcao: c.funcao, classe: classeFuncao_(c.funcao) }))
+    operadores: colaboradores.map((c) => ({
+      id: c.id, nome: c.nome, funcao: c.funcao, classe: classeFuncao_(c.funcao),
+      apto: classeFuncao_(c.funcao) !== 'motorista' || motoristaApto_(c),
+    }))
       .filter((o) => o.classe).sort(comparaNome_),
     motivos: {
       dia_sem_execucao: motivos.filter((m) => m.tipo === 'dia_sem_execucao').map((m) => ({ id: m.id, descricao: m.descricao })),
@@ -178,6 +182,9 @@ function salvarRdo(p) {
     const op = pessoasCad.find((x) => x.id === q.operador_id);
     if (!op || classeFuncao_(op.funcao) !== precisa) {
       throw new Error((eq.codigo || 'Equipamento') + ': escolha um ' + precisa + ' do efetivo.');
+    }
+    if (precisa === 'motorista' && !motoristaApto_(op)) {
+      throw new Error((eq.codigo || 'Veículo') + ': ' + op.nome + ' está sem CNH ou direção defensiva em dia.');
     }
   });
 
@@ -569,6 +576,7 @@ function carregarCadastros() {
   const r = {};
   Object.keys(CADASTROS).forEach((t) => { r[t] = lerAba_(t).map(semDatas_); });
   const nomes = (aba) => lerAba_(aba).map((x) => String(x.nome || '')).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  r.colaboradores = r.colaboradores.map((c) => Object.assign(c, { _classe: classeFuncao_(c.funcao), _apto: motoristaApto_(c) }));
   r.categorias = nomes('categorias_efetivo');
   r.funcoes = nomes('funcoes_efetivo');
   r.listas = VALORES_PERMITIDOS;
@@ -607,6 +615,13 @@ function salvarCadastro(tabela, reg) {
   if (tabela === 'equipamentos' && dados.ano_fabricacao !== '' && dados.ano_fabricacao !== undefined
     && (dados.ano_fabricacao < 2015 || dados.ano_fabricacao > 2050 || dados.ano_fabricacao % 1 !== 0)) {
     throw new Error('Ano deve estar entre 2015 e 2050.');
+  }
+  // Motorista/operador fixo: do efetivo ativo; Leve e Pesado só motorista apto; Equipamento só operador
+  if (tabela === 'equipamentos' && dados.operador_id) {
+    const p = lerAba_('colaboradores').find((x) => x.id === dados.operador_id);
+    const precisa = classeExigida_(dados.tipo);
+    if (!p || p.inativo_em || classeFuncao_(p.funcao) !== precisa) throw new Error('Escolha um ' + precisa + ' ativo do Efetivo.');
+    if (precisa === 'motorista' && !motoristaApto_(p)) throw new Error(p.nome + ' está sem CNH ou direção defensiva em dia.');
   }
   // Equipamento de terceiro: locação não é controlada por nós
   if (tabela === 'equipamentos' && dados.origem === 'Terceiro') dados.locacao_mensal = '';
@@ -842,7 +857,18 @@ function ativo_(v) {
 
 function isoData_(v) {
   if (v instanceof Date) return Utilities.formatDate(v, FUSO, 'yyyy-MM-dd');
-  return String(v || '').slice(0, 10);
+  const t = String(v || '').trim();
+  const br = t.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (br) return br[3] + '-' + br[2] + '-' + br[1];
+  return t.slice(0, 10);
+}
+
+/** Motorista apto: CNH com número e validade em dia, e direção defensiva em dia. */
+function motoristaApto_(c) {
+  const hoje = isoData_(new Date());
+  const cnh = isoData_(c.cnh_validade);
+  const dd = isoData_(c.direcao_defensiva_validade);
+  return !!String(c.cnh_numero || '').trim() && !!cnh && cnh >= hoje && !!dd && dd >= hoje;
 }
 
 /** Data e hora como texto. A tela não recebe objetos Date (o Google devolve vazio se houver algum). */
