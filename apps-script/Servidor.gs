@@ -74,7 +74,7 @@ function carregarBase() {
     responsaveis: colaboradores.filter((c) => ativo_(c.apto_rdo)).map((c) => ({ id: c.id, nome: c.nome })),
     // descricao (marca) + modelo, para mostrar no RDO
     equipamentos: lerAba_('equipamentos').filter((e) => !e.baixa_em).map((e) => ({
-      id: e.id, codigo: e.codigo, descricao: [e.descricao, e.modelo].filter(Boolean).join(' '), tipo: e.tipo,
+      id: e.id, codigo: e.codigo, descricao: [e.especificacao, e.descricao, e.modelo].filter(Boolean).join(' '), tipo: e.tipo,
     })),
     // Operadores e motoristas vêm do efetivo, pela função (começa com "Operador" ou "Motorista")
     operadores: colaboradores.map((c) => ({ id: c.id, nome: c.nome, funcao: c.funcao, classe: classeFuncao_(c.funcao) }))
@@ -543,6 +543,7 @@ const CADASTROS = {
   funcoes_efetivo: { obrig: ['nome'], unico: 'nome', baixa: '', usos: [['colaboradores', 'funcao', 'nome']], renomeia: ['colaboradores', 'funcao'] },
   categorias_efetivo: { obrig: ['nome', 'empresa'], unico: 'nome', baixa: '', usos: [['colaboradores', 'categoria', 'nome']], renomeia: ['colaboradores', 'categoria'] },
   equipamentos: { obrig: ['codigo', 'descricao', 'tipo'], unico: 'codigo', baixa: 'baixa_em', usos: [] },
+  especificacoes_veiculos: { obrig: ['tipo', 'nome'], unico: '', unicoCombo: ['tipo', 'nome'], baixa: '', usos: [['equipamentos', 'especificacao', 'nome']], renomeia: ['equipamentos', 'especificacao'] },
   catalogo_veiculos: { obrig: ['tipo', 'marca', 'modelo'], unico: '', unicoCombo: ['tipo', 'marca', 'modelo'], baixa: '', usos: [] },
   atividades_padrao: { obrig: ['nome'], unico: 'nome', baixa: '', usos: [['rdo_atividades', 'atividade', 'nome']] },
   unidades_medida: { obrig: ['sigla'], unico: 'sigla', baixa: '', usos: [['rdo_atividades', 'unidade_id'], ['atividades_padrao', 'unidade_id']] },
@@ -560,6 +561,7 @@ const rotulo_ = (c, tabela) => (tabela === 'equipamentos' && c === 'descricao' ?
 function carregarCadastros() {
   const u = exigirUsuario_(PERFIS_RDO);
   garantirCatalogo_();
+  garantirEspecificacoes_();
   const r = {};
   Object.keys(CADASTROS).forEach((t) => { r[t] = lerAba_(t).map(semDatas_); });
   const nomes = (aba) => lerAba_(aba).map((x) => String(x.nome || '')).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -705,6 +707,25 @@ function garantirCatalogo_() {
     });
   });
   if (linhas.length) aba.getRange(ultimaLinha_(aba) + 1, 1, linhas.length, 5).setValues(linhas);
+}
+
+/** Cria a aba especificacoes_veiculos e preenche cada tipo de ESPECIFICACOES_PADRAO que ainda não tem itens. */
+function garantirEspecificacoes_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let aba = ss.getSheetByName('especificacoes_veiculos');
+  if (!aba) {
+    aba = ss.insertSheet('especificacoes_veiculos');
+    aba.getRange(1, 1, 1, TABELAS.especificacoes_veiculos.length).setValues([TABELAS.especificacoes_veiculos]);
+    aba.setFrozenRows(1);
+  }
+  const existentes = lerAba_('especificacoes_veiculos');
+  const agora = new Date().toISOString();
+  const linhas = [];
+  Object.keys(ESPECIFICACOES_PADRAO).forEach((tipo) => {
+    if (existentes.some((x) => x.tipo === tipo)) return;
+    ESPECIFICACOES_PADRAO[tipo].forEach((nome) => linhas.push([Utilities.getUuid(), tipo, nome, agora]));
+  });
+  if (linhas.length) aba.getRange(ultimaLinha_(aba) + 1, 1, linhas.length, 4).setValues(linhas);
 }
 
 function semDatas_(o) {

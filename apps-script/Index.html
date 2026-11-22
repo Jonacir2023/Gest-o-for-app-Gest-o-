@@ -1303,11 +1303,13 @@
     funcoes_efetivo: { titulo: 'Funções', campos: [{ c: 'nome', r: 'Função', req: true }] },
     categorias_efetivo: { titulo: 'Setores', campos: [{ c: 'nome', r: 'Setor', req: true }, { c: 'empresa', r: 'Empresa', req: true }] },
     equipamentos: { titulo: 'Equipamentos e veículos', baixa: 'baixa_em', semSituacao: true, campos: [
-      { c: 'tipo', r: 'Tipo', req: true, lista: 'equipamentos.tipo' },
+      { c: 'tipo', r: 'Tipo', req: true, lista: 'equipamentos.tipo' }, { c: 'especificacao', r: 'Especificação', catalogo: 'especificacao' },
       { c: 'codigo', r: 'Código', req: true }, { c: 'descricao', r: 'Marca', req: true, catalogo: 'marca' }, { c: 'modelo', r: 'Modelo', catalogo: 'modelo' },
       { c: 'ano_fabricacao', r: 'Ano', tipo: 'number' }, { c: 'empresa', r: 'Empresa' }, { c: 'origem', r: 'Origem', lista: 'equipamentos.origem' },
       { c: 'locacao_mensal', r: 'Locação mensal (R$)', tipo: 'number', ativoSe: { campo: 'origem', valores: ['Própria', 'Locado'] } },
       { c: 'data_entrada', r: 'Entrada', tipo: 'date' }] },
+    especificacoes_veiculos: { titulo: 'Especificações', campos: [
+      { c: 'tipo', r: 'Tipo', req: true, lista: 'especificacoes_veiculos.tipo' }, { c: 'nome', r: 'Especificação', req: true }] },
     catalogo_veiculos: { titulo: 'Marcas e modelos', campos: [
       { c: 'tipo', r: 'Tipo', req: true, lista: 'catalogo_veiculos.tipo' }, { c: 'marca', r: 'Marca', req: true }, { c: 'modelo', r: 'Modelo', req: true }] },
     atividades_padrao: { titulo: 'Atividades padrão', campos: [{ c: 'nome', r: 'Atividade', req: true }, { c: 'unidade_id', r: 'Unidade', lista: 'unidades' }] },
@@ -1365,13 +1367,18 @@
   }
   /** Marca e modelo vindos do catálogo, conforme o tipo (e a marca) da linha. */
   function opcoesCatalogo(f, x) {
+    if (f.catalogo === 'especificacao') {
+      return (CADD.especificacoes_veiculos || []).filter((c) => c.tipo === x.tipo).map((c) => String(c.nome))
+        .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+    }
     const cat = (CADD.catalogo_veiculos || []).filter((c) => c.tipo === x.tipo);
     const lista = f.catalogo === 'marca' ? cat.map((c) => String(c.marca)) : cat.filter((c) => c.marca === x.descricao).map((c) => String(c.modelo));
     return [...new Set(lista)].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
   }
   function controleCatalogo(f, x) {
     const v = String(x[f.c] ?? '');
-    const temCatalogo = (CADD.catalogo_veiculos || []).some((c) => c.tipo === x.tipo);
+    const fonte = f.catalogo === 'especificacao' ? CADD.especificacoes_veiculos : CADD.catalogo_veiculos;
+    const temCatalogo = (fonte || []).some((c) => c.tipo === x.tipo);
     if (!temCatalogo) return `<input type="text" data-c="${f.c}" value="${esc(v)}">`;
     let ops = opcoesCatalogo(f, x);
     if (v && !ops.includes(v)) ops = ops.concat([v]);
@@ -1451,7 +1458,7 @@
     if (!sel) return;
     const tr = sel.closest('tr');
     // Tipo muda a lista de marcas; marca muda a lista de modelos
-    const dependentes = { tipo: ['descricao', 'modelo'], descricao: ['modelo'] };
+    const dependentes = { tipo: ['especificacao', 'descricao', 'modelo'], descricao: ['modelo'] };
     if (CAD[CAD_ATUAL].campos.some((f) => f.catalogo) && dependentes[sel.dataset.c]) {
       const x = {};
       tr.querySelectorAll('[data-c]').forEach((el) => { x[el.dataset.c] = el.value; });

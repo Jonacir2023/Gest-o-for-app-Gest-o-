@@ -39,12 +39,22 @@ const TABELAS = {
   categorias_efetivo: ['id', 'nome', 'criado_em', 'terceiro', 'empresa'],
   funcoes_efetivo: ['id', 'nome', 'criado_em'],
   operadores: ['id', 'matricula', 'nome', 'funcao', 'empresa', 'cnh_numero', 'cnh_validade', 'direcao_defensiva_validade', 'baixa_em', 'criado_em'],
-  equipamentos: ['id', 'codigo', 'descricao', 'tipo', 'origem', 'empresa', 'data_entrada', 'ano_fabricacao', 'medicao_entrada', 'prox_preventiva', 'prox_lavacao', 'locacao_mensal', 'baixa_em', 'criado_em', 'modelo'],
+  equipamentos: ['id', 'codigo', 'descricao', 'tipo', 'origem', 'empresa', 'data_entrada', 'ano_fabricacao', 'medicao_entrada', 'prox_preventiva', 'prox_lavacao', 'locacao_mensal', 'baixa_em', 'criado_em', 'modelo', 'especificacao'],
   equipamento_operadores: ['equipamento_id', 'operador_id'],
   equipamento_historico: ['id', 'equipamento_id', 'data', 'tipo', 'descricao', 'operador_id', 'custo', 'medicao', 'criado_em'],
   equipamento_confirmacoes: ['id', 'data', 'local_id', 'responsavel', 'equipamento_id', 'operador_id', 'status', 'justificativa_id', 'manutencao_tipo', 'parado_manha', 'parado_tarde', 'observacao', 'atualizado_em'],
   atividades_padrao: ['id', 'nome', 'unidade_id', 'criado_em'],
   catalogo_veiculos: ['id', 'tipo', 'marca', 'modelo', 'criado_em'],
+  especificacoes_veiculos: ['id', 'tipo', 'nome', 'criado_em'],
+};
+
+/** Especificações por tipo (lista do usuário de 22/11/2026). Preenche a aba especificacoes_veiculos por tipo, uma vez. */
+const ESPECIFICACOES_PADRAO = {
+  Leve: ['Carro', 'Pickup', 'Caminhonete'],
+  Pesado: ['Caminhão 3/4', 'Caminhão Carga Seca', 'Caminhão Caçamba', 'Caminhão Munck', 'Caminhão Pipa'],
+  Equipamento: ['Retroescavadeira', 'Escavadeira', 'Mini Escavadeira', 'Pá Carregadeira', 'Minicarregadeira', 'Trator Agrícola',
+    'Trator Esteira', 'Motoniveladora', 'Rolo Liso', 'Rolo Tandem', 'Rolo de Pneus', 'Guindaste',
+    'Perfuratriz Hélice Contínua', 'Perfuratriz Sondagem'],
 };
 
 /**
@@ -150,6 +160,7 @@ const VALORES_PERMITIDOS = {
   'equipamentos.tipo': ['Leve', 'Pesado', 'Equipamento'],
   'equipamentos.origem': ['Própria', 'Terceiro', 'Locado'],
   'catalogo_veiculos.tipo': ['Leve', 'Pesado', 'Equipamento'],
+  'especificacoes_veiculos.tipo': ['Leve', 'Pesado', 'Equipamento'],
   'equipamento_historico.tipo': ['Preventiva', 'Corretiva', 'Quebra', 'Lavação', 'Outra'],
   'equipamento_confirmacoes.status': ['operando', 'parado', 'manutencao'],
   'equipamento_confirmacoes.manutencao_tipo': ['Preventiva', 'Lavação', 'Outra manutenção programada'],
