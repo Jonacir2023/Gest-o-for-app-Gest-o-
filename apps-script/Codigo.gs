@@ -44,6 +44,33 @@ const TABELAS = {
   equipamento_historico: ['id', 'equipamento_id', 'data', 'tipo', 'descricao', 'operador_id', 'custo', 'medicao', 'criado_em'],
   equipamento_confirmacoes: ['id', 'data', 'local_id', 'responsavel', 'equipamento_id', 'operador_id', 'status', 'justificativa_id', 'manutencao_tipo', 'parado_manha', 'parado_tarde', 'observacao', 'atualizado_em'],
   atividades_padrao: ['id', 'nome', 'unidade_id', 'criado_em'],
+  catalogo_veiculos: ['id', 'tipo', 'marca', 'modelo', 'criado_em'],
+};
+
+/**
+ * Catálogo inicial de veículos leves (carros, SUVs e picapes vendidos no Brasil, modelos comuns em frotas de locadoras).
+ * Lista base montada sem consulta às frotas da Localiza e da Movida (sites bloqueiam leitura automática).
+ * Usada só para preencher a aba catalogo_veiculos quando ela está vazia; depois, edite em Cadastros > Marcas e modelos.
+ */
+const CATALOGO_LEVES = {
+  BYD: ['Dolphin', 'Dolphin Mini', 'King', 'Seal', 'Shark', 'Song Plus', 'Song Pro', 'Yuan Plus'],
+  'Caoa Chery': ['Arrizo 6', 'Tiggo 5x', 'Tiggo 7', 'Tiggo 8'],
+  Chevrolet: ['Montana', 'Onix', 'Onix Plus', 'S10', 'Spin', 'Tracker', 'Trailblazer'],
+  'Citroën': ['Basalt', 'C3', 'C3 Aircross'],
+  Fiat: ['Argo', 'Cronos', 'Fastback', 'Fiorino', 'Mobi', 'Pulse', 'Strada', 'Titano', 'Toro'],
+  Ford: ['Bronco Sport', 'Maverick', 'Ranger', 'Territory'],
+  GWM: ['Haval H6', 'Ora 03'],
+  Honda: ['City', 'City Hatchback', 'Civic', 'HR-V', 'WR-V', 'ZR-V'],
+  Hyundai: ['Creta', 'HB20', 'HB20S', 'Tucson'],
+  Jeep: ['Commander', 'Compass', 'Renegade'],
+  Kia: ['Sportage', 'Stonic'],
+  Mitsubishi: ['Eclipse Cross', 'L200 Triton', 'Outlander Sport', 'Pajero Sport'],
+  Nissan: ['Frontier', 'Kicks', 'Sentra', 'Versa'],
+  Peugeot: ['208', '2008', '3008'],
+  RAM: ['1500', 'Rampage'],
+  Renault: ['Duster', 'Kardian', 'Kwid', 'Oroch', 'Stepway'],
+  Toyota: ['Corolla', 'Corolla Cross', 'Hilux', 'SW4', 'Yaris Cross'],
+  Volkswagen: ['Amarok', 'Nivus', 'Polo', 'Saveiro', 'T-Cross', 'Taos', 'Tera', 'Virtus'],
 };
 
 /* ------------------------------------------------------------------
@@ -68,6 +95,7 @@ const VALORES_PERMITIDOS = {
   'operadores.funcao': ['Operador de equipamento', 'Motorista de caminhão', 'Motorista de veículo leve'],
   'equipamentos.tipo': ['Equipamento', 'Caminhão', 'Leve'],
   'equipamentos.origem': ['Própria', 'Terceiro', 'Locado'],
+  'catalogo_veiculos.tipo': ['Equipamento', 'Caminhão', 'Leve'],
   'equipamento_historico.tipo': ['Preventiva', 'Corretiva', 'Quebra', 'Lavação', 'Outra'],
   'equipamento_confirmacoes.status': ['operando', 'parado', 'manutencao'],
   'equipamento_confirmacoes.manutencao_tipo': ['Preventiva', 'Lavação', 'Outra manutenção programada'],

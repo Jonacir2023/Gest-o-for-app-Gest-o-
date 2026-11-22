@@ -543,6 +543,7 @@ const CADASTROS = {
   funcoes_efetivo: { obrig: ['nome'], unico: 'nome', baixa: '', usos: [['colaboradores', 'funcao', 'nome']], renomeia: ['colaboradores', 'funcao'] },
   categorias_efetivo: { obrig: ['nome', 'empresa'], unico: 'nome', baixa: '', usos: [['colaboradores', 'categoria', 'nome']], renomeia: ['colaboradores', 'categoria'] },
   equipamentos: { obrig: ['codigo', 'descricao', 'tipo'], unico: 'codigo', baixa: 'baixa_em', usos: [] },
+  catalogo_veiculos: { obrig: ['tipo', 'marca', 'modelo'], unico: '', unicoCombo: ['tipo', 'marca', 'modelo'], baixa: '', usos: [] },
   atividades_padrao: { obrig: ['nome'], unico: 'nome', baixa: '', usos: [['rdo_atividades', 'atividade', 'nome']] },
   unidades_medida: { obrig: ['sigla'], unico: 'sigla', baixa: '', usos: [['rdo_atividades', 'unidade_id'], ['atividades_padrao', 'unidade_id']] },
   motivos_justificativa: { obrig: ['tipo', 'descricao'], unico: '', baixa: '', usos: [['rdo', 'motivo_manha_id'], ['rdo', 'motivo_tarde_id'], ['rdo_equipamentos', 'justificativa_id'], ['rdo_atividades', 'justificativa_id']] },
@@ -558,6 +559,7 @@ const rotulo_ = (c, tabela) => (tabela === 'equipamentos' && c === 'descricao' ?
 /** Todos os cadastros de uma vez, sem objetos Date (datas viram AAAA-MM-DD). */
 function carregarCadastros() {
   const u = exigirUsuario_(PERFIS_RDO);
+  garantirCatalogo_();
   const r = {};
   Object.keys(CADASTROS).forEach((t) => { r[t] = lerAba_(t).map(semDatas_); });
   const nomes = (aba) => lerAba_(aba).map((x) => String(x.nome || '')).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -599,6 +601,10 @@ function salvarCadastro(tabela, reg) {
   lock.waitLock(20000);
   try {
     const linhas = lerAba_(tabela);
+    if (cfg.unicoCombo) {
+      const chave = (o) => cfg.unicoCombo.map((c) => String(o[c] || '').toLowerCase()).join('|');
+      if (linhas.some((x) => x.id !== reg.id && chave(x) === chave(dados))) throw new Error('Este item já está cadastrado.');
+    }
     if (cfg.unico) {
       const chave = String(dados[cfg.unico]).toLowerCase();
       const dup = linhas.find((x) => x.id !== reg.id && String(x[cfg.unico] || '').toLowerCase() === chave && !(cfg.baixa && x[cfg.baixa]));
@@ -677,6 +683,24 @@ function classeExigida_(tipoEquipamento) {
 function cabecalho_(nome) {
   const aba = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nome);
   return aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0].map(String).filter(Boolean);
+}
+
+/** Cria a aba catalogo_veiculos e preenche com a lista base (CATALOGO_LEVES) se estiver vazia. */
+function garantirCatalogo_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let aba = ss.getSheetByName('catalogo_veiculos');
+  if (!aba) {
+    aba = ss.insertSheet('catalogo_veiculos');
+    aba.getRange(1, 1, 1, TABELAS.catalogo_veiculos.length).setValues([TABELAS.catalogo_veiculos]);
+    aba.setFrozenRows(1);
+  }
+  if (ultimaLinha_(aba) > 1) return;
+  const agora = new Date().toISOString();
+  const linhas = [];
+  Object.keys(CATALOGO_LEVES).forEach((marca) => {
+    CATALOGO_LEVES[marca].forEach((modelo) => linhas.push([Utilities.getUuid(), 'Leve', marca, modelo, agora]));
+  });
+  aba.getRange(2, 1, linhas.length, 5).setValues(linhas);
 }
 
 function semDatas_(o) {
