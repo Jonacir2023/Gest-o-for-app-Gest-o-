@@ -1309,7 +1309,7 @@
     equipamentos: { titulo: 'Equipamentos e veículos', baixa: 'baixa_em', semSituacao: true, campos: [
       { c: 'tipo', r: 'Tipo', req: true, lista: 'equipamentos.tipo' }, { c: 'especificacao', r: 'Especificação', catalogo: 'especificacao' },
       { c: 'codigo', r: 'Código', req: true }, { c: 'descricao', r: 'Marca', req: true, catalogo: 'marca' }, { c: 'modelo', r: 'Modelo', catalogo: 'modelo' },
-      { c: 'ano_fabricacao', r: 'Ano', tipo: 'number' }, { c: 'empresa', r: 'Empresa' }, { c: 'origem', r: 'Origem', lista: 'equipamentos.origem' },
+      { c: 'ano_fabricacao', r: 'Ano', lista: 'anos' }, { c: 'empresa', r: 'Empresa', lista: 'empresas' }, { c: 'origem', r: 'Origem', lista: 'equipamentos.origem' },
       { c: 'locacao_mensal', r: 'Locação mensal (R$)', tipo: 'number', ativoSe: { campo: 'origem', valores: ['Própria', 'Locado'] } },
       { c: 'data_entrada', r: 'Entrada', tipo: 'date' }] },
     especificacoes_veiculos: { titulo: 'Especificações', campos: [
@@ -1328,6 +1328,10 @@
     if (!CADD) return [];
     if (nome === 'funcoes' || nome === 'categorias') return CADD[nome].map((v) => [v, v]);
     if (nome === 'unidades') return CADD.unidades_medida.map((u) => [u.id, u.sigla]);
+    if (nome === 'anos') { const a = []; for (let y = 2015; y <= 2050; y++) a.push([String(y), String(y)]); return a; }
+    if (nome === 'empresas') {
+      return (CADD.empresas || []).map((e) => String(e.nome)).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })).map((n) => [n, n]);
+    }
     return (CADD.listas[nome] || []).map((v) => [String(v), nome === 'motivos_justificativa.tipo' ? (ROT_TIPO_MOTIVO[v] || v) : String(v)]);
   }
   const ehVerdade = (v) => v === true || String(v).toUpperCase() === 'TRUE';

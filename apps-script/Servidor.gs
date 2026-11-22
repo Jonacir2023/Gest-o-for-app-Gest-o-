@@ -603,6 +603,11 @@ function salvarCadastro(tabela, reg) {
       throw new Error('A previsão de saída não pode ser anterior à data de entrada.');
     }
   }
+  // Ano do equipamento/veículo: de 2015 a 2050
+  if (tabela === 'equipamentos' && dados.ano_fabricacao !== '' && dados.ano_fabricacao !== undefined
+    && (dados.ano_fabricacao < 2015 || dados.ano_fabricacao > 2050 || dados.ano_fabricacao % 1 !== 0)) {
+    throw new Error('Ano deve estar entre 2015 e 2050.');
+  }
   // Equipamento de terceiro: locação não é controlada por nós
   if (tabela === 'equipamentos' && dados.origem === 'Terceiro') dados.locacao_mensal = '';
   // Efetivo sem empresa informada: usa a empresa cadastrada no setor
