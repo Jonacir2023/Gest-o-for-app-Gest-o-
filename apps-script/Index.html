@@ -1300,6 +1300,10 @@
       { c: 'cnh_numero', r: 'CNH' }, { c: 'cnh_validade', r: 'Validade da CNH', tipo: 'date' },
       { c: 'direcao_defensiva_validade', r: 'Direção defensiva até', tipo: 'date' },
       { c: 'apto_rdo', r: 'Apto RDO', tipo: 'bool' }] },
+    empresas: { titulo: 'Empresas', campos: [
+      { c: 'nome', r: 'Empresa', req: true }, { c: 'especialidade_1', r: 'Especialidade 1' }, { c: 'especialidade_2', r: 'Especialidade 2' },
+      { c: 'especialidade_3', r: 'Especialidade 3' }, { c: 'num_colaboradores', r: 'Nº de colaboradores', tipo: 'number' },
+      { c: 'data_entrada', r: 'Entrada', tipo: 'date' }, { c: 'previsao_saida', r: 'Previsão de saída', tipo: 'date' }] },
     funcoes_efetivo: { titulo: 'Funções', campos: [{ c: 'nome', r: 'Função', req: true }] },
     categorias_efetivo: { titulo: 'Setores', campos: [{ c: 'nome', r: 'Setor', req: true }, { c: 'empresa', r: 'Empresa', req: true }] },
     equipamentos: { titulo: 'Equipamentos e veículos', baixa: 'baixa_em', semSituacao: true, campos: [

@@ -543,13 +543,16 @@ const CADASTROS = {
   funcoes_efetivo: { obrig: ['nome'], unico: 'nome', baixa: '', usos: [['colaboradores', 'funcao', 'nome']], renomeia: ['colaboradores', 'funcao'] },
   categorias_efetivo: { obrig: ['nome', 'empresa'], unico: 'nome', baixa: '', usos: [['colaboradores', 'categoria', 'nome']], renomeia: ['colaboradores', 'categoria'] },
   equipamentos: { obrig: ['codigo', 'descricao', 'tipo'], unico: 'codigo', baixa: 'baixa_em', usos: [] },
+  empresas: { obrig: ['nome'], unico: 'nome', baixa: '',
+    usos: [['categorias_efetivo', 'empresa', 'nome'], ['colaboradores', 'grupo_terceiro', 'nome'], ['equipamentos', 'empresa', 'nome']],
+    renomeia: [['categorias_efetivo', 'empresa'], ['colaboradores', 'grupo_terceiro'], ['equipamentos', 'empresa']] },
   especificacoes_veiculos: { obrig: ['tipo', 'nome'], unico: '', unicoCombo: ['tipo', 'nome'], baixa: '', usos: [['equipamentos', 'especificacao', 'nome']], renomeia: ['equipamentos', 'especificacao'] },
   catalogo_veiculos: { obrig: ['tipo', 'marca', 'modelo'], unico: '', unicoCombo: ['tipo', 'marca', 'modelo'], baixa: '', usos: [] },
   atividades_padrao: { obrig: ['nome'], unico: 'nome', baixa: '', usos: [['rdo_atividades', 'atividade', 'nome']] },
   unidades_medida: { obrig: ['sigla'], unico: 'sigla', baixa: '', usos: [['rdo_atividades', 'unidade_id'], ['atividades_padrao', 'unidade_id']] },
   motivos_justificativa: { obrig: ['tipo', 'descricao'], unico: '', baixa: '', usos: [['rdo', 'motivo_manha_id'], ['rdo', 'motivo_tarde_id'], ['rdo_equipamentos', 'justificativa_id'], ['rdo_atividades', 'justificativa_id']] },
 };
-const CAMPOS_NUMERICOS = ['ano_fabricacao', 'medicao_entrada', 'locacao_mensal', 'baixada_dias'];
+const CAMPOS_NUMERICOS = ['ano_fabricacao', 'medicao_entrada', 'locacao_mensal', 'baixada_dias', 'num_colaboradores'];
 const ROTULOS = {
   nome: 'nome', codigo: 'código', descricao: 'descrição', tipo: 'tipo', sigla: 'sigla', funcao: 'função',
   baixada_dias: 'baixada (dias)', ano_fabricacao: 'ano', medicao_entrada: 'medição na entrada', locacao_mensal: 'locação mensal',
@@ -560,6 +563,7 @@ const rotulo_ = (c, tabela) => (tabela === 'equipamentos' && c === 'descricao' ?
 /** Todos os cadastros de uma vez, sem objetos Date (datas viram AAAA-MM-DD). */
 function carregarCadastros() {
   const u = exigirUsuario_(PERFIS_RDO);
+  garantirAba_('empresas');
   garantirCatalogo_();
   garantirEspecificacoes_();
   const r = {};
@@ -590,6 +594,15 @@ function salvarCadastro(tabela, reg) {
     if (v !== '' && !valorPermitido(tabela + '.' + c, v)) throw new Error('Valor não permitido em ' + rotulo_(c, tabela) + ': ' + v + '.');
     dados[c] = v === null || v === undefined ? '' : v;
   });
+  // Empresa: nº de colaboradores inteiro e previsão de saída não anterior à entrada
+  if (tabela === 'empresas') {
+    if (dados.num_colaboradores !== '' && dados.num_colaboradores !== undefined && (dados.num_colaboradores < 0 || dados.num_colaboradores % 1 !== 0)) {
+      throw new Error('Nº de colaboradores deve ser um número inteiro, zero ou maior.');
+    }
+    if (dados.data_entrada && dados.previsao_saida && String(dados.previsao_saida) < String(dados.data_entrada)) {
+      throw new Error('A previsão de saída não pode ser anterior à data de entrada.');
+    }
+  }
   // Equipamento de terceiro: locação não é controlada por nós
   if (tabela === 'equipamentos' && dados.origem === 'Terceiro') dados.locacao_mensal = '';
   // Efetivo sem empresa informada: usa a empresa cadastrada no setor
@@ -618,7 +631,8 @@ function salvarCadastro(tabela, reg) {
       atualizarLinha_(tabela, reg.id, dados);
       // Renomear função ou setor atualiza os colaboradores que usam o nome antigo
       if (cfg.renomeia && dados.nome && String(atual.nome) !== String(dados.nome)) {
-        renomearReferencias_(cfg.renomeia[0], cfg.renomeia[1], atual.nome, dados.nome);
+        const pares = Array.isArray(cfg.renomeia[0]) ? cfg.renomeia : [cfg.renomeia];
+        pares.forEach((p) => renomearReferencias_(p[0], p[1], atual.nome, dados.nome));
       }
       return { id: reg.id };
     }
@@ -647,7 +661,7 @@ function excluirCadastro(tabela, id) {
   cfg.usos.forEach((u) => {
     const valor = String(reg[u[2] || 'id']);
     if (lerAba_(u[0]).some((x) => String(x[u[1]]) === valor)) {
-      throw new Error('Não é possível excluir: está em uso em ' + ({ rdo: 'RDO', rdo_atividades: 'atividades do RDO', rdo_equipamentos: 'equipamentos do RDO', atividades_padrao: 'atividades padrão', equipamento_confirmacoes: 'confirmação de equipamentos', colaboradores: 'colaboradores' }[u[0]] || u[0]) + '.');
+      throw new Error('Não é possível excluir: está em uso em ' + ({ rdo: 'RDO', rdo_atividades: 'atividades do RDO', rdo_equipamentos: 'equipamentos do RDO', atividades_padrao: 'atividades padrão', equipamento_confirmacoes: 'confirmação de equipamentos', colaboradores: 'efetivo', categorias_efetivo: 'setores', equipamentos: 'equipamentos e veículos' }[u[0]] || u[0]) + '.');
     }
   });
   excluirLinha_(tabela, id);
@@ -726,6 +740,15 @@ function garantirEspecificacoes_() {
     ESPECIFICACOES_PADRAO[tipo].forEach((nome) => linhas.push([Utilities.getUuid(), tipo, nome, agora]));
   });
   if (linhas.length) aba.getRange(ultimaLinha_(aba) + 1, 1, linhas.length, 4).setValues(linhas);
+}
+
+/** Cria a aba com o cabeçalho de TABELAS, se ainda não existir. */
+function garantirAba_(nome) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss.getSheetByName(nome)) return;
+  const aba = ss.insertSheet(nome);
+  aba.getRange(1, 1, 1, TABELAS[nome].length).setValues([TABELAS[nome]]);
+  aba.setFrozenRows(1);
 }
 
 function semDatas_(o) {

@@ -24,7 +24,7 @@ const GRUPO_COR = {
   usuarios: '#B3261E',
 };
 
-const COLUNAS_DATA = ['data', 'prazo', 'prazo_atual', 'data_contrato', 'cnh_validade', 'direcao_defensiva_validade', 'data_entrada', 'prox_preventiva', 'prox_lavacao'];
+const COLUNAS_DATA = ['data', 'prazo', 'prazo_atual', 'data_contrato', 'cnh_validade', 'direcao_defensiva_validade', 'data_entrada', 'prox_preventiva', 'prox_lavacao', 'previsao_saida'];
 const COLUNAS_DATAHORA = ['lancado_em', 'criado_em', 'atualizado_em', 'concluido_em', 'transferido_em', 'expira_em', 'bloqueado_ate', 'inativo_em', 'baixa_em'];
 const COLUNAS_BOOLEANAS = ['atrasado', 'presente', 'paralisada', 'parado_manha', 'parado_tarde', 'primeiro_acesso_feito', 'atencao_especial', 'apto_rdo', 'ativo'];
 const COLUNAS_MOEDA = ['valor_contrato', 'locacao_mensal', 'custo'];

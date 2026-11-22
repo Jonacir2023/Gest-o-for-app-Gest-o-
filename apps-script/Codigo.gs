@@ -46,6 +46,7 @@ const TABELAS = {
   atividades_padrao: ['id', 'nome', 'unidade_id', 'criado_em'],
   catalogo_veiculos: ['id', 'tipo', 'marca', 'modelo', 'criado_em'],
   especificacoes_veiculos: ['id', 'tipo', 'nome', 'criado_em'],
+  empresas: ['id', 'nome', 'especialidade_1', 'especialidade_2', 'especialidade_3', 'num_colaboradores', 'data_entrada', 'previsao_saida', 'criado_em'],
 };
 
 /** Especificações por tipo (lista do usuário de 22/11/2026). Preenche a aba especificacoes_veiculos por tipo, uma vez. */
