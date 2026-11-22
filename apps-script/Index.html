@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GranSul · RDO (prévia)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+<style>
+  /* Prévia do RDO · padrão de sistemas corporativos de gestão de obra.
+     Cores: identidade CESBE (azul-marinho, azul-logo, neutros). Tema claro fixo. */
+  :root {
+    color-scheme: light;
+    --azul: #24374B;
+    --azul-2: #1C94C4;
+    --azul-claro: #D5E4E6;
+    --fundo: #EEEEEB;
+    --superficie: #FFFFFF;
+    --zebra: #F7F9FA;
+    --texto: #1F2D3D;
+    --muted: #6B7A88;
+    --borda: #D5DEE3;
+    --ok: #1E6B52;
+    --ok-bg: #E6F2EC;
+    --alerta: #7A5200;
+    --alerta-bg: #FFF4D6;
+    --erro: #B3261E;
+    --erro-bg: #F8E5E3;
+    --sombra: 0 1px 2px rgba(31, 45, 61, .06), 0 1px 3px rgba(31, 45, 61, .08);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; font-family: Poppins, Arial, sans-serif; font-size: 13px; color: var(--texto); background: var(--fundo); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  [hidden] { display: none !important; }
+
+  /* Barra superior */
+  .topo { position: sticky; top: 0; z-index: 20; height: 56px; background: var(--azul); color: #fff; display: flex; align-items: center; gap: 16px; padding: 0 16px; }
+  .marca { font-weight: 800; letter-spacing: .08em; font-size: 14px; }
+  .marca small { display: block; font-weight: 500; letter-spacing: .02em; font-size: 11px; opacity: .8; }
+  .topo .espaco { flex: 1; }
+  .obra-sel { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: #fff; border-radius: 6px; padding: 6px 10px; min-width: 260px; }
+  .obra-sel option { color: var(--texto); }
+  .usuario { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--azul-2); display: grid; place-items: center; font-weight: 700; }
+  .menu-btn { display: none; background: transparent; border: 0; color: #fff; font-size: 20px; padding: 4px 8px; }
+
+  /* Layout */
+  .corpo { display: grid; grid-template-columns: 228px 1fr; min-height: calc(100% - 56px); }
+  .nav { background: var(--superficie); border-right: 1px solid var(--borda); padding: 12px 8px; }
+  .nav h4 { margin: 10px 10px 6px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 6px; color: var(--texto); text-decoration: none; font-weight: 500; }
+  .nav a:hover { background: var(--zebra); }
+  .nav a.ativo { background: var(--azul-claro); color: var(--azul); font-weight: 700; }
+  .nav a.breve { color: var(--muted); }
+  .nav a.breve span:last-child { margin-left: auto; font-size: 10px; background: var(--zebra); border: 1px solid var(--borda); padding: 1px 6px; border-radius: 10px; }
+  .principal { padding: 18px 22px 40px; min-width: 0; }
+
+  /* Cabeçalhos de página */
+  .trilha { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .trilha a { color: var(--azul-2); text-decoration: none; }
+  .pagina-cab { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .pagina-cab h1 { margin: 0; font-size: 20px; font-weight: 700; color: var(--azul); }
+  .pagina-cab .espaco { flex: 1; }
+
+  /* Botões */
+  .btn { border: 1px solid var(--azul); background: var(--superficie); color: var(--azul); border-radius: 6px; padding: 8px 14px; font-weight: 600; font-size: 13px; }
+  .btn:hover { background: var(--zebra); }
+  .btn.primario { background: var(--azul); color: #fff; }
+  .btn.primario:hover { background: #1b2c3d; }
+  .btn.perigo { color: var(--erro); border-color: var(--erro); }
+  .btn.pequeno { padding: 4px 8px; font-size: 12px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-link { background: none; border: 0; color: var(--azul-2); font-weight: 600; padding: 4px; }
+
+  /* Cartões e seções */
+  .cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px; box-shadow: var(--sombra); margin-bottom: 14px; }
+  .cartao-cab { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--borda); }
+  .cartao-cab h2 { margin: 0; font-size: 14px; font-weight: 700; color: var(--azul); }
+  .num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--azul); color: #fff; font-size: 11px; font-weight: 700; }
+  .cartao-cab .espaco { flex: 1; }
+  .cartao-corpo { padding: 14px 16px; }
+  .grade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 14px; }
+  .grade .span2 { grid-column: span 2; }
+  .grade .span4 { grid-column: 1 / -1; }
+  .grade > div { min-width: 0; }
+  input[type=date], input[type=time] { min-width: 0; }
+  @media (max-width: 1100px) { .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grade .span2, .grade .span4 { grid-column: 1 / -1; } }
+  @media (max-width: 600px) { .grade { grid-template-columns: minmax(0, 1fr); } .grade .span2 { grid-column: 1 / -1; } }
+
+  label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .02em; margin-bottom: 4px; }
+  label .obrig { color: var(--erro); }
+  input[type=text], input[type=date], input[type=time], input[type=number], select, textarea {
+    width: 100%; border: 1px solid var(--borda); border-radius: 6px; padding: 8px 10px; background: #fff; font-size: 13px;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--azul-2); outline-offset: 0; border-color: var(--azul-2); }
+  input[readonly], input[disabled], select[disabled] { background: var(--zebra); color: var(--muted); }
+  textarea { min-height: 70px; resize: vertical; }
+  .campo-erro { border-color: var(--erro) !important; }
+  .msg-erro { color: var(--erro); font-size: 11px; margin-top: 3px; min-height: 0; }
+  .ajuda { color: var(--muted); font-size: 11px; margin-top: 3px; }
+
+  /* Chips de status */
+  .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .chip.rascunho { color: var(--alerta); background: var(--alerta-bg); }
+  .chip.enviado { color: var(--ok); background: var(--ok-bg); }
+  .chip.atrasado { color: var(--erro); background: var(--erro-bg); }
+  .chip.neutro { color: var(--muted); background: var(--zebra); border: 1px solid var(--borda); }
+
+  /* Indicadores */
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .kpi { background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px; padding: 12px 14px; box-shadow: var(--sombra); }
+  .kpi .rot { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .kpi .val { font-size: 22px; font-weight: 800; color: var(--azul); margin-top: 2px; }
+  @media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* Tabelas (grade de dados) */
+  .grade-dados { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  .grade-dados th { position: sticky; top: 0; background: #F3F6F8; color: var(--azul); text-align: left; font-weight: 700; padding: 9px 10px; border-bottom: 1px solid var(--borda); white-space: nowrap; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+  .grade-dados td { padding: 7px 10px; border-bottom: 1px solid var(--borda); vertical-align: middle; background: #fff; }
+  .grade-dados tr:hover td { background: #F3FAFD; }
+  .grade-dados td input, .grade-dados td select { padding: 6px 8px; font-size: 12px; min-width: 96px; }
+  .grade-dados td.acoes { white-space: nowrap; text-align: right; }
+  .scroll-x { overflow-x: auto; border: 1px solid var(--borda); border-radius: 8px; background: #fff; }
+  .vazio { text-align: center; color: var(--muted); padding: 18px; }
+  .total-linha td { background: var(--zebra) !important; font-weight: 700; }
+
+  /* Resumo de equipamento */
+  .sub-tit { font-size: 11px; font-weight: 700; color: var(--azul); text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 6px; }
+  .sub-tit:first-child { margin-top: 0; }
+
+  /* Painel de erros e alertas */
+  .painel-erro { background: var(--erro-bg); border: 1px solid #E9B7B2; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: var(--erro); }
+  .painel-erro strong { display: block; margin-bottom: 4px; }
+  .painel-erro ul { margin: 0; padding-left: 18px; }
+  .aviso-info { background: #EAF5FA; border: 1px solid #B9DCEB; color: #1A5F7E; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+
+  /* Barra de ação do rodapé */
+  .barra-acao { position: sticky; bottom: 0; background: var(--superficie); border-top: 1px solid var(--borda); padding: 10px 16px; display: flex; align-items: center; gap: 10px; box-shadow: 0 -2px 6px rgba(31,45,61,.06); margin: 0 -22px -40px; }
+  .barra-acao .espaco { flex: 1; }
+  .auditoria { color: var(--muted); font-size: 11px; }
+
+  /* Toast */
+  .toast { position: fixed; right: 18px; bottom: 18px; background: var(--azul); color: #fff; padding: 10px 14px; border-radius: 8px; box-shadow: var(--sombra); font-weight: 600; z-index: 50; max-width: 360px; }
+
+  /* Responsivo */
+  @media (max-width: 900px) {
+    .menu-btn { display: block; }
+    .corpo { grid-template-columns: 1fr; }
+    .nav { display: none; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 15; overflow-y: auto; }
+    .nav.aberto { display: block; }
+    .obra-sel { min-width: 0; width: 170px; }
+    .usuario span.nome { display: none; }
+    .principal { padding: 14px 12px 40px; }
+    .barra-acao { margin: 0 -12px -40px; }
+    .marca small { display: none; }
+    .toast { top: 66px; bottom: auto; left: 12px; right: 12px; max-width: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <button class="menu-btn" id="btnMenu" aria-label="Abrir menu">☰</button>
+  <div class="marca">GRANSUL<small>Gestão de Obras</small></div>
+  <div class="espaco"></div>
+  <select class="obra-sel" id="obraSel" aria-label="Obra">
+    <option>GRANSUL · STATKRAFT</option>
+  </select>
+  <div class="usuario"><div class="avatar" id="avUser">--</div><span class="nome" id="nomeUser"></span></div>
+</header>
+
+<div class="corpo">
+  <nav class="nav" id="nav" aria-label="Menu principal">
+    <h4>Operação</h4>
+    <a href="#" data-rota="inicio"><span>Início</span></a>
+    <a href="#lista" data-rota="lista" class="ativo"><span>RDO</span></a>
+    <a href="#" data-rota="efetivo"><span>Efetivo</span></a>
+    <a href="#" data-rota="equip"><span>Equipamentos e veículos</span></a>
+    <a href="#" data-rota="atividades"><span>Atividades padrão</span></a>
+    <h4>Gestão</h4>
+    <a href="#" data-rota="pauta"><span>Pauta</span></a>
+    <a href="#" data-rota="checkin"><span>Check-in</span></a>
+    <a href="#" data-rota="calendario"><span>Calendário</span></a>
+    <a href="#" class="breve"><span>Relatórios</span><span>em breve</span></a>
+    <h4>Administração</h4>
+    <a href="#" data-rota="cadastros"><span>Cadastros</span></a>
+  </nav>
+
+  <main class="principal">
+
+    <!-- ============ LISTA DE RDOs ============ -->
+    <section id="vLista">
+      <div class="trilha">Operação · RDO</div>
+      <div class="pagina-cab">
+        <h1>Relatório diário de obra</h1>
+        <div class="espaco"></div>
+        <button class="btn primario" id="btnNovo">+ Novo RDO</button>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="rot">RDOs no mês</div><div class="val" id="kTotal">0</div></div>
+        <div class="kpi"><div class="rot">Enviados</div><div class="val" id="kEnviados">0</div></div>
+        <div class="kpi"><div class="rot">Rascunhos</div><div class="val" id="kRascunho">0</div></div>
+        <div class="kpi"><div class="rot">Lançados fora do prazo</div><div class="val" id="kAtraso">0</div></div>
+      </div>
+
+      <div class="cartao">
+        <div class="cartao-corpo">
+          <div class="grade" style="grid-template-columns: repeat(4, minmax(0,1fr));">
+            <div><label for="fStatus">Situação</label>
+              <select id="fStatus"><option value="">Todas</option><option value="Rascunho">Rascunho</option><option value="Enviado">Enviado</option></select></div>
+            <div><label for="fLocal">Local</label>
+              <select id="fLocal"><option value="">Todos os locais</option></select></div>
+            <div><label for="fBusca">Pesquisar</label>
+              <input type="text" id="fBusca" placeholder="Nº, responsável ou local"></div>
+            <div><label>&nbsp;</label><button class="btn" id="btnLimpar">Limpar filtros</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll-x">
+        <table class="grade-dados">
+          <thead><tr>
+            <th>Nº RDO</th><th>Data</th><th>Local</th><th>Responsável pelo local</th><th>Criador</th><th>Situação</th><th>Prazo</th><th></th>
+          </tr></thead>
+          <tbody id="tbLista"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ FORMULÁRIO DO RDO ============ -->
+    <section id="vForm" hidden>
+      <div class="trilha"><a href="#lista" data-voltar>RDO</a> › <span id="trilhaNum">Novo RDO</span></div>
+      <div class="pagina-cab">
+        <h1 id="tituloRdo">Novo RDO</h1>
+        <span class="chip rascunho" id="chipStatus">Rascunho</span>
+        <span class="chip atrasado" id="chipAtraso" hidden>Fora do prazo</span>
+        <div class="espaco"></div>
+        <span class="auditoria" id="auditoria"></span>
+      </div>
+
+      <div class="painel-erro" id="painelErro" hidden>
+        <strong>Corrija os campos destacados antes de enviar:</strong>
+        <ul id="listaErro"></ul>
+      </div>
+      <div class="aviso-info" id="avisoPrazo" hidden></div>
+
+      <!-- 1. Identificação -->
+      <div class="cartao">
+        <div class="cartao-cab"><span class="num">1</span><h2>Identificação</h2></div>
+        <div class="cartao-corpo grade">
+          <div class="span2"><label for="fObra">Obra <span class="obrig">*</span></label>
+            <select id="fObra"><option value="GRANSUL · STATKRAFT" selected>GRANSUL · STATKRAFT</option></select>
+            <div class="msg-erro" data-erro="fObra"></div></div>
+          <div><label for="fData">Data do RDO <span class="obrig">*</span></label>
+            <input type="date" id="fData"><div class="msg-erro" data-erro="fData"></div></div>
+          <div><label for="fNumero">Nº RDO</label>
+            <input type="text" id="fNumero" readonly value="(gerado ao enviar)"></div>
+
+          <div><label for="fLocal2">Local <span class="obrig">*</span></label>
+            <select id="fLocal2"></select><div class="msg-erro" data-erro="fLocal2"></div></div>
+          <div class="span2"><label for="fDescLocal">Descrição do local</label>
+            <input type="text" id="fDescLocal" placeholder="Ex.: Filtro 4, eixo 3"></div>
+
+          <div><label for="fResp">Responsável pelo local <span class="obrig">*</span></label>
+            <select id="fResp"></select><div class="msg-erro" data-erro="fResp"></div></div>
+          <div><label for="fCriador">Criador do RDO <span class="obrig">*</span></label>
+            <select id="fCriador"></select><div class="msg-erro" data-erro="fCriador"></div></div>
+          <div><label for="fLancadoPor">Lançado por</label>
+            <input type="text" id="fLancadoPor" readonly value="Jonacir Cazelli"></div>
+          <div><label for="fLancadoEm">Lançado em</label>
+            <input type="text" id="fLancadoEm" readonly value="—"></div>
+        </div>
+      </div>
+
+      <!-- 2. Condições do tempo -->
+      <div class="cartao">
+        <div class="cartao-cab"><span class="num">2</span><h2>Condições do tempo e operação</h2></div>
+        <div class="cartao-corpo">
+          <div class="grade">
+            <div><label for="cManhaClima">Manhã · clima</label>
+              <select id="cManhaClima"><option value="">Selecione</option><option value="sol">Sol</option><option value="nublado">Nublado</option><option value="chuva">Chuva</option></select>
+              <div class="msg-erro" data-erro="cManhaClima"></div></div>
+            <div><label for="cManhaOp">Manhã · operação <span class="obrig">*</span></label>
+              <select id="cManhaOp"><option value="">Selecione</option><option value="operacao">Com operação</option><option value="sem_operacao">Sem operação</option></select>
+              <div class="msg-erro" data-erro="cManhaOp"></div></div>
+            <div class="span2"><label for="cManhaMotivo">Motivo (sem operação)</label>
+              <select id="cManhaMotivo"></select><div class="msg-erro" data-erro="cManhaMotivo"></div></div>
+
+            <div><label for="cManhaMm">Chuva na manhã (mm)</label>
+              <input type="number" min="0" step="0.1" id="cManhaMm"><div class="msg-erro" data-erro="cManhaMm"></div></div>
+            <div><label for="cManhaIni">Início da chuva</label>
+              <input type="time" id="cManhaIni"><div class="msg-erro" data-erro="cManhaIni"></div></div>
+            <div><label for="cManhaFim">Fim da chuva</label>
+              <input type="time" id="cManhaFim"><div class="msg-erro" data-erro="cManhaFim"></div></div>
+            <div class="ajuda" style="align-self:end;">Horário 07h–12h. Chuva exige mm, início e fim.</div>
+
+            <div><label for="cTardeClima">Tarde · clima</label>
+              <select id="cTardeClima"><option value="">Selecione</option><option value="sol">Sol</option><option value="nublado">Nublado</option><option value="chuva">Chuva</option></select>
+              <div class="msg-erro" data-erro="cTardeClima"></div></div>
+            <div><label for="cTardeOp">Tarde · operação <span class="obrig">*</span></label>
+              <select id="cTardeOp"><option value="">Selecione</option><option value="operacao">Com operação</option><option value="sem_operacao">Sem operação</option></select>
+              <div class="msg-erro" data-erro="cTardeOp"></div></div>
+            <div class="span2"><label for="cTardeMotivo">Motivo (sem operação)</label>
+              <select id="cTardeMotivo"></select><div class="msg-erro" data-erro="cTardeMotivo"></div></div>
+
+            <div><label for="cTardeMm">Chuva na tarde (mm)</label>
+              <input type="number" min="0" step="0.1" id="cTardeMm"><div class="msg-erro" data-erro="cTardeMm"></div></div>
+            <div><label for="cTardeIni">Início da chuva</label>
+              <input type="time" id="cTardeIni"><div class="msg-erro" data-erro="cTardeIni"></div></div>
+            <div><label for="cTardeFim">Fim da chuva</label>
+              <input type="time" id="cTardeFim"><div class="msg-erro" data-erro="cTardeFim"></div></div>
+            <div class="ajuda" style="align-self:end;">Horário 13h–17h.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Efetivo -->
+      <div class="cartao">
+        <div class="cartao-cab"><span class="num">3</span><h2>Efetivo do dia</h2>
+          <span class="chip neutro" id="chipEfetivo">0 presentes · 0 ausentes</span>
+          <div class="espaco"></div>
+          <button class="btn pequeno" id="btnAddEf">+ Incluir colaborador</button></div>
+        <div class="cartao-corpo" style="padding:0;">
+          <div class="scroll-x" style="border:0;border-radius:0;">
+            <table class="grade-dados">
+              <thead><tr><th style="width:34%">Colaborador</th><th>Setor</th><th>Presente</th><th>Motivo da ausência</th><th>Observação</th><th></th></tr></thead>
+              <tbody id="tbEf"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Equipamentos e veículos -->
+      <div class="cartao">
+        <div class="cartao-cab"><span class="num">4</span><h2>Equipamentos e veículos</h2>
+          <div class="espaco"></div>
+          <span class="auditoria">Origem: confirmação diária do local e da data</span></div>
+        <div class="cartao-corpo">
+          <div class="sub-tit">Trabalharam no dia · horímetro ou km</div>
+          <div class="scroll-x">
+            <table class="grade-dados">
+              <thead><tr><th>Equipamento</th><th>Operador ou motorista</th><th>Inicial</th><th>Final</th><th>Horas trabalhadas</th></tr></thead>
+              <tbody id="tbEqOp"></tbody>
+              <tfoot><tr class="total-linha"><td colspan="4" style="text-align:right;">Total de horas trabalhadas</td><td id="totalHoras">0,0 h</td></tr></tfoot>
+            </table>
+          </div>
+          <div class="sub-tit">Paradas ou em manutenção · justificativa e efeito na medição</div>
+          <div class="scroll-x">
+            <table class="grade-dados">
+              <thead><tr><th>Equipamento</th><th>Situação</th><th>Motivo / tipo</th><th>Período</th><th>Efeito na medição</th></tr></thead>
+              <tbody id="tbEqPar"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Atividades -->
+      <div class="cartao">
+        <div class="cartao-cab"><span class="num">5</span><h2>Atividades executadas</h2>
+          <div class="espaco"></div>
+          <button class="btn pequeno" id="btnAddAt">+ Incluir atividade</button></div>
+        <div class="cartao-corpo" style="padding:0;">
+          <div class="scroll-x" style="border:0;border-radius:0;">
+            <table class="grade-dados" style="min-width:1080px;">
+              <thead><tr><th style="width:13%">Local</th><th style="width:20%">Atividade <span class="obrig">*</span></th><th>Descrição</th><th style="width:8%">Unidade</th><th style="width:9%">Quantidade</th><th style="width:7%">Paralisada</th><th style="width:16%">Motivo</th><th></th></tr></thead>
+              <tbody id="tbAt"></tbody>
+            </table>
+          </div>
+          <div class="msg-erro" data-erro="tbAt" style="padding:6px 16px;"></div>
+        </div>
+      </div>
+
+      <!-- 6. Eventos -->
+      <div class="cartao">
+        <div class="cartao-cab"><span class="num">6</span><h2>Eventos de SST, Meio Ambiente e Qualidade</h2>
+          <div class="espaco"></div>
+          <button class="btn pequeno" id="btnAddEv">+ Incluir evento</button></div>
+        <div class="cartao-corpo" style="padding:0;">
+          <div class="scroll-x" style="border:0;border-radius:0;">
+            <table class="grade-dados">
+              <thead><tr><th style="width:14%">Tipo</th><th>Descrição</th><th>Providências</th><th></th></tr></thead>
+              <tbody id="tbEv"></tbody>
+            </table>
+          </div>
+          <div class="cartao-corpo" id="semEvento" style="color:var(--muted);">Nenhum evento registrado no dia.</div>
+        </div>
+      </div>
+
+      <!-- 7. Observações e fotos -->
+      <div class="cartao">
+        <div class="cartao-cab"><span class="num">7</span><h2>Observações e registro fotográfico</h2></div>
+        <div class="cartao-corpo grade">
+          <div class="span2"><label for="fObs">Observações do dia</label>
+            <textarea id="fObs" placeholder="Registre fatos relevantes do dia, sem repetir o que já está nas seções acima."></textarea></div>
+          <div class="span2"><label for="fFotos">Fotos (até 10 por RDO)</label>
+            <input type="file" id="fFotos" accept="image/*" multiple>
+            <div class="ajuda" id="ajudaFotos">Prévia: as fotos são anexadas somente após a implantação do envio.</div>
+            <ul id="listaFotos" style="margin:8px 0 0;padding-left:18px;color:var(--muted);"></ul></div>
+        </div>
+      </div>
+
+      <div class="barra-acao">
+        <button class="btn" id="btnRascunho">Salvar rascunho</button>
+        <button class="btn perigo" id="btnCancelar" hidden>Cancelar</button>
+        <div class="espaco"></div>
+        <span class="auditoria" id="auditoria2"></span>
+        <button class="btn primario" id="btnEnviar">Enviar RDO</button>
+      </div>
+    </section>
+
+    <!-- ============ CHECK-IN ============ -->
+    <section id="vCheckin" hidden>
+      <div class="trilha">Gestão · Check-in</div>
+      <div class="pagina-cab">
+        <h1>Check-in</h1>
+        <div class="espaco"></div>
+        <button class="btn primario" id="btnNovoCk" hidden>+ Novo item</button>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="rot">Em aberto</div><div class="val" id="ckAbertos">0</div></div>
+        <div class="kpi"><div class="rot">Vencem hoje</div><div class="val" id="ckHoje">0</div></div>
+        <div class="kpi"><div class="rot">Atrasados</div><div class="val" id="ckAtrasados">0</div></div>
+        <div class="kpi"><div class="rot">Concluídos</div><div class="val" id="ckConcluidos">0</div></div>
+      </div>
+
+      <div class="cartao" id="ckForm" hidden>
+        <div class="cartao-corpo">
+          <strong id="ckFormTitulo" style="color:var(--azul)">Novo item</strong>
+          <input type="hidden" id="ckId">
+          <div class="grade" style="margin-top:10px">
+            <div><label for="ckArea">Área</label><input type="text" id="ckArea"></div>
+            <div><label for="ckAssunto">Assunto</label><input type="text" id="ckAssunto"></div>
+            <div><label for="ckResp">Responsável</label><input type="text" id="ckResp"></div>
+            <div><label for="ckPrazo">Prazo</label><input type="date" id="ckPrazo"></div>
+            <div><label for="ckPrior">Prioridade</label><select id="ckPrior"><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select></div>
+            <div><label for="ckStatus">Status</label><select id="ckStatus"><option value="a_fazer">A fazer</option><option value="fazendo">Fazendo</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></div>
+            <div class="span2"><label for="ckDesc">Descrição</label><input type="text" id="ckDesc"></div>
+            <div><label style="display:flex;gap:6px;align-items:center;margin-top:20px"><input type="checkbox" id="ckAtencao"> Atenção especial</label></div>
+          </div>
+          <p class="msg-erro" id="ckMsg"></p>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+            <button class="btn" id="ckCancelar">Cancelar</button>
+            <button class="btn primario" id="ckSalvar">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cartao"><div class="cartao-corpo">
+        <div class="grade" style="grid-template-columns: repeat(3, minmax(0,1fr));">
+          <div><label for="ckFiltro">Situação</label><select id="ckFiltro"><option value="">Todas</option><option value="a_fazer">A fazer</option><option value="fazendo">Fazendo</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></div>
+          <div><label for="ckBusca">Pesquisar</label><input type="text" id="ckBusca" placeholder="Assunto, área ou responsável"></div>
+          <div><label>&nbsp;</label><button class="btn" id="ckLimpar">Limpar filtros</button></div>
+        </div>
+      </div></div>
+
+      <div class="scroll-x">
+        <table class="grade-dados">
+          <thead><tr><th>Assunto</th><th>Área</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Situação</th><th>Origem</th><th></th></tr></thead>
+          <tbody id="tbCheckin"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ PAUTA ============ -->
+    <section id="vPauta" hidden>
+      <div class="trilha">Gestão · Pauta</div>
+
+      <div id="pautaLogin" hidden>
+        <div class="pagina-cab"><h1>Pauta dos líderes</h1></div>
+        <div class="cartao"><div class="cartao-corpo">
+          <p class="ajuda" style="margin:0 0 10px">Escolha seu nome e informe sua senha. No primeiro acesso, você cria a senha.</p>
+          <div class="grade" style="grid-template-columns: repeat(2, minmax(0,1fr));">
+            <div><label for="plLider">Líder</label><select id="plLider"></select></div>
+            <div><label for="plSenha">Senha</label><input type="password" id="plSenha" autocomplete="current-password"></div>
+          </div>
+          <p class="msg-erro" id="plMsg"></p>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn primario" id="plEntrar">Entrar</button></div>
+        </div></div>
+      </div>
+
+      <div id="pautaConteudo" hidden>
+        <div class="pagina-cab">
+          <h1>Pauta</h1>
+          <span class="ajuda" id="pautaQuem"></span>
+          <div class="espaco"></div>
+          <button class="btn" id="btnSairPauta" hidden>Sair</button>
+          <button class="btn primario" id="btnNovoPa">+ Novo item</button>
+        </div>
+
+        <div class="cartao" id="paForm" hidden>
+          <div class="cartao-corpo">
+            <strong id="paFormTitulo" style="color:var(--azul)">Novo item</strong>
+            <input type="hidden" id="paId">
+            <div class="grade" style="margin-top:10px">
+              <div><label for="paArea">Área</label><input type="text" id="paArea"></div>
+              <div><label for="paAssunto">Assunto</label><input type="text" id="paAssunto"></div>
+              <div><label for="paResp">Responsável</label><select id="paResp"></select></div>
+              <div><label for="paPrazo">Prazo</label><input type="date" id="paPrazo"></div>
+              <div><label for="paPrior">Prioridade</label><select id="paPrior"><option value="alta">Alta</option><option value="media" selected>Média</option><option value="baixa">Baixa</option></select></div>
+              <div><label for="paStatus">Status</label><select id="paStatus"><option value="a_fazer">A fazer</option><option value="fazendo">Fazendo</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></div>
+              <div class="span4"><label for="paDesc">Descrição</label><input type="text" id="paDesc"></div>
+            </div>
+            <p class="msg-erro" id="paMsg"></p>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+              <button class="btn" id="paCancelar">Cancelar</button>
+              <button class="btn primario" id="paSalvar">Salvar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cartao"><div class="cartao-corpo">
+          <div class="grade" style="grid-template-columns: repeat(3, minmax(0,1fr));">
+            <div><label for="paFiltro">Situação</label><select id="paFiltro"><option value="">Todas</option><option value="a_fazer">A fazer</option><option value="fazendo">Fazendo</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select></div>
+            <div><label for="paBusca">Pesquisar</label><input type="text" id="paBusca" placeholder="Assunto, área ou setor"></div>
+            <div><label>&nbsp;</label><button class="btn" id="paLimpar">Limpar filtros</button></div>
+          </div>
+        </div></div>
+
+        <div class="scroll-x">
+          <table class="grade-dados">
+            <thead><tr><th>Assunto</th><th>Área</th><th>Criado por (setor)</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Situação</th><th></th></tr></thead>
+            <tbody id="tbPauta"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CADASTROS ============ -->
+    <section id="vCadastros" hidden>
+      <div class="trilha">Administração · Cadastros</div>
+      <div class="pagina-cab">
+        <h1>Cadastros</h1>
+        <div class="espaco"></div>
+        <button class="btn primario" id="cadNovo" hidden>+ Novo</button>
+      </div>
+      <div id="cadAbas" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+      <div class="cartao"><div class="cartao-corpo">
+        <div class="grade" style="grid-template-columns: repeat(3, minmax(0,1fr));">
+          <div><label for="cadBusca">Pesquisar</label><input type="text" id="cadBusca" placeholder="Digite para filtrar"></div>
+          <div id="cadBaixaWrap"><label>&nbsp;</label><label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" id="cadBaixados"> Mostrar baixados</label></div>
+          <div><label>&nbsp;</label><span class="ajuda" id="cadInfo"></span></div>
+        </div>
+      </div></div>
+      <p class="msg-erro" id="cadMsg"></p>
+      <div class="scroll-x">
+        <table class="grade-dados"><thead id="cadCab"></thead><tbody id="cadCorpo"></tbody></table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+  /* ====================== BASE (carregada da planilha pelo servidor) ====================== */
+  const HOJE = new Date();
+  const iso = (d) => [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+  const AUSENCIAS = ['Falta', 'Atestado', 'Folga', 'Baixada', 'Férias'];
+  const MANUT = ['Preventiva', 'Lavação', 'Outra manutenção programada'];
+  const TIPOS_EVENTO = ['SST', 'MA', 'Q'];
+  let BASE = null;
+  let OBRAS = [], LOCAIS = [], RESPONSAVEIS = [], CRIADORES = [], COLABORADORES = [], EQUIPAMENTOS = [], OPERADORES = [], OPERADORES_BASE = [];
+  let MOTIVOS_DIA = [], MOTIVOS_EQ = [], MOTIVOS_ATIV = [], UNIDADES = [], ATIVIDADES_PADRAO = [];
+  let RDOS = [];
+
+  function aplicaBase(b) {
+    BASE = b;
+    OBRAS = b.obras.map((o) => o.nome);
+    LOCAIS = b.locais.map((l) => l.nome);
+    COLABORADORES = b.colaboradores.map((c) => ({ nome: c.nome, setor: c.categoria || '' }));
+    RESPONSAVEIS = b.responsaveis.map((r) => r.nome);
+    CRIADORES = b.colaboradores.map((c) => c.nome);
+    EQUIPAMENTOS = b.equipamentos.map((e) => ({ codigo: e.codigo, descricao: e.descricao, tipo: e.tipo }));
+    OPERADORES = b.operadores.map((o) => o.nome);
+    OPERADORES_BASE = b.operadores;
+    MOTIVOS_DIA = b.motivos.dia_sem_execucao.map((m) => m.descricao);
+    MOTIVOS_EQ = b.motivos.equipamento_parado.map((m) => m.descricao);
+    MOTIVOS_ATIV = b.motivos.atividade_paralisada.map((m) => m.descricao);
+    UNIDADES = b.unidades.map((u) => u.sigla);
+    ATIVIDADES_PADRAO = b.atividades.map((a) => ({ nome: a.nome, un: (b.unidades.find((u) => u.id === a.unidade_id) || {}).sigla || '' }));
+  }
+
+  /* ====================== UTILITÁRIOS ====================== */
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const dataBR = (s) => (s ? s.split('-').reverse().join('/') : '—');
+  const horasNum = (ini, fim) => { const a = parseFloat(String(ini).replace(',', '.')); const b = parseFloat(String(fim).replace(',', '.')); return !isNaN(a) && !isNaN(b) && b >= a ? b - a : null; };
+  const fmtH = (n) => (n == null ? '—' : n.toFixed(1).replace('.', ',') + ' h');
+  const moeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  function opcoes(sel, lista, { vazio = 'Selecione', valor = '' } = {}) {
+    sel.innerHTML = '';
+    sel.appendChild(new Option(vazio, ''));
+    lista.forEach((x) => { const [v, r] = Array.isArray(x) ? x : [x, x]; sel.appendChild(new Option(r, v)); });
+    sel.value = valor;
+  }
+  function toast(texto) { const t = $('toast'); t.textContent = texto; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 3200); }
+  function chip(status, atrasado) {
+    if (atrasado) return '<span class="chip atrasado">Fora do prazo</span>';
+    return status === 'Enviado' ? '<span class="chip enviado">Enviado</span>' : '<span class="chip rascunho">Rascunho</span>';
+  }
+
+  /* ====================== LISTA ====================== */
+  function renderLista() {
+    const st = $('fStatus').value;
+    const loc = $('fLocal').value;
+    const q = $('fBusca').value.trim().toLowerCase();
+    const lista = RDOS.filter((r) => (!st || r.status === st) && (!loc || r.local === loc) && (!q || [r.id, r.resp, r.local].join(' ').toLowerCase().includes(q)));
+    $('tbLista').innerHTML = lista.length ? lista.map((r) => `
+      <tr>
+        <td><strong>${esc(r.id)}</strong></td><td>${dataBR(r.data)}</td><td>${esc(r.local)}</td><td>${esc(r.resp)}</td><td>${esc(r.criador)}</td>
+        <td>${chip(r.status)}</td><td>${r.atrasado ? '<span class="chip atrasado">Fora do prazo</span>' : '<span class="chip neutro">No prazo</span>'}</td>
+        <td class="acoes"><button class="btn-link" data-abrir="${esc(r.id)}">Abrir</button></td>
+      </tr>`).join('') : '<tr><td colspan="8" class="vazio">Nenhum RDO com os filtros atuais.</td></tr>';
+    $('kTotal').textContent = RDOS.length;
+    $('kEnviados').textContent = RDOS.filter((r) => r.status === 'Enviado').length;
+    $('kRascunho').textContent = RDOS.filter((r) => r.status === 'Rascunho').length;
+    $('kAtraso').textContent = RDOS.filter((r) => r.atrasado).length;
+  }
+
+  /* ====================== FORMULÁRIO: LINHAS ====================== */
+  function linhaEfetivo(v = {}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><select class="ef-nome"></select></td>
+      <td><input type="text" class="ef-setor" readonly></td>
+      <td><select class="ef-pres"><option value="sim">Sim</option><option value="nao">Não</option></select></td>
+      <td><select class="ef-motivo"></select></td>
+      <td><input type="text" class="ef-obs"></td>
+      <td class="acoes"><button class="btn-link perigo" title="Remover">Remover</button></td>`;
+    opcoes(tr.querySelector('.ef-nome'), COLABORADORES.map((c) => c.nome), { valor: v.nome || '' });
+    tr.querySelector('.ef-setor').value = (COLABORADORES.find((c) => c.nome === v.nome) || {}).setor || '';
+    tr.querySelector('.ef-pres').value = v.presente === false ? 'nao' : 'sim';
+    opcoes(tr.querySelector('.ef-motivo'), AUSENCIAS, { valor: v.motivo || '' });
+    tr.querySelector('.ef-obs').value = v.obs || '';
+    tr.querySelector('.ef-nome').addEventListener('change', (e) => { tr.querySelector('.ef-setor').value = (COLABORADORES.find((c) => c.nome === e.target.value) || {}).setor || ''; atualizaEfetivo(); });
+    tr.querySelector('.ef-pres').addEventListener('change', () => { atualizaEfetivo(); });
+    tr.querySelector('.btn-link').addEventListener('click', () => { tr.remove(); atualizaEfetivo(); });
+    return tr;
+  }
+  function atualizaEfetivo() {
+    const linhas = [...$('tbEf').querySelectorAll('tr')];
+    const pres = linhas.filter((tr) => tr.querySelector('.ef-pres').value === 'sim').length;
+    const aus = linhas.length - pres;
+    $('chipEfetivo').textContent = `${pres} presentes · ${aus} ausentes`;
+    linhas.forEach((tr) => { const ausente = tr.querySelector('.ef-pres').value === 'nao'; tr.querySelector('.ef-motivo').disabled = !ausente; if (!ausente) tr.querySelector('.ef-motivo').value = ''; });
+  }
+
+  /** Caminhão e leve: motoristas. Máquinas e equipamentos: operadores. Ordem alfabética. */
+  function operadoresPara(tipo, atual) {
+    const classe = tipo === 'Equipamento' ? 'operador' : 'motorista';
+    const nomes = OPERADORES_BASE.filter((o) => o.classe === classe).map((o) => o.nome)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    return atual && !nomes.includes(atual) ? nomes.concat([atual]) : nomes;
+  }
+  function montaEquipamentos(salvos = {}) {
+    const tbOp = $('tbEqOp');
+    const tbPar = $('tbEqPar');
+    tbOp.innerHTML = '';
+    tbPar.innerHTML = '';
+    EQUIPAMENTOS.forEach((e, i) => {
+      const s = salvos[e.codigo] || { situacao: 'operando', operador: '', ini: '', fim: '', periodo: '', motivo: '', obs: '' };
+      const tr = document.createElement('tr');
+      tr.dataset.cod = e.codigo;
+      tr.innerHTML = `
+        <td><strong>${esc(e.codigo)}</strong> · ${esc(e.descricao)} <span class="chip neutro" style="margin-left:4px;">${esc(e.tipo)}</span>
+          <div style="margin-top:6px;"><select class="eq-sit" style="min-width:150px;"><option value="operando">Operando</option><option value="parado">Parado (quebra)</option><option value="manutencao">Em manutenção</option></select></div></td>
+        <td><select class="eq-op"></select><div class="msg-erro" data-erro="eq-op-${i}"></div></td>
+        <td><input type="number" step="0.1" min="0" class="eq-ini" placeholder="0,0"><div class="msg-erro" data-erro="eq-ini-${i}"></div></td>
+        <td><input type="number" step="0.1" min="0" class="eq-fim" placeholder="0,0"><div class="msg-erro" data-erro="eq-fim-${i}"></div></td>
+        <td class="eq-hrs" style="font-weight:700;color:var(--azul);">—</td>`;
+      tr.querySelector('.eq-sit').value = s.situacao;
+      opcoes(tr.querySelector('.eq-op'), operadoresPara(e.tipo, s.operador), { valor: s.operador });
+      tr.querySelector('.eq-ini').value = s.ini;
+      tr.querySelector('.eq-fim').value = s.fim;
+      tr.querySelector('.eq-sit').addEventListener('change', () => { montaEquipamentos(lerEquip()); });
+      tr.querySelector('.eq-ini').addEventListener('input', atualizaHoras);
+      tr.querySelector('.eq-fim').addEventListener('input', atualizaHoras);
+      tbOp.appendChild(tr);
+      if (s.situacao !== 'operando') {
+        const p = document.createElement('tr');
+        p.dataset.cod = e.codigo;
+        const motOpts = s.situacao === 'parado' ? MOTIVOS_EQ : MANUT;
+        p.innerHTML = `
+          <td><strong>${esc(e.codigo)}</strong> · ${esc(e.descricao)}</td>
+          <td><span class="chip ${s.situacao === 'parado' ? 'atrasado' : 'neutro'}">${s.situacao === 'parado' ? 'Parado por quebra' : 'Em manutenção'}</span></td>
+          <td><select class="par-mot"></select><div class="msg-erro" data-erro="par-mot-${i}"></div></td>
+          <td>${s.situacao === 'parado' ? `<select class="par-per"><option value="">Selecione</option><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="ambos">Manhã e tarde</option></select><div class="msg-erro" data-erro="par-per-${i}"></div>` : '<span class="ajuda">Não se aplica</span>'}</td>
+          <td class="par-efeito">${s.situacao === 'parado' ? 'Desconta 0,5 diária por meio período' : 'Não desconta do valor integral'}</td>`;
+        opcoes(p.querySelector('.par-mot'), motOpts, { valor: s.motivo });
+        const per = p.querySelector('.par-per');
+        if (per) per.value = s.periodo || '';
+        tbPar.appendChild(p);
+      }
+    });
+    if (!tbPar.children.length) tbPar.innerHTML = '<tr><td colspan="5" class="vazio">Nenhum equipamento parado ou em manutenção.</td></tr>';
+    atualizaHoras();
+  }
+  function lerEquip() {
+    const r = {};
+    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => {
+      r[tr.dataset.cod] = { situacao: tr.querySelector('.eq-sit').value, operador: tr.querySelector('.eq-op').value, ini: tr.querySelector('.eq-ini').value, fim: tr.querySelector('.eq-fim').value };
+    });
+    [...$('tbEqPar').querySelectorAll('tr[data-cod]')].forEach((tr) => {
+      const c = r[tr.dataset.cod] || {};
+      c.motivo = tr.querySelector('.par-mot').value;
+      c.periodo = tr.querySelector('.par-per') ? tr.querySelector('.par-per').value : '';
+      r[tr.dataset.cod] = c;
+    });
+    return r;
+  }
+  function atualizaHoras() {
+    let total = 0;
+    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => {
+      const operando = tr.querySelector('.eq-sit').value === 'operando';
+      tr.querySelector('.eq-ini').disabled = !operando;
+      tr.querySelector('.eq-fim').disabled = !operando;
+      tr.querySelector('.eq-op').disabled = !operando;
+      const h = operando ? horasNum(tr.querySelector('.eq-ini').value, tr.querySelector('.eq-fim').value) : null;
+      tr.querySelector('.eq-hrs').textContent = fmtH(h);
+      if (h) total += h;
+    });
+    $('totalHoras').textContent = fmtH(total);
+  }
+
+  function linhaAtividade(v = {}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><select class="at-local"></select></td>
+      <td><select class="at-nome"></select><div class="msg-erro"></div></td>
+      <td><input type="text" class="at-desc"></td>
+      <td><select class="at-un"></select></td>
+      <td><input type="number" min="0" step="0.01" class="at-qtd"></td>
+      <td style="text-align:center;"><input type="checkbox" class="at-par"></td>
+      <td><select class="at-mot"></select></td>
+      <td class="acoes"><button class="btn-link perigo">Remover</button></td>`;
+    opcoes(tr.querySelector('.at-local'), LOCAIS, { valor: v.local || '' });
+    opcoes(tr.querySelector('.at-nome'), ATIVIDADES_PADRAO.map((a) => a.nome), { valor: v.nome || '' });
+    opcoes(tr.querySelector('.at-un'), UNIDADES, { valor: v.un || '' });
+    tr.querySelector('.at-desc').value = v.desc || '';
+    tr.querySelector('.at-qtd').value = v.qtd || '';
+    tr.querySelector('.at-par').checked = !!v.par;
+    opcoes(tr.querySelector('.at-mot'), MOTIVOS_ATIV.concat(MOTIVOS_DIA), { valor: v.mot || '' });
+    const nomeSel = tr.querySelector('.at-nome');
+    nomeSel.addEventListener('change', () => { const a = ATIVIDADES_PADRAO.find((x) => x.nome === nomeSel.value); if (a) tr.querySelector('.at-un').value = a.un; });
+    const par = tr.querySelector('.at-par');
+    const mot = tr.querySelector('.at-mot');
+    const ajusta = () => { mot.disabled = !par.checked; if (!par.checked) mot.value = ''; };
+    par.addEventListener('change', ajusta);
+    ajusta();
+    tr.querySelector('.btn-link').addEventListener('click', () => tr.remove());
+    return tr;
+  }
+
+  function linhaEvento(v = {}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><select class="ev-tipo"></select></td>
+      <td><input type="text" class="ev-desc"></td>
+      <td><input type="text" class="ev-prov"></td>
+      <td class="acoes"><button class="btn-link perigo">Remover</button></td>`;
+    opcoes(tr.querySelector('.ev-tipo'), TIPOS_EVENTO, { valor: v.tipo || '' });
+    tr.querySelector('.ev-desc').value = v.desc || '';
+    tr.querySelector('.ev-prov').value = v.prov || '';
+    tr.querySelector('.btn-link').addEventListener('click', () => { tr.remove(); atualizaSemEvento(); });
+    atualizaSemEvento();
+    return tr;
+  }
+  function atualizaSemEvento() { $('semEvento').hidden = $('tbEv').children.length > 0; }
+
+  /* ====================== CONDIÇÕES DO TEMPO ====================== */
+  function aplicaTempo(p) {
+    const op = $(p + 'Op').value;
+    $(p + 'Motivo').disabled = op !== 'sem_operacao';
+    if (op !== 'sem_operacao') $(p + 'Motivo').value = '';
+    const chuva = $(p + 'Clima').value === 'chuva';
+    [p + 'Mm', p + 'Ini', p + 'Fim'].forEach((id) => { $(id).disabled = !chuva; if (!chuva) $(id).value = ''; });
+  }
+  function preencheTempo() {
+    opcoes($('cManhaMotivo'), MOTIVOS_DIA, { vazio: '—' });
+    opcoes($('cTardeMotivo'), MOTIVOS_DIA, { vazio: '—' });
+    ['cManha', 'cTarde'].forEach((p) => aplicaTempo(p));
+  }
+  ['cManha', 'cTarde'].forEach((p) => {
+    $(p + 'Clima').addEventListener('change', () => aplicaTempo(p));
+    $(p + 'Op').addEventListener('change', () => aplicaTempo(p));
+  });
+
+  /* ====================== VALIDAÇÃO ====================== */
+  function marca(id, msg) {
+    const el = document.querySelector(`[data-erro="${id}"]`) || $(id);
+    if (el && el.classList) el.classList.add('campo-erro');
+    const alvo = document.querySelector(`[data-erro="${id}"]`);
+    if (alvo) alvo.textContent = msg || '';
+  }
+  function limpaErros() {
+    document.querySelectorAll('.campo-erro').forEach((e) => e.classList.remove('campo-erro'));
+    document.querySelectorAll('.msg-erro').forEach((e) => (e.textContent = ''));
+  }
+  function validar() {
+    limpaErros();
+    const erros = [];
+    const ok = (id, cond, msg) => { if (!cond) { marca(id, msg); erros.push(msg); } };
+    ok('fObra', $('fObra').value, 'Informe a obra.');
+    ok('fData', $('fData').value, 'Informe a data do RDO.');
+    ok('fLocal2', $('fLocal2').value, 'Escolha o local.');
+    ok('fResp', $('fResp').value, 'Escolha o responsável pelo local.');
+    ok('fCriador', $('fCriador').value, 'Escolha o criador do RDO.');
+    ['cManha', 'cTarde'].forEach((p) => {
+      const nome = p === 'cManha' ? 'manhã' : 'tarde';
+      const op = $(p + 'Op').value;
+      ok(p + 'Op', op, `Informe a operação da ${nome}.`);
+      if (op === 'sem_operacao') ok(p + 'Motivo', $(p + 'Motivo').value, `Informe o motivo da ${nome} sem operação.`);
+      if ($(p + 'Clima').value === 'chuva') {
+        ok(p + 'Mm', $(p + 'Mm').value !== '', `Informe os mm de chuva da ${nome}.`);
+        ok(p + 'Ini', $(p + 'Ini').value, `Informe o início da chuva da ${nome}.`);
+        ok(p + 'Fim', $(p + 'Fim').value, `Informe o fim da chuva da ${nome}.`);
+        if ($(p + 'Ini').value && $(p + 'Fim').value && $(p + 'Fim').value < $(p + 'Ini').value) {
+          ok(p + 'Fim', false, `O fim da chuva da ${nome} não pode ser antes do início.`);
+        }
+      }
+    });
+    [...$('tbEf').querySelectorAll('tr')].forEach((tr, i) => {
+      if (tr.querySelector('.ef-pres').value === 'nao') {
+        const m = tr.querySelector('.ef-motivo');
+        if (!m.value) { m.classList.add('campo-erro'); erros.push(`Efetivo, linha ${i + 1}: informe o motivo da ausência.`); }
+      }
+    });
+    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => {
+      const cod = tr.dataset.cod;
+      if (tr.querySelector('.eq-sit').value === 'operando') {
+        const op = tr.querySelector('.eq-op');
+        if (!op.value) { op.classList.add('campo-erro'); erros.push(`${cod}: informe o operador ou motorista.`); }
+        const ini = tr.querySelector('.eq-ini');
+        const fim = tr.querySelector('.eq-fim');
+        if (ini.value === '' || fim.value === '') {
+          (ini.value === '' ? ini : fim).classList.add('campo-erro');
+          erros.push(`${cod}: informe a medição inicial e a final.`);
+        } else if (horasNum(ini.value, fim.value) === null) {
+          fim.classList.add('campo-erro');
+          erros.push(`${cod}: a medição final não pode ser menor que a inicial.`);
+        }
+      }
+    });
+    [...$('tbEqPar').querySelectorAll('tr[data-cod]')].forEach((tr) => {
+      const cod = tr.dataset.cod;
+      const mot = tr.querySelector('.par-mot');
+      if (!mot.value) { mot.classList.add('campo-erro'); erros.push(`${cod}: informe o motivo.`); }
+      const per = tr.querySelector('.par-per');
+      if (per && !per.value) { per.classList.add('campo-erro'); erros.push(`${cod}: informe o período parado.`); }
+    });
+    const linhasAt = [...$('tbAt').querySelectorAll('tr')].filter((tr) => !atividadeVazia(tr));
+    linhasAt.forEach((tr, i) => {
+      const nome = tr.querySelector('.at-nome');
+      if (!nome.value) { nome.classList.add('campo-erro'); erros.push(`Atividade ${i + 1}: escolha a atividade.`); }
+      if (tr.querySelector('.at-par').checked && !tr.querySelector('.at-mot').value) {
+        tr.querySelector('.at-mot').classList.add('campo-erro');
+        erros.push(`Atividade ${i + 1}: informe o motivo da paralisação.`);
+      }
+    });
+    [...$('tbEv').querySelectorAll('tr')].forEach((tr, i) => {
+      if (!tr.querySelector('.ev-tipo').value) { tr.querySelector('.ev-tipo').classList.add('campo-erro'); erros.push(`Evento ${i + 1}: informe o tipo.`); }
+      if (!tr.querySelector('.ev-desc').value.trim()) { tr.querySelector('.ev-desc').classList.add('campo-erro'); erros.push(`Evento ${i + 1}: descreva o evento.`); }
+    });
+    return erros;
+  }
+  function mostraErros(erros) {
+    const painel = $('painelErro');
+    painel.hidden = erros.length === 0;
+    $('listaErro').innerHTML = erros.slice(0, 12).map((e) => `<li>${esc(e)}</li>`).join('') + (erros.length > 12 ? `<li>… e mais ${erros.length - 12}</li>` : '');
+    if (erros.length) painel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ====================== AVISO DE PRAZO ====================== */
+  function avaliaPrazo() {
+    const d = $('fData').value;
+    if (!d) { $('avisoPrazo').hidden = true; $('chipAtraso').hidden = true; return; }
+    const limite = new Date(d + 'T06:00:00');
+    limite.setDate(limite.getDate() + 1);
+    const atrasado = HOJE > limite;
+    $('chipAtraso').hidden = !atrasado;
+    $('avisoPrazo').hidden = !atrasado;
+    $('avisoPrazo').textContent = atrasado ? 'Este RDO é de um dia anterior ao prazo de lançamento (06h do dia seguinte). Ele será marcado como fora do prazo.' : '';
+  }
+
+  /* ====================== NAVEGAÇÃO ====================== */
+  function mostra(rota) {
+    const vistas = { lista: 'vLista', form: 'vForm', checkin: 'vCheckin', pauta: 'vPauta', cadastros: 'vCadastros' };
+    Object.keys(vistas).forEach((k) => { $(vistas[k]).hidden = k !== rota; });
+    document.querySelectorAll('#nav a[data-rota]').forEach((a) => a.classList.toggle('ativo', a.dataset.rota === (rota === 'form' ? 'lista' : rota)));
+    $('nav').classList.remove('aberto');
+    window.scrollTo(0, 0);
+  }
+  function novoRdo() {
+    $('tituloRdo').textContent = 'Novo RDO';
+    $('trilhaNum').textContent = 'Novo RDO';
+    $('fNumero').value = '(gerado ao enviar)';
+    $('fData').value = iso(HOJE);
+    $('fLocal2').innerHTML = ''; opcoes($('fLocal2'), LOCAIS, { valor: LOCAIS[0] });
+    opcoes($('fResp'), RESPONSAVEIS, { valor: RESPONSAVEIS[0] });
+    opcoes($('fCriador'), CRIADORES, { valor: USUARIO && CRIADORES.includes(USUARIO.nome) ? USUARIO.nome : '' });
+    $('fDescLocal').value = '';
+    $('fLancadoPor').value = USUARIO ? USUARIO.nome : '';
+    $('fLancadoEm').value = '—';
+    ['cManhaClima', 'cManhaOp', 'cTardeClima', 'cTardeOp'].forEach((id) => ($(id).value = ''));
+    ['cManhaMm', 'cManhaIni', 'cManhaFim', 'cTardeMm', 'cTardeIni', 'cTardeFim'].forEach((id) => ($(id).value = ''));
+    preencheTempo();
+    $('tbEf').innerHTML = '';
+    atualizaEfetivo();
+    montaEquipamentos({});
+    $('tbAt').innerHTML = ''; $('tbAt').appendChild(linhaAtividade());
+    $('tbEv').innerHTML = ''; atualizaSemEvento();
+    $('fObs').value = '';
+    $('listaFotos').innerHTML = '';
+    $('chipStatus').className = 'chip rascunho'; $('chipStatus').textContent = 'Rascunho';
+    $('auditoria').textContent = 'Novo RDO · ' + dataBR(iso(HOJE));
+    $('auditoria2').textContent = 'Não enviado';
+    $('btnCancelar').hidden = true;
+    limpaErros(); $('painelErro').hidden = true;
+    avaliaPrazo();
+    mostra('form');
+  }
+  function abrirRdo(id) {
+    if (!RDOS.find((x) => x.id === id)) return;
+    toast('Carregando RDO…');
+    google.script.run
+      .withSuccessHandler(preencheRdo)
+      .withFailureHandler((e) => toast(e.message))
+      .detalheRdo(id);
+  }
+  function preencheRdo(d) {
+    if (!d) { toast('Não foi possível carregar o RDO.'); return; }
+    novoRdo();
+    const comValor = (lista, v) => (!v || lista.includes(v) ? lista : lista.concat([v]));
+    $('tituloRdo').textContent = 'RDO ' + dataBR(d.data) + ' · ' + d.local;
+    $('trilhaNum').textContent = dataBR(d.data) + ' · ' + d.local;
+    $('fNumero').value = d.id;
+    $('fData').value = d.data;
+    opcoes($('fLocal2'), comValor(LOCAIS, d.local), { valor: d.local });
+    opcoes($('fResp'), comValor(RESPONSAVEIS, d.responsavel), { valor: d.responsavel });
+    opcoes($('fCriador'), comValor(CRIADORES, d.criador), { valor: d.criador });
+    $('fDescLocal').value = d.descricao_local;
+    $('fLancadoPor').value = /^[0-9a-f-]{36}$/i.test(d.lancado_por) ? '—' : (d.lancado_por || '—');
+    $('fLancadoEm').value = d.lancado_em || '—';
+    [['cManha', d.manha], ['cTarde', d.tarde]].forEach(([p, t]) => {
+      $(p + 'Clima').value = t.clima;
+      $(p + 'Op').value = t.operacao;
+      aplicaTempo(p);
+      $(p + 'Motivo').value = t.motivo;
+      if (t.clima === 'chuva') { $(p + 'Mm').value = t.mm; $(p + 'Ini').value = t.ini; $(p + 'Fim').value = t.fim; }
+    });
+    $('tbEf').innerHTML = '';
+    d.efetivo.forEach((e) => $('tbEf').appendChild(linhaEfetivo({
+      nome: e.nome, presente: e.presente, motivo: AUSENCIAS.find((a) => semAcento(a) === semAcento(e.motivo)) || '',
+    })));
+    atualizaEfetivo();
+    const salvos = {};
+    d.equipamentos.forEach((q) => { salvos[q.codigo] = { situacao: q.situacao, operador: q.operador, ini: q.ini, fim: q.fim, periodo: q.periodo, motivo: q.motivo }; });
+    montaEquipamentos(salvos);
+    $('tbAt').innerHTML = '';
+    d.atividades.forEach((a) => $('tbAt').appendChild(linhaAtividade(a)));
+    $('tbEv').innerHTML = '';
+    d.eventos.forEach((v) => $('tbEv').appendChild(linhaEvento(v)));
+    atualizaSemEvento();
+    $('fObs').value = d.observacoes;
+    $('chipStatus').className = 'chip enviado';
+    $('chipStatus').textContent = 'Enviado';
+    $('auditoria').textContent = `Criado por ${d.criador || '—'} · data ${dataBR(d.data)}`;
+    $('auditoria2').textContent = 'Enviado. Reenviar substitui este RDO (o anterior fica no histórico).';
+    $('btnCancelar').hidden = false;
+    avaliaPrazo();
+    mostra('form');
+  }
+  /** Linha de atividade sem nada preenchido: ignorada na validação e no envio. */
+  function atividadeVazia(tr) {
+    return !tr.querySelector('.at-nome').value && !tr.querySelector('.at-qtd').value
+      && !tr.querySelector('.at-desc').value.trim() && !tr.querySelector('.at-par').checked;
+  }
+
+  /* ====================== EVENTOS ====================== */
+  document.querySelectorAll('#nav a[data-rota]').forEach((a) => a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const r = a.dataset.rota;
+    if (r === 'lista') mostra('lista');
+    else if (r === 'checkin') { mostra('checkin'); carregaCheckin(); }
+    else if (r === 'pauta') { mostra('pauta'); iniciaPauta(); }
+    else if (r === 'cadastros') abrirCadastros();
+    else if (r === 'equip') abrirCadastros('equipamentos');
+    else if (r === 'efetivo') abrirCadastros('colaboradores');
+    else if (r === 'atividades') abrirCadastros('atividades_padrao');
+    else toast('Módulo ainda não disponível. Em construção.');
+  }));
+  $('btnMenu').addEventListener('click', () => $('nav').classList.toggle('aberto'));
+  $('btnNovo').addEventListener('click', novoRdo);
+  $('btnLimpar').addEventListener('click', () => { $('fStatus').value = ''; $('fLocal').value = ''; $('fBusca').value = ''; renderLista(); });
+  ['fStatus', 'fLocal', 'fBusca'].forEach((id) => $(id).addEventListener('input', renderLista));
+  $('tbLista').addEventListener('click', (e) => { const b = e.target.closest('[data-abrir]'); if (b) abrirRdo(b.dataset.abrir); });
+  document.querySelectorAll('[data-voltar]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); mostra('lista'); }));
+  $('fData').addEventListener('change', avaliaPrazo);
+  $('btnAddEf').addEventListener('click', () => { const usados = [...$('tbEf').querySelectorAll('.ef-nome')].map((s) => s.value); const prox = COLABORADORES.find((c) => !usados.includes(c.nome)); $('tbEf').appendChild(linhaEfetivo({ nome: prox ? prox.nome : '', presente: true })); atualizaEfetivo(); });
+  $('btnAddAt').addEventListener('click', () => $('tbAt').appendChild(linhaAtividade()));
+  $('btnAddEv').addEventListener('click', () => { $('tbEv').appendChild(linhaEvento()); });
+  $('fFotos').addEventListener('change', (e) => { const f = [...e.target.files].slice(0, 10); $('listaFotos').innerHTML = f.map((x) => `<li>${esc(x.name)}</li>`).join(''); });
+  $('btnRascunho').addEventListener('click', () => { toast('Rascunho ainda não é guardado nesta versão. Envie o RDO ao concluir.'); });
+  $('btnCancelar').addEventListener('click', () => mostra('lista'));
+  function nomeParaId(lista, nome) {
+    const x = (lista || []).find((i) => (i.nome || i.descricao || i.codigo || i.sigla) === nome);
+    return x ? x.id : '';
+  }
+  function semAcento(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+
+  function montarPayload() {
+    const tempo = (p) => ({
+      clima: $(p + 'Clima').value,
+      operacao: $(p + 'Op').value,
+      motivo_id: nomeParaId(BASE.motivos.dia_sem_execucao, $(p + 'Motivo').value),
+      mm: $(p + 'Mm').value === '' ? '' : Number($(p + 'Mm').value),
+      ini: $(p + 'Ini').value,
+      fim: $(p + 'Fim').value,
+    });
+    const efetivo = [...$('tbEf').querySelectorAll('tr')].map((tr) => {
+      const nome = tr.querySelector('.ef-nome').value;
+      const c = BASE.colaboradores.find((x) => x.nome === nome) || {};
+      return {
+        nome: nome, categoria: c.categoria || '', grupo_terceiro: c.grupo_terceiro || '',
+        presente: tr.querySelector('.ef-pres').value === 'sim', motivo: semAcento(tr.querySelector('.ef-motivo').value),
+      };
+    });
+    const parPorCodigo = {};
+    [...$('tbEqPar').querySelectorAll('tr[data-cod]')].forEach((tr) => { parPorCodigo[tr.dataset.cod] = tr; });
+    const equipamentos = [...$('tbEqOp').querySelectorAll('tr')].map((tr) => {
+      const cod = tr.dataset.cod;
+      const eq = BASE.equipamentos.find((e) => e.codigo === cod) || {};
+      const sit = tr.querySelector('.eq-sit').value;
+      const par = parPorCodigo[cod];
+      const motTxt = par ? par.querySelector('.par-mot').value : '';
+      const perSel = par ? par.querySelector('.par-per') : null;
+      return {
+        equipamento_id: eq.id || '',
+        situacao: sit,
+        operador_id: nomeParaId(BASE.operadores, tr.querySelector('.eq-op').value),
+        ini: tr.querySelector('.eq-ini').value === '' ? '' : Number(tr.querySelector('.eq-ini').value),
+        fim: tr.querySelector('.eq-fim').value === '' ? '' : Number(tr.querySelector('.eq-fim').value),
+        motivo_id: sit === 'parado' ? nomeParaId(BASE.motivos.equipamento_parado, motTxt) : '',
+        motivo_texto: sit === 'manutencao' ? motTxt : '',
+        periodo: sit === 'parado' && perSel ? perSel.value : '',
+      };
+    });
+    const atividades = [...$('tbAt').querySelectorAll('tr')].filter((tr) => !atividadeVazia(tr)).map((tr) => {
+      const par = tr.querySelector('.at-par').checked;
+      const motNome = tr.querySelector('.at-mot').value;
+      return {
+        nome: tr.querySelector('.at-nome').value,
+        local_id: nomeParaId(BASE.locais, tr.querySelector('.at-local').value),
+        unidade_id: (BASE.unidades.find((u) => u.sigla === tr.querySelector('.at-un').value) || {}).id || '',
+        quantidade: tr.querySelector('.at-qtd').value,
+        paralisada: par,
+        motivo_id: par ? nomeParaId(BASE.motivos.atividade_paralisada.concat(BASE.motivos.dia_sem_execucao), motNome) : '',
+        descricao: tr.querySelector('.at-desc').value,
+      };
+    });
+    const eventos = [...$('tbEv').querySelectorAll('tr')].map((tr) => ({
+      tipo: tr.querySelector('.ev-tipo').value, descricao: tr.querySelector('.ev-desc').value, providencias: tr.querySelector('.ev-prov').value,
+    }));
+    return {
+      obra_id: nomeParaId(BASE.obras, $('fObra').value),
+      data: $('fData').value,
+      local_id: nomeParaId(BASE.locais, $('fLocal2').value),
+      descricao_local: $('fDescLocal').value,
+      responsavel: $('fResp').value,
+      criador: $('fCriador').value,
+      manha: tempo('cManha'),
+      tarde: tempo('cTarde'),
+      efetivo: efetivo, equipamentos: equipamentos, atividades: atividades, eventos: eventos,
+      observacoes: $('fObs').value,
+    };
+  }
+
+  function carregaRdos() {
+    google.script.run
+      .withSuccessHandler((lista) => {
+        RDOS = lista.map((r) => ({ id: r.id, data: r.data, local: r.local, resp: r.responsavel, criador: r.criador, status: 'Enviado', atrasado: r.atrasado }));
+        renderLista();
+      })
+      .withFailureHandler((e) => toast(e.message))
+      .listarRdos();
+  }
+
+  $('btnEnviar').addEventListener('click', () => {
+    const erros = validar();
+    if (erros.length) { mostraErros(erros); toast(`Há ${erros.length} pendência(s). Revise os campos destacados.`); return; }
+    mostraErros([]);
+    const btn = $('btnEnviar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    google.script.run
+      .withSuccessHandler((r) => {
+        btn.disabled = false; btn.textContent = 'Enviar RDO';
+        toast(r.atrasado ? 'RDO enviado, marcado como fora do prazo.' : 'RDO enviado.');
+        carregaRdos();
+        mostra('lista');
+      })
+      .withFailureHandler((e) => {
+        btn.disabled = false; btn.textContent = 'Enviar RDO';
+        mostraErros([e.message]);
+        toast('Não foi possível enviar. Veja a mensagem.');
+      })
+      .salvarRdo(montarPayload());
+  });
+
+  /* ====================== CHECK-IN ====================== */
+  const STATUS_LBL = { a_fazer: 'A fazer', fazendo: 'Fazendo', concluido: 'Concluído', cancelado: 'Cancelado' };
+  const PRIOR_LBL = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+  let CHECKIN = [], PAUTA = [], PAUTA_LIDERES = [], PAUTA_TOKEN = '', PAUTA_QUEM = '';
+  let USUARIO = null;
+  try { PAUTA_TOKEN = localStorage.getItem('gransul_pauta_token') || ''; } catch (e) { PAUTA_TOKEN = ''; }
+  const ehGerente = () => !!USUARIO && USUARIO.perfil === 'gerente';
+  function situacaoPrazo(x) {
+    if (x.status === 'concluido' || x.status === 'cancelado' || !x.prazo) return '';
+    if (x.prazo < iso(HOJE)) return '<span class="chip atrasado">Atrasado</span>';
+    if (x.prazo === iso(HOJE)) return '<span class="chip rascunho">Vence hoje</span>';
+    return '';
+  }
+  function badgeStatus(s) {
+    const cls = s === 'concluido' ? 'enviado' : s === 'cancelado' ? 'neutro' : 'rascunho';
+    return `<span class="chip ${cls}">${esc(STATUS_LBL[s] || s)}</span>`;
+  }
+  function definirUsuario(u) {
+    USUARIO = u;
+    if (!u) return;
+    $('nomeUser').textContent = u.nome;
+    $('avUser').textContent = u.nome.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+    $('btnNovoCk').hidden = !ehGerente();
+  }
+  function carregaCheckin() {
+    google.script.run
+      .withSuccessHandler((l) => { CHECKIN = l; renderCheckin(); })
+      .withFailureHandler((e) => toast(e.message))
+      .listarCheckin();
+  }
+  function renderCheckin() {
+    const st = $('ckFiltro').value, q = semAcento($('ckBusca').value);
+    const hoje = iso(HOJE);
+    const abertos = CHECKIN.filter((x) => x.status === 'a_fazer' || x.status === 'fazendo');
+    $('ckAbertos').textContent = abertos.length;
+    $('ckHoje').textContent = abertos.filter((x) => x.prazo === hoje).length;
+    $('ckAtrasados').textContent = abertos.filter((x) => x.prazo && x.prazo < hoje).length;
+    $('ckConcluidos').textContent = CHECKIN.filter((x) => x.status === 'concluido').length;
+    const lista = CHECKIN
+      .filter((x) => (!st || x.status === st) && (!q || semAcento([x.assunto, x.area, x.responsavel, x.descricao].join(' ')).includes(q)))
+      .sort((a, b) => (a.prazo || '9999').localeCompare(b.prazo || '9999'));
+    $('tbCheckin').innerHTML = lista.length ? lista.map((x) => `<tr>
+      <td>${esc(x.assunto)}${x.atencao ? ' <span class="chip rascunho">Atenção</span>' : ''}</td>
+      <td>${esc(x.area)}</td>
+      <td>${esc(x.responsavel)}</td>
+      <td>${esc(PRIOR_LBL[x.prioridade] || x.prioridade)}</td>
+      <td>${dataBR(x.prazo)}</td>
+      <td>${badgeStatus(x.status)} ${situacaoPrazo(x)}</td>
+      <td>${x.origem_pauta ? '<span class="chip neutro">Pauta</span>' : 'Manual'}</td>
+      <td class="acoes">${ehGerente() ? `<button class="btn pequeno" data-ck="${esc(x.id)}">Editar</button>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="8" class="ajuda">Nenhum item.</td></tr>';
+  }
+  function abrirCkForm(x) {
+    const f = !!x;
+    $('ckFormTitulo').textContent = f ? 'Editar item' : 'Novo item';
+    $('ckId').value = f ? x.id : '';
+    $('ckArea').value = f ? x.area : '';
+    $('ckAssunto').value = f ? x.assunto : '';
+    $('ckDesc').value = f ? (x.descricao || '') : '';
+    $('ckResp').value = f ? x.responsavel : '';
+    $('ckPrazo').value = f ? x.prazo : '';
+    $('ckPrior').value = f ? x.prioridade : 'media';
+    $('ckStatus').value = f ? x.status : 'a_fazer';
+    $('ckAtencao').checked = f ? !!x.atencao : false;
+    $('ckMsg').textContent = '';
+    $('ckForm').hidden = false;
+    $('ckArea').focus();
+  }
+  $('btnNovoCk').addEventListener('click', () => abrirCkForm(null));
+  $('ckCancelar').addEventListener('click', () => { $('ckForm').hidden = true; });
+  $('ckSalvar').addEventListener('click', () => {
+    const item = {
+      id: $('ckId').value, area: $('ckArea').value.trim(), assunto: $('ckAssunto').value.trim(), descricao: $('ckDesc').value.trim(),
+      responsavel: $('ckResp').value.trim(), prazo: $('ckPrazo').value, prioridade: $('ckPrior').value, status: $('ckStatus').value,
+      atencao: $('ckAtencao').checked,
+    };
+    if (!item.area || !item.assunto || !item.responsavel) { $('ckMsg').textContent = 'Preencha área, assunto e responsável.'; return; }
+    const btn = $('ckSalvar');
+    btn.disabled = true;
+    google.script.run
+      .withSuccessHandler(() => { btn.disabled = false; $('ckForm').hidden = true; toast('Item salvo.'); carregaCheckin(); })
+      .withFailureHandler((e) => { btn.disabled = false; $('ckMsg').textContent = e.message; })
+      .salvarCheckin(item);
+  });
+  $('tbCheckin').addEventListener('click', (e) => { const b = e.target.closest('[data-ck]'); if (b) abrirCkForm(CHECKIN.find((x) => x.id === b.dataset.ck)); });
+  ['ckFiltro', 'ckBusca'].forEach((id) => $(id).addEventListener('input', renderCheckin));
+  $('ckLimpar').addEventListener('click', () => { $('ckFiltro').value = ''; $('ckBusca').value = ''; renderCheckin(); });
+
+  /* ====================== PAUTA ====================== */
+  function guardaToken(t) {
+    PAUTA_TOKEN = t;
+    try { if (t) localStorage.setItem('gransul_pauta_token', t); else localStorage.removeItem('gransul_pauta_token'); } catch (e) { /* sem armazenamento: não lembra a sessão */ }
+  }
+  function iniciaPauta() {
+    google.script.run
+      .withSuccessHandler((r) => { PAUTA = r.itens; PAUTA_LIDERES = r.lideres; PAUTA_QUEM = r.quem; mostraPautaConteudo(); })
+      .withFailureHandler(() => { mostraPautaLogin(); })
+      .listarPauta(PAUTA_TOKEN || null);
+  }
+  function mostraPautaLogin() {
+    $('pautaLogin').hidden = false;
+    $('pautaConteudo').hidden = true;
+    google.script.run
+      .withSuccessHandler((ls) => {
+        opcoes($('plLider'), ls.map((l) => [l.id, l.nome + (l.setor ? ' · ' + l.setor : '') + (l.primeiro ? ' (primeiro acesso)' : '')]), { vazio: 'Selecione seu nome' });
+      })
+      .withFailureHandler((e) => toast(e.message))
+      .listarLideresPauta();
+  }
+  function mostraPautaConteudo() {
+    $('pautaLogin').hidden = true;
+    $('pautaConteudo').hidden = false;
+    $('pautaQuem').textContent = PAUTA_QUEM ? 'Logado: ' + PAUTA_QUEM : '';
+    $('btnSairPauta').hidden = !PAUTA_TOKEN;
+    opcoes($('paResp'), PAUTA_LIDERES.map((l) => [l.id, l.nome + (l.setor ? ' · ' + l.setor : '')]), { vazio: 'Selecione o responsável' });
+    renderPauta();
+  }
+  function renderPauta() {
+    const st = $('paFiltro').value, q = semAcento($('paBusca').value);
+    const lista = PAUTA.filter((x) => (!st || x.status === st) && (!q || semAcento([x.assunto, x.area, x.responsavel, x.criador_setor, x.responsavel_setor].join(' ')).includes(q)));
+    $('tbPauta').innerHTML = lista.length ? lista.map((x) => `<tr>
+      <td>${esc(x.assunto)}</td>
+      <td>${esc(x.area)}</td>
+      <td>${esc(x.criador_setor || '—')}</td>
+      <td>${esc(x.responsavel)}${x.responsavel_setor ? ' <span class="ajuda">· ' + esc(x.responsavel_setor) + '</span>' : ''}</td>
+      <td>${esc(PRIOR_LBL[x.prioridade] || x.prioridade)}</td>
+      <td>${dataBR(x.prazo)}</td>
+      <td>${badgeStatus(x.status)} ${situacaoPrazo(x)}</td>
+      <td class="acoes"><button class="btn pequeno" data-pa="${esc(x.id)}">Editar</button></td>
+    </tr>`).join('') : '<tr><td colspan="8" class="ajuda">Nenhum item.</td></tr>';
+  }
+  function abrirPaForm(x) {
+    const f = !!x;
+    $('paFormTitulo').textContent = f ? 'Editar item' : 'Novo item';
+    $('paId').value = f ? x.id : '';
+    $('paArea').value = f ? x.area : '';
+    $('paAssunto').value = f ? x.assunto : '';
+    $('paDesc').value = f ? x.descricao : '';
+    $('paResp').value = f ? x.responsavel_id : '';
+    $('paPrazo').value = f ? x.prazo : '';
+    $('paPrior').value = f ? x.prioridade : 'media';
+    $('paStatus').value = f ? x.status : 'a_fazer';
+    $('paMsg').textContent = '';
+    $('paForm').hidden = false;
+    $('paArea').focus();
+  }
+  $('plEntrar').addEventListener('click', () => {
+    $('plMsg').textContent = '';
+    if (!$('plLider').value) { $('plMsg').textContent = 'Escolha seu nome.'; return; }
+    const btn = $('plEntrar');
+    btn.disabled = true;
+    google.script.run
+      .withSuccessHandler((r) => { btn.disabled = false; guardaToken(r.token); $('plSenha').value = ''; PAUTA_QUEM = r.quem; iniciaPauta(); })
+      .withFailureHandler((e) => { btn.disabled = false; $('plMsg').textContent = e.message; })
+      .entrarPauta($('plLider').value, $('plSenha').value);
+  });
+  $('plSenha').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('plEntrar').click(); });
+  $('btnSairPauta').addEventListener('click', () => { guardaToken(''); PAUTA = []; PAUTA_QUEM = ''; mostraPautaLogin(); });
+  $('btnNovoPa').addEventListener('click', () => abrirPaForm(null));
+  $('paCancelar').addEventListener('click', () => { $('paForm').hidden = true; });
+  $('paSalvar').addEventListener('click', () => {
+    const item = {
+      id: $('paId').value, area: $('paArea').value.trim(), assunto: $('paAssunto').value.trim(), descricao: $('paDesc').value.trim(),
+      responsavel_id: $('paResp').value, prazo: $('paPrazo').value, prioridade: $('paPrior').value, status: $('paStatus').value,
+    };
+    if (!item.area || !item.assunto || !item.responsavel_id || !item.prazo) { $('paMsg').textContent = 'Preencha área, assunto, responsável e prazo.'; return; }
+    const btn = $('paSalvar');
+    btn.disabled = true;
+    google.script.run
+      .withSuccessHandler(() => { btn.disabled = false; $('paForm').hidden = true; toast('Item salvo e enviado ao Check-in.'); iniciaPauta(); })
+      .withFailureHandler((e) => { btn.disabled = false; $('paMsg').textContent = e.message; })
+      .salvarPautaItem(PAUTA_TOKEN || null, item);
+  });
+  $('tbPauta').addEventListener('click', (e) => { const b = e.target.closest('[data-pa]'); if (b) abrirPaForm(PAUTA.find((x) => x.id === b.dataset.pa)); });
+  ['paFiltro', 'paBusca'].forEach((id) => $(id).addEventListener('input', renderPauta));
+  $('paLimpar').addEventListener('click', () => { $('paFiltro').value = ''; $('paBusca').value = ''; renderPauta(); });
+
+  /* ====================== CADASTROS ====================== */
+  const CAD = {
+    locais: { titulo: 'Locais', campos: [{ c: 'nome', r: 'Nome', req: true }] },
+    colaboradores: { titulo: 'Efetivo', baixa: 'inativo_em', campos: [
+      { c: 'nome', r: 'Nome', req: true }, { c: 'matricula', r: 'Matrícula' }, { c: 'funcao', r: 'Função', lista: 'funcoes' },
+      { c: 'categoria', r: 'Setor', lista: 'categorias' }, { c: 'grupo_terceiro', r: 'Empresa' },
+      { c: 'data_contrato', r: 'Data do contrato', tipo: 'date' }, { c: 'baixada_dias', r: 'Baixada (dias)', lista: 'colaboradores.baixada_dias' },
+      { c: 'cnh_numero', r: 'CNH' }, { c: 'cnh_validade', r: 'Validade da CNH', tipo: 'date' },
+      { c: 'direcao_defensiva_validade', r: 'Direção defensiva até', tipo: 'date' },
+      { c: 'apto_rdo', r: 'Apto RDO', tipo: 'bool' }] },
+    funcoes_efetivo: { titulo: 'Funções', campos: [{ c: 'nome', r: 'Função', req: true }] },
+    categorias_efetivo: { titulo: 'Setores', campos: [{ c: 'nome', r: 'Setor', req: true }, { c: 'empresa', r: 'Empresa', req: true }] },
+    equipamentos: { titulo: 'Equipamentos e veículos', baixa: 'baixa_em', semSituacao: true, campos: [
+      { c: 'codigo', r: 'Código', req: true }, { c: 'descricao', r: 'Marca', req: true }, { c: 'modelo', r: 'Modelo' },
+      { c: 'ano_fabricacao', r: 'Ano', tipo: 'number' }, { c: 'empresa', r: 'Empresa' }, { c: 'origem', r: 'Origem', lista: 'equipamentos.origem' },
+      { c: 'tipo', r: 'Tipo', req: true, lista: 'equipamentos.tipo' }, { c: 'data_entrada', r: 'Entrada', tipo: 'date' }] },
+    atividades_padrao: { titulo: 'Atividades padrão', campos: [{ c: 'nome', r: 'Atividade', req: true }, { c: 'unidade_id', r: 'Unidade', lista: 'unidades' }] },
+    unidades_medida: { titulo: 'Unidades', campos: [{ c: 'sigla', r: 'Sigla', req: true }, { c: 'descricao', r: 'Descrição' }] },
+    motivos_justificativa: { titulo: 'Motivos', campos: [{ c: 'tipo', r: 'Tipo', req: true, lista: 'motivos_justificativa.tipo' }, { c: 'descricao', r: 'Descrição', req: true }] },
+  };
+  const ROT_TIPO_MOTIVO = { dia_sem_execucao: 'Dia sem execução', equipamento_parado: 'Equipamento parado', atividade_paralisada: 'Atividade paralisada' };
+  let CADD = null, CAD_ATUAL = 'locais', CAD_EDITANDO = null, CAD_EXCLUINDO = null;
+  const comSituacao = (cfg) => cfg.baixa && !cfg.semSituacao;
+
+  function listaOpcoes(nome) {
+    if (!CADD) return [];
+    if (nome === 'funcoes' || nome === 'categorias') return CADD[nome].map((v) => [v, v]);
+    if (nome === 'unidades') return CADD.unidades_medida.map((u) => [u.id, u.sigla]);
+    return (CADD.listas[nome] || []).map((v) => [String(v), nome === 'motivos_justificativa.tipo' ? (ROT_TIPO_MOTIVO[v] || v) : String(v)]);
+  }
+  const ehVerdade = (v) => v === true || String(v).toUpperCase() === 'TRUE';
+  function exibeTexto(f, v) {
+    if (f.tipo === 'bool') return ehVerdade(v) ? 'Sim' : 'Não';
+    if (v === '' || v === null || v === undefined) return '—';
+    if (f.tipo === 'date') return dataBR(String(v).slice(0, 10));
+    if (f.c === 'locacao_mensal') return moeda(v);
+    if (f.lista) { const o = listaOpcoes(f.lista).find(([ov]) => String(ov) === String(v)); return o ? o[1] : String(v); }
+    return String(v);
+  }
+  function renderCad() {
+    const cfg = CAD[CAD_ATUAL];
+    $('cadAbas').innerHTML = Object.keys(CAD).map((k) => `<button class="btn ${k === CAD_ATUAL ? 'primario' : ''}" data-cad="${k}">${CAD[k].titulo}</button>`).join('');
+    $('cadNovo').hidden = !CADD.podeEditar;
+    $('cadBaixaWrap').style.visibility = cfg.baixa ? 'visible' : 'hidden';
+    const verBaixados = cfg.baixa && $('cadBaixados').checked;
+    const q = semAcento($('cadBusca').value);
+    const linhas = CADD[CAD_ATUAL]
+      .filter((x) => (verBaixados || !cfg.baixa || !x[cfg.baixa]) && (!q || semAcento(cfg.campos.map((f) => exibeTexto(f, x[f.c])).join(' ')).includes(q)))
+      .sort((a, b) => String(a[cfg.campos[0].c]).localeCompare(String(b[cfg.campos[0].c]), 'pt-BR', { numeric: true }));
+    $('cadCab').innerHTML = '<tr>' + cfg.campos.map((f) => `<th>${f.r}${f.req ? ' *' : ''}</th>`).join('') + (comSituacao(cfg) ? '<th>Situação</th>' : '') + '<th></th></tr>';
+    const cols = cfg.campos.length + (comSituacao(cfg) ? 2 : 1);
+    let html = CAD_EDITANDO === 'novo' ? linhaCadForm(cfg, {}) : '';
+    html += linhas.map((x) => (CAD_EDITANDO === x.id ? linhaCadForm(cfg, x) : linhaCadView(cfg, x))).join('');
+    $('cadCorpo').innerHTML = html || `<tr><td colspan="${cols}" class="vazio">Nenhum registro.</td></tr>`;
+    $('cadInfo').textContent = linhas.length + ' registro(s)' + (CADD.podeEditar ? '' : ' · somente consulta');
+  }
+  function linhaCadView(cfg, x) {
+    const baixado = cfg.baixa && x[cfg.baixa];
+    let acoes = '';
+    if (CADD.podeEditar && !baixado) {
+      acoes = CAD_EXCLUINDO === x.id
+        ? `<span class="ajuda">${cfg.baixa ? 'Dar baixa?' : 'Excluir?'}</span> <button class="btn pequeno perigo" data-sim="${esc(x.id)}">Sim</button> <button class="btn pequeno" data-nao="1">Não</button>`
+        : `<button class="btn pequeno" data-editar="${esc(x.id)}" title="Editar">✏️</button> <button class="btn pequeno perigo" data-excluir="${esc(x.id)}" title="${cfg.baixa ? 'Dar baixa' : 'Excluir'}">🗑</button>`;
+    }
+    if (baixado && cfg.semSituacao) acoes = '<span class="chip neutro">Baixa ' + dataBR(String(x[cfg.baixa]).slice(0, 10)) + '</span>';
+    const situacao = comSituacao(cfg) ? `<td>${baixado ? '<span class="chip neutro">Baixa ' + dataBR(String(x[cfg.baixa]).slice(0, 10)) + '</span>' : '<span class="chip enviado">Ativo</span>'}</td>` : '';
+    return `<tr>${cfg.campos.map((f) => `<td>${esc(exibeTexto(f, x[f.c]))}</td>`).join('')}${situacao}<td class="acoes">${acoes}</td></tr>`;
+  }
+  function linhaCadForm(cfg, x) {
+    const celulas = cfg.campos.map((f) => {
+      const v = x[f.c] === undefined || x[f.c] === null ? '' : x[f.c];
+      if (f.tipo === 'bool') return `<td style="text-align:center;"><input type="checkbox" data-c="${f.c}" ${ehVerdade(v) ? 'checked' : ''}></td>`;
+      if (f.lista) {
+        let ops = listaOpcoes(f.lista);
+        if (v !== '' && !ops.some((o) => String(o[0]) === String(v))) ops = ops.concat([[String(v), String(v)]]);
+        return `<td><select data-c="${f.c}"><option value="">Selecione</option>${ops.map(([ov, ol]) => `<option value="${esc(ov)}"${String(ov) === String(v) ? ' selected' : ''}>${esc(ol)}</option>`).join('')}</select></td>`;
+      }
+      const tipo = f.tipo === 'date' ? 'date' : f.tipo === 'number' ? 'number' : 'text';
+      const valor = f.tipo === 'date' ? String(v).slice(0, 10) : v;
+      return `<td><input type="${tipo}"${tipo === 'number' ? ' step="any"' : ''} data-c="${f.c}" value="${esc(valor)}"></td>`;
+    }).join('');
+    return `<tr data-id="${esc(x.id || '')}">${celulas}${comSituacao(cfg) ? '<td></td>' : ''}<td class="acoes"><button class="btn pequeno primario" data-salvar="1">Salvar</button> <button class="btn pequeno" data-cancelar="1">Cancelar</button></td></tr>`;
+  }
+  function carregaCadastros(atualizaBase) {
+    google.script.run
+      .withSuccessHandler((d) => {
+        CADD = d;
+        renderCad();
+        if (atualizaBase) {
+          google.script.run.withSuccessHandler((b) => { aplicaBase(b); preencheTempo(); opcoes($('fLocal'), LOCAIS, { vazio: 'Todos os locais' }); }).carregarBase();
+        }
+      })
+      .withFailureHandler((e) => toast(e.message))
+      .carregarCadastros();
+  }
+  function abrirCadastros(aba) {
+    if (aba) CAD_ATUAL = aba;
+    CAD_EDITANDO = null;
+    CAD_EXCLUINDO = null;
+    $('cadMsg').textContent = '';
+    mostra('cadastros');
+    if (CADD) renderCad();
+    else $('cadCorpo').innerHTML = '<tr><td class="vazio">Carregando…</td></tr>';
+    carregaCadastros(false);
+  }
+  function salvaCad(tr) {
+    const cfg = CAD[CAD_ATUAL];
+    const reg = { id: tr.dataset.id || '' };
+    tr.querySelectorAll('[data-c]').forEach((el) => { reg[el.dataset.c] = el.type === 'checkbox' ? el.checked : el.value; });
+    const falta = cfg.campos.filter((f) => f.req && !String(reg[f.c] ?? '').trim()).map((f) => f.r);
+    if (falta.length) { $('cadMsg').textContent = 'Preencha: ' + falta.join(', ') + '.'; return; }
+    $('cadMsg').textContent = '';
+    tr.querySelectorAll('button').forEach((b) => (b.disabled = true));
+    google.script.run
+      .withSuccessHandler(() => { CAD_EDITANDO = null; toast('Cadastro salvo.'); carregaCadastros(true); })
+      .withFailureHandler((e) => { tr.querySelectorAll('button').forEach((b) => (b.disabled = false)); $('cadMsg').textContent = e.message; })
+      .salvarCadastro(CAD_ATUAL, reg);
+  }
+  function excluiCad(id) {
+    const cfg = CAD[CAD_ATUAL];
+    google.script.run
+      .withSuccessHandler(() => { CAD_EXCLUINDO = null; toast(cfg.baixa ? 'Baixa registrada.' : 'Registro excluído.'); carregaCadastros(true); })
+      .withFailureHandler((e) => { CAD_EXCLUINDO = null; $('cadMsg').textContent = e.message; renderCad(); })
+      .excluirCadastro(CAD_ATUAL, id);
+  }
+  $('cadAbas').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cad]');
+    if (!b) return;
+    CAD_ATUAL = b.dataset.cad; CAD_EDITANDO = null; CAD_EXCLUINDO = null; $('cadMsg').textContent = '';
+    renderCad();
+  });
+  $('cadNovo').addEventListener('click', () => { CAD_EDITANDO = 'novo'; CAD_EXCLUINDO = null; $('cadMsg').textContent = ''; renderCad(); });
+  $('cadBusca').addEventListener('input', () => { if (CADD) renderCad(); });
+  $('cadBaixados').addEventListener('change', () => { if (CADD) renderCad(); });
+  $('cadCorpo').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.editar) { CAD_EDITANDO = b.dataset.editar; CAD_EXCLUINDO = null; $('cadMsg').textContent = ''; renderCad(); }
+    else if (b.dataset.excluir) { CAD_EXCLUINDO = b.dataset.excluir; CAD_EDITANDO = null; renderCad(); }
+    else if (b.dataset.nao) { CAD_EXCLUINDO = null; renderCad(); }
+    else if (b.dataset.sim) excluiCad(b.dataset.sim);
+    else if (b.dataset.cancelar) { CAD_EDITANDO = null; $('cadMsg').textContent = ''; renderCad(); }
+    else if (b.dataset.salvar) salvaCad(b.closest('tr'));
+  });
+
+  /* ====================== INÍCIO ====================== */
+  function iniciar(base) {
+    aplicaBase(base);
+    opcoes($('fObra'), OBRAS, { vazio: 'Selecione', valor: OBRAS[0] || '' });
+    opcoes($('fLocal'), LOCAIS, { vazio: 'Todos os locais' });
+    preencheTempo();
+    carregaRdos();
+    mostra('lista');
+  }
+  google.script.run.withSuccessHandler(definirUsuario).dadosSessao();
+  google.script.run
+    .withSuccessHandler(iniciar)
+    .withFailureHandler((e) => { toast(e.message); })
+    .carregarBase();
+</script>
+</body>
+</html>

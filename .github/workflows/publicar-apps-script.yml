@@ -1,0 +1,49 @@
+# Publica o Gestão GranSul (Google Sheets + Apps Script) a cada alteração na pasta apps-script.
+# Envia o código ao projeto do script e cria uma nova versão NA MESMA implantação (a URL /exec não muda).
+# Requer o secret CLASPRC_JSON (conteúdo do ~/.clasprc.json gerado por "clasp login", clasp 2.4.2).
+name: Publicar Apps Script
+
+on:
+  push:
+    branches: [claude/gestao-base]
+    paths: ['apps-script/**', '.github/workflows/publicar-apps-script.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: publicar-apps-script
+  cancel-in-progress: false
+
+env:
+  DEPLOYMENT_ID: AKfycbxq5eh_pvc5PvHAeqgbYfpEOMOipmv__-42d9PXC8TtnxIT83jkRq_zrgyu1Hkv8qE4Sw
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar clasp
+        run: npm install -g @google/clasp@2.4.2
+
+      - name: Credencial
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then echo "::error::Falta o secret CLASPRC_JSON no repositório."; exit 1; fi
+          printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+
+      - name: Enviar código ao Apps Script
+        working-directory: apps-script
+        run: clasp push --force
+
+      - name: Publicar nova versão na implantação existente
+        working-directory: apps-script
+        run: clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "GitHub ${GITHUB_SHA::7}"
+
+      - name: Remover credencial
+        if: always()
+        run: rm -f ~/.clasprc.json

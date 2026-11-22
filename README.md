@@ -71,3 +71,15 @@ O app não tem tela de cadastro de usuários nesta fase.
 - Logotipo oficial horizontal (hoje é texto).
 - Decisão: ao criar uma obra, copiar a lista padrão de locais ou cada obra cadastra os seus.
 - Gerentes de contratos e de planejamento: criar as contas e vincular.
+
+## Versão Google (Planilha + Apps Script)
+
+O código do app Google fica em `apps-script/` e é publicado automaticamente pela
+automação `.github/workflows/publicar-apps-script.yml` a cada alteração nessa pasta:
+
+1. `clasp push --force` envia os arquivos ao projeto do Apps Script vinculado à planilha "Gestão GranSul".
+2. `clasp deploy --deploymentId …` cria uma nova versão na implantação existente — a URL `/exec` não muda.
+
+Pré-requisitos (uma vez só): API do Apps Script ativada em script.google.com/home/usersettings
+e o secret `CLASPRC_JSON` no repositório (conteúdo do `~/.clasprc.json` gerado por `clasp login`, clasp 2.4.2).
+Não editar o código direto no editor do Apps Script: a próxima publicação sobrescreve.
