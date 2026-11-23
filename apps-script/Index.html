@@ -44,17 +44,8 @@
   .obra-sel option { color: var(--texto); }
   .usuario { display: flex; align-items: center; gap: 8px; font-size: 12px; }
   .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--azul-2); display: grid; place-items: center; font-weight: 700; }
-  .menu-btn { display: none; background: transparent; border: 0; color: #fff; font-size: 20px; padding: 4px 8px; }
-
   /* Layout */
-  .corpo { display: grid; grid-template-columns: 228px 1fr; min-height: calc(100% - 56px); }
-  .nav { background: var(--superficie); border-right: 1px solid var(--borda); padding: 12px 8px; }
-  .nav h4 { margin: 10px 10px 6px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-  .nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 6px; color: var(--texto); text-decoration: none; font-weight: 500; }
-  .nav a:hover { background: var(--zebra); }
-  .nav a.ativo { background: var(--azul-claro); color: var(--azul); font-weight: 700; }
-  .nav a.breve { color: var(--muted); }
-  .nav a.breve span:last-child { margin-left: auto; font-size: 10px; background: var(--zebra); border: 1px solid var(--borda); padding: 1px 6px; border-radius: 10px; }
+  .corpo { min-height: calc(100% - 56px); }
   .principal { padding: 18px 22px 40px; min-width: 0; }
 
   /* Cabeçalhos de página */
@@ -165,10 +156,6 @@
 
   /* Responsivo */
   @media (max-width: 900px) {
-    .menu-btn { display: block; }
-    .corpo { grid-template-columns: 1fr; }
-    .nav { display: none; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 15; overflow-y: auto; }
-    .nav.aberto { display: block; }
     .obra-sel { min-width: 0; width: 170px; }
     .usuario span.nome { display: none; }
     .principal { padding: 14px 12px 40px; }
@@ -181,7 +168,6 @@
 <body>
 
 <header class="topo">
-  <button class="menu-btn" id="btnMenu" aria-label="Abrir menu">☰</button>
   <div class="marca">GRANSUL<small>Gestão de Obras</small></div>
   <div class="espaco"></div>
   <select class="obra-sel" id="obraSel" aria-label="Obra">
@@ -191,19 +177,6 @@
 </header>
 
 <div class="corpo">
-  <nav class="nav" id="nav" aria-label="Menu principal">
-    <h4>Operação</h4>
-    <a href="#" data-rota="inicio"><span>Início</span></a>
-    <h4>Gestão</h4>
-    <a href="#" data-rota="pauta"><span>Pauta</span></a>
-    <a href="#" data-rota="checkin"><span>Check-in</span></a>
-    <a href="#lista" data-rota="lista" class="ativo"><span>RDO</span></a>
-    <a href="#" data-rota="calendario"><span>Calendário</span></a>
-    <a href="#" class="breve"><span>Relatórios</span><span>em breve</span></a>
-    <h4>Administração</h4>
-    <a href="#" data-rota="cadastros"><span>Cadastros</span></a>
-  </nav>
-
   <main class="principal">
 
     <!-- ============ LISTA DE RDOs ============ -->
@@ -215,6 +188,7 @@
         <input type="date" id="relData" aria-label="Data do relatório" style="max-width:150px;">
         <button class="btn" id="btnRelDia">Relatório do dia (PDF)</button>
         <span id="relLink" class="ajuda"></span>
+        <button class="btn voltar-inicio" data-rota="inicio">&larr; Início</button>
         <button class="btn primario" id="btnNovo">+ Novo RDO</button>
       </div>
 
@@ -436,6 +410,7 @@
       <div class="pagina-cab">
         <h1>Check-in</h1>
         <div class="espaco"></div>
+        <button class="btn voltar-inicio" data-rota="inicio">&larr; Início</button>
         <button class="btn primario" id="btnNovoCk" hidden>+ Novo item</button>
       </div>
 
@@ -507,6 +482,7 @@
           <span class="ajuda" id="pautaQuem"></span>
           <div class="espaco"></div>
           <button class="btn" id="btnSairPauta" hidden>Sair</button>
+          <button class="btn voltar-inicio" data-rota="inicio">&larr; Início</button>
           <button class="btn primario" id="btnNovoPa">+ Novo item</button>
         </div>
 
@@ -945,8 +921,6 @@
   function mostra(rota) {
     const vistas = { lista: 'vLista', form: 'vForm', checkin: 'vCheckin', pauta: 'vPauta', cadastros: 'vCadastros', inicio: 'vInicio' };
     Object.keys(vistas).forEach((k) => { $(vistas[k]).hidden = k !== rota; });
-    document.querySelectorAll('#nav a[data-rota]').forEach((a) => a.classList.toggle('ativo', a.dataset.rota === (rota === 'form' ? 'lista' : rota)));
-    $('nav').classList.remove('aberto');
     window.scrollTo(0, 0);
   }
   let RDO_EDITANDO = '';
@@ -1039,7 +1013,7 @@
   }
 
   /* ====================== EVENTOS ====================== */
-  document.querySelectorAll('#nav a[data-rota], .tema-botao[data-rota]').forEach((a) => a.addEventListener('click', (e) => {
+  document.querySelectorAll('.tema-botao[data-rota], .voltar-inicio[data-rota]').forEach((a) => a.addEventListener('click', (e) => {
     e.preventDefault();
     const r = a.dataset.rota;
     if (r === 'lista') mostra('lista');
@@ -1052,7 +1026,6 @@
     else if (r === 'inicio') { mostra('inicio'); abrirInicio(); }
     else toast('Módulo ainda não disponível. Em construção.');
   }));
-  $('btnMenu').addEventListener('click', () => $('nav').classList.toggle('aberto'));
   $('btnNovo').addEventListener('click', novoRdo);
   $('relData').value = iso(HOJE);
   $('btnRelDia').addEventListener('click', () => {
@@ -1631,7 +1604,8 @@
     opcoes($('fLocal'), LOCAIS, { vazio: 'Todos os locais' });
     preencheTempo();
     carregaRdos();
-    mostra('lista');
+    mostra('inicio');
+    abrirInicio();
   }
   google.script.run.withSuccessHandler(definirUsuario).dadosSessao();
   google.script.run
