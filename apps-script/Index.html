@@ -1492,6 +1492,7 @@
       .withSuccessHandler((d) => {
         CADD = d;
         renderCad();
+        if (!$('vInicio').hidden) abrirInicio();
         if (atualizaBase) {
           google.script.run.withSuccessHandler((b) => { aplicaBase(b); preencheTempo(); opcoes($('fLocal'), LOCAIS, { vazio: 'Todos os locais' }); }).carregarBase();
         }
@@ -1517,8 +1518,9 @@
       if (c._ddSituacao) linhas.push({ nome: c.nome, doc: 'Direção defensiva', data: c.direcao_defensiva_validade, dias: c._ddDias, situacao: c._ddSituacao });
     });
     linhas.sort((a, b) => String(a.data).slice(0, 10).localeCompare(String(b.data).slice(0, 10)));
+    const diasTexto = (d) => (d < 0 ? `vencida há ${Math.abs(d)} dias` : String(d));
     $('tbInicio').innerHTML = linhas.length
-      ? linhas.map((l) => `<tr class="venc-${l.situacao}"><td>${esc(l.nome)}</td><td>${esc(l.doc)}</td><td>${dataBR(String(l.data).slice(0, 10))}</td><td>${l.dias}</td></tr>`).join('')
+      ? linhas.map((l) => `<tr class="venc-${l.situacao}"><td>${esc(l.nome)}</td><td>${esc(l.doc)}</td><td>${dataBR(String(l.data).slice(0, 10))}</td><td>${diasTexto(l.dias)}</td></tr>`).join('')
       : '<tr><td class="vazio" colspan="4">Nenhum vencimento nos próximos 30 dias.</td></tr>';
   }
   function salvaCad(tr) {
