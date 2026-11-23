@@ -459,6 +459,7 @@ function listarCheckin() {
     id: c.id, criador: c.criador, responsavel: c.responsavel, area: c.area, assunto: c.assunto,
     descricao: c.descricao, prioridade: c.prioridade, status: c.status, prazo: isoData_(c.prazo_atual),
     atencao: ativo_(c.atencao_especial), criado_em: textoData_(c.criado_em), origem_pauta: !!c.pauta_origem_id,
+    concluido_em: c.concluido_em ? isoData_(c.concluido_em) : '',
   }));
 }
 
