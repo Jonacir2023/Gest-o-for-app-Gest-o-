@@ -173,7 +173,8 @@ const VALORES_PERMITIDOS = {
  * ------------------------------------------------------------------ */
 const REGRAS = [
   // RDO
-  'RDO: um por obra, local e dia. Editar e reenviar APAGA a versão anterior (com efetivo, equipamentos, atividades, eventos e fotos), mesmo se a data ou o local mudarem. Lançar de novo no mesmo dia e local também apaga o anterior.',
+  'RDO: um por data + responsável pelo local + criador. Lançar de novo com os mesmos três APAGA o mais antigo (com efetivo, equipamentos, atividades, eventos e fotos). Editar e reenviar apaga a versão editada.',
+  'RDOs da mesma data com responsáveis ou criadores diferentes convivem e são somados no Relatório do dia (PDF A4, sem marca e sem carimbo), salvo na pasta "Gestão GranSul - Relatórios RDO" do Drive.',
   'RDO atrasado: lançado depois das 06:00 do dia seguinte fica marcado como atrasado. Depois disso o RDO trava.',
   'RDO: local, responsável pelo local e criador são obrigatórios. Criador vem da lista de encarregado, supervisor, coordenador, engenheiro ou apontador.',
   'RDO clima: se o período estiver com chuva, informar mm e início e fim da chuva. Fim não pode ser antes do início.',

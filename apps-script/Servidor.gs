@@ -142,6 +142,7 @@ function detalheRdo(id) {
     manha: tempo('manha'), tarde: tempo('tarde'), observacoes: String(r.observacoes || ''),
     efetivo: lerAba_('rdo_efetivo').filter((e) => e.rdo_id === id).map((e) => ({
       nome: String(e.colaborador || ''), presente: e.presente === '' ? true : ativo_(e.presente), motivo: String(e.motivo_ausencia || ''),
+      setor: String(e.categoria || ''), empresa: String(e.grupo_terceiro || ''),
     })),
     equipamentos: lerAba_('rdo_equipamentos').filter((q) => q.rdo_id === id).map((q) => {
       const manha = ativo_(q.parado_manha);
@@ -167,9 +168,10 @@ function detalheRdo(id) {
 
 /**
  * Grava um RDO completo. Valida as regras e marca "atrasado" após 06h do dia seguinte.
- * Versão anterior é APAGADA (com efetivo, equipamentos, atividades, eventos e fotos):
- * o RDO que foi aberto para edição (p.rdo_id_anterior), mesmo com data ou local trocados,
- * e qualquer outro RDO vigente do mesmo dia, obra e local.
+ * Um RDO por data + responsável pelo local + criador: o anterior é APAGADO (com efetivo,
+ * equipamentos, atividades, eventos e fotos). O RDO aberto para edição (p.rdo_id_anterior)
+ * também é apagado. Responsáveis ou criadores diferentes na mesma data convivem e são
+ * somados no relatório do dia (relatorioDiaPdf).
  */
 function salvarRdo(p) {
   const usuario = exigirUsuario_(PERFIS_RDO);
@@ -200,11 +202,13 @@ function salvarRdo(p) {
     }
     const local = lerAba_('locais').find((l) => l.id === p.local_id);
 
-    // Apaga a versão anterior: o RDO editado e o vigente do mesmo dia, obra e local
+    // Um RDO por data + responsável pelo local + criador: o mais antigo é apagado.
+    // O RDO aberto para edição também é apagado (mesmo com data ou pessoas trocadas).
     const apagar = new Set();
     if (p.rdo_id_anterior) apagar.add(String(p.rdo_id_anterior));
     lerAba_('rdo').forEach((r) => {
-      if (isoData_(r.data) === p.data && r.projeto_id === p.obra_id && r.local_id === p.local_id) apagar.add(String(r.id));
+      if (isoData_(r.data) === p.data && r.projeto_id === p.obra_id
+        && String(r.encarregado) === String(p.responsavel) && String(r.apontador) === String(p.criador)) apagar.add(String(r.id));
     });
     if (apagar.size) apagarRdos_(apagar);
 
@@ -317,6 +321,134 @@ function limiteRdo_(dataIso) {
   const dia = new Date(Date.UTC(a, m - 1, d + 1, 6, 0, 0));
   const offset = -3; // America/Sao_Paulo (sem horário de verão desde 2019)
   return new Date(dia.getTime() - offset * 3600 * 1000);
+}
+
+/* ---------------- Relatório do dia (PDF) ---------------- */
+
+const PASTA_RELATORIOS = 'Gestão GranSul - Relatórios RDO';
+
+/** Soma todos os RDOs de uma data num único PDF A4. Salva no Drive e devolve o arquivo. */
+function relatorioDiaPdf(dataIso) {
+  const u = exigirUsuario_(PERFIS_RDO);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dataIso || ''))) throw new Error('Informe a data do relatório.');
+  const ids = lerAba_('rdo').filter((r) => !r.substituido_por && isoData_(r.data) === dataIso).map((r) => r.id);
+  if (!ids.length) throw new Error('Nenhum RDO em ' + dataIso.split('-').reverse().join('/') + '.');
+  const lista = ids.map((id) => detalheRdo(id)).sort((a, b) => a.local.localeCompare(b.local, 'pt-BR'));
+  const obra = (lerAba_('projetos').find((x) => x.id === lista[0].obra_id) || {}).nome || '';
+  const html = montarHtmlRelatorio_(dataIso, lista, obra, u.nome);
+  const nome = 'RDO ' + dataIso + '.pdf';
+  const blob = HtmlService.createHtmlOutput(html).getAs('application/pdf').setName(nome);
+  const pasta = pastaRelatorios_();
+  const antigos = pasta.getFilesByName(nome);
+  while (antigos.hasNext()) antigos.next().setTrashed(true);
+  const arquivo = pasta.createFile(blob);
+  return { nome: nome, url: arquivo.getUrl(), base64: Utilities.base64Encode(blob.getBytes()), rdos: lista.length };
+}
+
+function pastaRelatorios_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('PASTA_RELATORIOS_ID');
+  if (id) {
+    try { const p = DriveApp.getFolderById(id); if (!p.isTrashed()) return p; } catch (e) { /* recria abaixo */ }
+  }
+  const it = DriveApp.getFoldersByName(PASTA_RELATORIOS);
+  const pasta = it.hasNext() ? it.next() : DriveApp.createFolder(PASTA_RELATORIOS);
+  props.setProperty('PASTA_RELATORIOS_ID', pasta.getId());
+  return pasta;
+}
+
+/** Rode uma vez no editor para autorizar o acesso ao Drive (gravação dos PDFs). */
+function autorizarDrive() {
+  pastaRelatorios_();
+}
+
+function montarHtmlRelatorio_(dataIso, lista, obra, quem) {
+  const e = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const br = (iso) => (iso ? String(iso).split('-').reverse().join('/') : '—');
+  const CLIMA = { sol: 'Sol', nublado: 'Nublado', chuva: 'Chuva' };
+  const OPER = { operacao: 'Com operação', sem_operacao: 'Sem operação' };
+  const SIT = { operando: 'Operando', parado: 'Parado (quebra)', manutencao: 'Manutenção' };
+  const PER = { manha: 'Manhã', tarde: 'Tarde', ambos: 'Manhã e tarde' };
+  const num = (v) => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
+  const fmt = (n) => (n === null ? '—' : String(Math.round(n * 100) / 100).replace('.', ','));
+  const tabela = (cab, linhas) => (linhas.length
+    ? '<table><tr>' + cab.map((c) => '<th>' + e(c) + '</th>').join('') + '</tr>'
+      + linhas.map((l) => '<tr>' + l.map((c) => '<td>' + e(c) + '</td>').join('') + '</tr>').join('') + '</table>'
+    : '<p class="vazio">Sem registros.</p>');
+  const tempo = (t) => [CLIMA[t.clima] || '—', OPER[t.operacao] || '—', t.motivo, t.clima === 'chuva' && t.mm !== '' ? t.mm + ' mm' : '']
+    .filter(Boolean).join(' · ');
+
+  // Efetivo: por pessoa (presente em qualquer RDO conta como presente) e por setor
+  const pessoas = {};
+  lista.forEach((r) => r.efetivo.forEach((p) => {
+    const k = p.nome;
+    if (!pessoas[k]) pessoas[k] = { nome: p.nome, setor: p.setor, empresa: p.empresa, presente: false, motivo: '', locais: [] };
+    pessoas[k].presente = pessoas[k].presente || p.presente;
+    if (!p.presente && !pessoas[k].motivo) pessoas[k].motivo = p.motivo;
+    if (pessoas[k].locais.indexOf(r.local) === -1) pessoas[k].locais.push(r.local);
+  }));
+  const listaPessoas = Object.keys(pessoas).map((k) => pessoas[k]).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const presentes = listaPessoas.filter((p) => p.presente).length;
+  const porSetor = {};
+  listaPessoas.forEach((p) => {
+    const s = p.setor || 'Sem setor';
+    porSetor[s] = porSetor[s] || { presentes: 0, ausentes: 0 };
+    porSetor[s][p.presente ? 'presentes' : 'ausentes'] += 1;
+  });
+
+  // Atividades: lista e soma por atividade + unidade
+  const atividades = [];
+  const soma = {};
+  lista.forEach((r) => r.atividades.forEach((a) => {
+    atividades.push([a.local || r.local, a.nome, a.desc, a.qtd === '' ? '—' : String(a.qtd).replace('.', ',') + (a.un ? ' ' + a.un : ''),
+      a.par ? 'Sim' + (a.mot ? ' – ' + a.mot : '') : 'Não']);
+    const q = num(a.qtd);
+    if (q !== null) { const k = a.nome + '|' + a.un; soma[k] = (soma[k] || 0) + q; }
+  }));
+
+  const equipamentos = [];
+  lista.forEach((r) => r.equipamentos.forEach((q) => {
+    const ini = num(q.ini); const fim = num(q.fim);
+    equipamentos.push([q.codigo, r.local, SIT[q.situacao] || q.situacao, q.operador || '—',
+      q.situacao === 'operando' ? fmt(ini) + ' → ' + fmt(fim) : '—',
+      q.situacao === 'operando' && ini !== null && fim !== null ? fmt(fim - ini) + ' h' : '—',
+      q.situacao === 'operando' ? '—' : (q.motivo || '—') + (q.periodo ? ' (' + (PER[q.periodo] || q.periodo) + ')' : '')]);
+  }));
+
+  const eventos = [];
+  lista.forEach((r) => r.eventos.forEach((v) => eventos.push([v.tipo, r.local, v.desc, v.prov || '—'])));
+
+  return '<html><head><meta charset="utf-8"><style>'
+    + 'body{font-family:Arial,Helvetica,sans-serif;font-size:9.5pt;color:#1F2D3D;margin:18px;}'
+    + 'h1{font-size:15pt;margin:0 0 2px;color:#24374B;}h2{font-size:11pt;color:#24374B;border-bottom:1.5px solid #24374B;padding-bottom:2px;margin:14px 0 6px;}'
+    + '.sub{color:#555;margin:0 0 8px;}table{width:100%;border-collapse:collapse;margin-bottom:4px;}'
+    + 'th{background:#E9EEF2;text-align:left;font-size:8.5pt;}th,td{border:1px solid #B8C2CA;padding:3px 5px;vertical-align:top;}'
+    + '.vazio{color:#777;font-style:italic;}.resumo td{font-weight:bold;}.rodape{margin-top:16px;font-size:8pt;color:#777;}'
+    + '</style></head><body>'
+    + '<h1>Relatório Diário de Obra</h1>'
+    + '<p class="sub"><b>Obra:</b> ' + e(obra) + ' &nbsp;·&nbsp; <b>Data:</b> ' + br(dataIso) + ' &nbsp;·&nbsp; <b>RDOs consolidados:</b> ' + lista.length + '</p>'
+    + '<h2>1. Identificação</h2>'
+    + tabela(['Local', 'Descrição do local', 'Responsável pelo local', 'Criador', 'Lançado em', 'Prazo'],
+      lista.map((r) => [r.local, r.descricao_local || '—', r.responsavel, r.criador, r.lancado_em || '—', r.atrasado ? 'Fora do prazo' : 'No prazo']))
+    + '<h2>2. Condições do tempo e operação</h2>'
+    + tabela(['Local', 'Manhã', 'Tarde'], lista.map((r) => [r.local, tempo(r.manha), tempo(r.tarde)]))
+    + '<h2>3. Efetivo</h2>'
+    + '<table class="resumo"><tr><td>Presentes: ' + presentes + '</td><td>Ausentes: ' + (listaPessoas.length - presentes) + '</td><td>Total: ' + listaPessoas.length + '</td></tr></table>'
+    + tabela(['Setor', 'Presentes', 'Ausentes'], Object.keys(porSetor).sort().map((s) => [s, porSetor[s].presentes, porSetor[s].ausentes]))
+    + tabela(['Colaborador', 'Setor', 'Empresa', 'Situação', 'Local'],
+      listaPessoas.map((p) => [p.nome, p.setor || '—', p.empresa || '—', p.presente ? 'Presente' : 'Ausente' + (p.motivo ? ' – ' + p.motivo : ''), p.locais.join(', ')]))
+    + '<h2>4. Equipamentos e veículos</h2>'
+    + tabela(['Código', 'Local', 'Situação', 'Motorista/Operador', 'Medição', 'Horas', 'Motivo / período'], equipamentos)
+    + '<h2>5. Atividades</h2>'
+    + tabela(['Local', 'Atividade', 'Descrição', 'Quantidade', 'Paralisada'], atividades)
+    + (Object.keys(soma).length ? '<p><b>Total por atividade</b></p>'
+      + tabela(['Atividade', 'Quantidade somada'], Object.keys(soma).sort().map((k) => { const [n, un] = k.split('|'); return [n, fmt(soma[k]) + (un ? ' ' + un : '')]; })) : '')
+    + '<h2>6. Eventos (SST, MA, Q)</h2>'
+    + tabela(['Tipo', 'Local', 'Descrição', 'Providências'], eventos)
+    + '<h2>7. Observações</h2>'
+    + tabela(['Local', 'Observações'], lista.filter((r) => r.observacoes).map((r) => [r.local, r.observacoes]))
+    + '<p class="rodape">Emitido em ' + Utilities.formatDate(new Date(), FUSO, 'dd/MM/yyyy HH:mm') + ' por ' + e(quem) + '.</p>'
+    + '</body></html>';
 }
 
 /* ---------------- Check-in ---------------- */
@@ -907,7 +1039,13 @@ function motoristaApto_(c) {
 /** Data e hora como texto. A tela não recebe objetos Date (o Google devolve vazio se houver algum). */
 function textoData_(v) {
   if (v instanceof Date) return Utilities.formatDate(v, FUSO, 'dd/MM/yyyy HH:mm');
-  return String(v || '');
+  const t = String(v || '');
+  // Data e hora gravadas como texto ISO (ex.: 2026-11-23T02:54:35.100Z) viram hora de Brasília
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(t)) {
+    const d = new Date(t);
+    if (!isNaN(d.getTime())) return Utilities.formatDate(d, FUSO, 'dd/MM/yyyy HH:mm');
+  }
+  return t;
 }
 
 function comparaNome_(a, b) {

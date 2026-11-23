@@ -197,6 +197,9 @@
       <div class="pagina-cab">
         <h1>Relatório diário de obra</h1>
         <div class="espaco"></div>
+        <input type="date" id="relData" aria-label="Data do relatório" style="max-width:150px;">
+        <button class="btn" id="btnRelDia">Relatório do dia (PDF)</button>
+        <span id="relLink" class="ajuda"></span>
         <button class="btn primario" id="btnNovo">+ Novo RDO</button>
       </div>
 
@@ -1000,6 +1003,28 @@
   }));
   $('btnMenu').addEventListener('click', () => $('nav').classList.toggle('aberto'));
   $('btnNovo').addEventListener('click', novoRdo);
+  $('relData').value = iso(HOJE);
+  $('btnRelDia').addEventListener('click', () => {
+    const d = $('relData').value;
+    if (!d) { toast('Escolha a data do relatório.'); return; }
+    const btn = $('btnRelDia');
+    btn.disabled = true; btn.textContent = 'Gerando…'; $('relLink').textContent = '';
+    google.script.run
+      .withSuccessHandler((r) => {
+        btn.disabled = false; btn.textContent = 'Relatório do dia (PDF)';
+        $('relLink').innerHTML = `<a href="${esc(r.url)}" target="_blank" rel="noopener">Abrir PDF (${r.rdos} RDO${r.rdos > 1 ? 's' : ''})</a>`;
+        try {
+          const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+          a.download = r.nome;
+          document.body.appendChild(a); a.click(); a.remove();
+        } catch (e) { /* sem download direto: fica o link para o Drive */ }
+        toast('Relatório gerado.');
+      })
+      .withFailureHandler((e) => { btn.disabled = false; btn.textContent = 'Relatório do dia (PDF)'; toast(e.message); })
+      .relatorioDiaPdf(d);
+  });
   $('btnLimpar').addEventListener('click', () => { $('fStatus').value = ''; $('fLocal').value = ''; $('fBusca').value = ''; renderLista(); });
   ['fStatus', 'fLocal', 'fBusca'].forEach((id) => $(id).addEventListener('input', renderLista));
   $('tbLista').addEventListener('click', (e) => { const b = e.target.closest('[data-abrir]'); if (b) abrirRdo(b.dataset.abrir); });
