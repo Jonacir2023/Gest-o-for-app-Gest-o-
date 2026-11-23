@@ -82,6 +82,7 @@ function carregarBase() {
     operadores: colaboradores.map((c) => ({
       id: c.id, nome: c.nome, funcao: c.funcao,
       podeOperar: classeFuncao_(c.funcao) === 'operador', podeDirigir: motoristaApto_(c),
+      podeDirigirPesado: classeFuncao_(c.funcao) === 'motorista' && motoristaApto_(c),
     }))
       .filter((o) => o.podeOperar || o.podeDirigir).sort(comparaNome_),
     motivos: {
@@ -706,9 +707,10 @@ function classeFuncao_(funcao) {
   return '';
 }
 
-/** Veículo leve e pesado (caminhão): motorista. Máquinas e equipamentos: operador. */
+/** Leve: motorista (qualquer função). Pesado: motorista com função de motorista. Equipamento: operador. */
 function classeExigida_(tipoEquipamento) {
-  return tipoEquipamento === 'Equipamento' ? 'operador' : 'motorista';
+  if (tipoEquipamento === 'Equipamento') return 'operador';
+  return tipoEquipamento === 'Pesado' ? 'motorista_pesado' : 'motorista';
 }
 
 /** Cabeçalho real da aba (permite colunas novas sem alterar o Codigo.gs). */
@@ -861,8 +863,9 @@ function isoData_(v) {
 
 /** Mensagem de erro se a pessoa não pode conduzir (motorista: CNH e direção defensiva em dia; operador: função "Operador …"). */
 function condutorInvalido_(p, precisa) {
-  if (!p) return 'escolha um ' + precisa + ' ativo do Efetivo.';
-  if (precisa === 'motorista' && !motoristaApto_(p)) return p.nome + ' está sem CNH ou direção defensiva em dia.';
+  if (!p) return 'escolha um ' + (precisa === 'operador' ? 'operador' : 'motorista') + ' ativo do Efetivo.';
+  if (precisa === 'motorista_pesado' && classeFuncao_(p.funcao) !== 'motorista') return p.nome + ' não tem função de motorista (exigida para veículo pesado).';
+  if (precisa !== 'operador' && !motoristaApto_(p)) return p.nome + ' está sem CNH ou direção defensiva em dia.';
   if (precisa === 'operador' && classeFuncao_(p.funcao) !== 'operador') return p.nome + ' não tem função de operador.';
   return '';
 }

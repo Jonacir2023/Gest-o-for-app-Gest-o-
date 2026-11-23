@@ -201,7 +201,7 @@ const REGRAS = [
   'Motorista de caminhão: CNH em dia e especializado no caminhão.',
   'Todo motorista (caminhão ou veículo leve): CNH e direção defensiva em dia. Operador de equipamento não precisa de direção defensiva.',
   'Motorista de veículo leve: habilitado para todos os leves com CNH e direção defensiva em dia.',
-  'Equipamentos e veículos têm motorista/operador fixo (do Efetivo). Leve e Pesado: qualquer pessoa ativa, de qualquer função, com CNH (número e validade) e direção defensiva em dia. Equipamento: só função Operador.',
+  'Equipamentos e veículos têm motorista/operador fixo (do Efetivo). Leve: qualquer pessoa ativa, de qualquer função, com CNH (número e validade) e direção defensiva em dia. Pesado: além disso, função de motorista. Equipamento: só função Operador.',
   // Atividades
   'Atividade do RDO: escolhida da lista de atividades padrão. Unidade padrão preenche sozinha.',
   'Motivo de atividade paralisada: lista inclui atividade_paralisada e dia_sem_execucao (ex.: Chuva).',
