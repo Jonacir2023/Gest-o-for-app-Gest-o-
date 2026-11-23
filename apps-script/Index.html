@@ -117,13 +117,14 @@
   .temas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
   .tema-cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: 10px; box-shadow: var(--sombra); padding: 16px 18px; }
   .tema-cartao h2 { margin: 0 0 12px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-  .tema-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 10px; }
-  .tema-botao { display: flex; flex-direction: column; gap: 10px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px; padding: 14px 12px; text-decoration: none; color: var(--texto); transition: border-color .15s, box-shadow .15s, transform .15s; }
-  .tema-botao:hover { border-color: var(--azul-2); box-shadow: 0 4px 10px rgba(31, 45, 61, .1); transform: translateY(-1px); }
-  .tema-botao .tema-ico { width: 32px; height: 32px; border-radius: 7px; background: var(--azul-claro); color: var(--azul); display: grid; place-items: center; font-weight: 800; font-size: 12px; letter-spacing: -.02em; }
+  .tema-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .tema-botao { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; background: linear-gradient(180deg, var(--superficie) 0%, var(--zebra) 100%); border: 1px solid var(--borda); border-radius: 8px; padding: 12px 16px; text-decoration: none; text-align: center; box-shadow: 0 3px 0 var(--borda), 0 4px 7px rgba(31, 45, 61, .14); transition: box-shadow .1s ease, transform .1s ease, border-color .15s; }
   .tema-botao .tema-rot { font-weight: 700; color: var(--azul); font-size: 13px; }
+  .tema-botao:hover { border-color: var(--azul-2); }
+  .tema-botao:active { transform: translateY(3px); box-shadow: 0 0 0 var(--borda), 0 1px 2px rgba(31, 45, 61, .14); }
   .tema-botao.breve { opacity: .6; cursor: default; }
-  .tema-botao.breve .tema-tag { font-size: 10px; font-weight: 600; color: var(--muted); background: var(--zebra); border: 1px solid var(--borda); padding: 1px 6px; border-radius: 10px; align-self: flex-start; }
+  .tema-botao.breve:active { transform: none; }
+  .tema-botao.breve .tema-tag { font-size: 10px; font-weight: 600; color: var(--muted); background: var(--zebra); border: 1px solid var(--borda); padding: 1px 6px; border-radius: 10px; }
   @media (max-width: 900px) { .temas { grid-template-columns: 1fr; } }
 
   /* Indicadores */
@@ -580,17 +581,17 @@
         <div class="tema-cartao">
           <h2>Gestão</h2>
           <div class="tema-grade">
-            <a href="#" class="tema-botao" data-rota="pauta"><span class="tema-ico">PA</span><span class="tema-rot">Pauta</span></a>
-            <a href="#" class="tema-botao" data-rota="checkin"><span class="tema-ico">CK</span><span class="tema-rot">Check-in</span></a>
-            <a href="#lista" class="tema-botao" data-rota="lista"><span class="tema-ico">RD</span><span class="tema-rot">RDO</span></a>
-            <a href="#" class="tema-botao" data-rota="calendario"><span class="tema-ico">CL</span><span class="tema-rot">Calendário</span></a>
-            <a href="#" class="tema-botao breve"><span class="tema-ico">RE</span><span class="tema-rot">Relatórios</span><span class="tema-tag">em breve</span></a>
+            <a href="#" class="tema-botao" data-rota="pauta"><span class="tema-rot">Pauta</span></a>
+            <a href="#" class="tema-botao" data-rota="checkin"><span class="tema-rot">Check-in</span></a>
+            <a href="#lista" class="tema-botao" data-rota="lista"><span class="tema-rot">RDO</span></a>
+            <a href="#" class="tema-botao" data-rota="calendario"><span class="tema-rot">Calendário</span></a>
+            <a href="#" class="tema-botao breve"><span class="tema-rot">Relatórios</span><span class="tema-tag">em breve</span></a>
           </div>
         </div>
         <div class="tema-cartao">
           <h2>Administração</h2>
           <div class="tema-grade">
-            <a href="#" class="tema-botao" data-rota="cadastros"><span class="tema-ico">CD</span><span class="tema-rot">Cadastros</span></a>
+            <a href="#" class="tema-botao" data-rota="cadastros"><span class="tema-rot">Cadastros</span></a>
           </div>
         </div>
       </div>
