@@ -654,7 +654,7 @@
   /** Leve e pesado (caminhão): motoristas. Máquinas e equipamentos: operadores. Ordem alfabética. */
   function operadoresPara(tipo, atual) {
     const classe = tipo === 'Equipamento' ? 'operador' : 'motorista';
-    const nomes = OPERADORES_BASE.filter((o) => o.classe === classe && (classe === 'operador' || o.apto)).map((o) => o.nome)
+    const nomes = OPERADORES_BASE.filter((o) => (classe === 'operador' ? o.podeOperar : o.podeDirigir)).map((o) => o.nome)
       .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
     return atual && !nomes.includes(atual) ? nomes.concat([atual]) : nomes;
   }
@@ -1387,11 +1387,11 @@
     return [...new Set(lista)].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
   }
   const nomeColaborador = (id) => ((CADD.colaboradores || []).find((c) => c.id === id) || {}).nome || '';
-  /** Leve e Pesado: motoristas com CNH e direção defensiva em dia. Equipamento: operadores. Só ativos. */
+  /** Leve e Pesado: qualquer pessoa com CNH e direção defensiva em dia. Equipamento: função Operador. Só ativos. */
   function condutoresPara(tipo) {
     if (!tipo) return [];
     const classe = tipo === 'Equipamento' ? 'operador' : 'motorista';
-    return (CADD.colaboradores || []).filter((c) => !c.inativo_em && c._classe === classe && (classe === 'operador' || c._apto))
+    return (CADD.colaboradores || []).filter((c) => !c.inativo_em && (classe === 'operador' ? c._classe === 'operador' : c._apto))
       .map((c) => [String(c.id), String(c.nome)]).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { sensitivity: 'base' }));
   }
   /** Data de direção defensiva do motorista escolhido (vem do Efetivo). */
@@ -1408,7 +1408,7 @@
       if (!x.tipo) return `<select data-c="${f.c}" disabled><option value="">Escolha o tipo</option></select>`;
       let ops = condutoresPara(x.tipo);
       if (v && !ops.some((o) => o[0] === v)) ops = ops.concat([[v, nomeColaborador(v) + ' (fora do filtro)']]);
-      const vazio = ops.length ? 'Selecione' : (x.tipo === 'Equipamento' ? 'Nenhum operador no Efetivo' : 'Nenhum motorista apto no Efetivo');
+      const vazio = ops.length ? 'Selecione' : (x.tipo === 'Equipamento' ? 'Nenhum operador no Efetivo' : 'Ninguém com CNH e direção defensiva em dia');
       return `<select data-c="${f.c}"><option value="">${vazio}</option>${ops.map(([ov, ol]) => `<option value="${esc(ov)}"${ov === v ? ' selected' : ''}>${esc(ol)}</option>`).join('')}</select>`;
     }
     const v = String(x[f.c] ?? '');

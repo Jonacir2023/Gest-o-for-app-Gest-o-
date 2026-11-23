@@ -78,11 +78,12 @@ function carregarBase() {
       operador: (colaboradores.find((c) => c.id === e.operador_id) || {}).nome || '',
     })),
     // Operadores e motoristas vêm do efetivo, pela função (começa com "Operador" ou "Motorista")
+    // Dirigir (Leve/Pesado): qualquer pessoa com CNH e direção defensiva em dia. Operar (Equipamento): função "Operador …".
     operadores: colaboradores.map((c) => ({
-      id: c.id, nome: c.nome, funcao: c.funcao, classe: classeFuncao_(c.funcao),
-      apto: classeFuncao_(c.funcao) !== 'motorista' || motoristaApto_(c),
+      id: c.id, nome: c.nome, funcao: c.funcao,
+      podeOperar: classeFuncao_(c.funcao) === 'operador', podeDirigir: motoristaApto_(c),
     }))
-      .filter((o) => o.classe).sort(comparaNome_),
+      .filter((o) => o.podeOperar || o.podeDirigir).sort(comparaNome_),
     motivos: {
       dia_sem_execucao: motivos.filter((m) => m.tipo === 'dia_sem_execucao').map((m) => ({ id: m.id, descricao: m.descricao })),
       equipamento_parado: motivos.filter((m) => m.tipo === MOTIVO_QUEBRA).map((m) => ({ id: m.id, descricao: m.descricao })),
@@ -180,12 +181,8 @@ function salvarRdo(p) {
     const eq = equipamentosCad.find((e) => e.id === q.equipamento_id) || {};
     const precisa = classeExigida_(eq.tipo);
     const op = pessoasCad.find((x) => x.id === q.operador_id);
-    if (!op || classeFuncao_(op.funcao) !== precisa) {
-      throw new Error((eq.codigo || 'Equipamento') + ': escolha um ' + precisa + ' do efetivo.');
-    }
-    if (precisa === 'motorista' && !motoristaApto_(op)) {
-      throw new Error((eq.codigo || 'Veículo') + ': ' + op.nome + ' está sem CNH ou direção defensiva em dia.');
-    }
+    const erroCondutor = condutorInvalido_(op, precisa);
+    if (erroCondutor) throw new Error((eq.codigo || 'Equipamento') + ': ' + erroCondutor);
   });
 
   const lock = LockService.getScriptLock();
@@ -618,10 +615,9 @@ function salvarCadastro(tabela, reg) {
   }
   // Motorista/operador fixo: do efetivo ativo; Leve e Pesado só motorista apto; Equipamento só operador
   if (tabela === 'equipamentos' && dados.operador_id) {
-    const p = lerAba_('colaboradores').find((x) => x.id === dados.operador_id);
-    const precisa = classeExigida_(dados.tipo);
-    if (!p || p.inativo_em || classeFuncao_(p.funcao) !== precisa) throw new Error('Escolha um ' + precisa + ' ativo do Efetivo.');
-    if (precisa === 'motorista' && !motoristaApto_(p)) throw new Error(p.nome + ' está sem CNH ou direção defensiva em dia.');
+    const p = lerAba_('colaboradores').find((x) => x.id === dados.operador_id && !x.inativo_em);
+    const erroCondutor = condutorInvalido_(p, classeExigida_(dados.tipo));
+    if (erroCondutor) throw new Error(erroCondutor);
   }
   // Equipamento de terceiro: locação não é controlada por nós
   if (tabela === 'equipamentos' && dados.origem === 'Terceiro') dados.locacao_mensal = '';
@@ -863,7 +859,15 @@ function isoData_(v) {
   return t.slice(0, 10);
 }
 
-/** Motorista apto: CNH com número e validade em dia, e direção defensiva em dia. */
+/** Mensagem de erro se a pessoa não pode conduzir (motorista: CNH e direção defensiva em dia; operador: função "Operador …"). */
+function condutorInvalido_(p, precisa) {
+  if (!p) return 'escolha um ' + precisa + ' ativo do Efetivo.';
+  if (precisa === 'motorista' && !motoristaApto_(p)) return p.nome + ' está sem CNH ou direção defensiva em dia.';
+  if (precisa === 'operador' && classeFuncao_(p.funcao) !== 'operador') return p.nome + ' não tem função de operador.';
+  return '';
+}
+
+/** Pode dirigir: qualquer função, com CNH (número e validade em dia) e direção defensiva em dia. */
 function motoristaApto_(c) {
   const hoje = isoData_(new Date());
   const cnh = isoData_(c.cnh_validade);
