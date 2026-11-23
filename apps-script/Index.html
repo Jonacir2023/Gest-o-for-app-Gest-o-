@@ -65,6 +65,13 @@
   .btn:disabled { opacity: .5; cursor: not-allowed; }
   .btn-link { background: none; border: 0; color: var(--azul-2); font-weight: 600; padding: 4px; }
 
+  /* Abas de cadastro */
+  #cadAbas { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; }
+  #cadAbas .cad-aba { display: flex; align-items: center; justify-content: center; text-align: center; white-space: normal; line-height: 1.25; min-height: 52px; padding: 6px 8px; }
+  .cad-aba-construcao { opacity: .6; }
+  @media (max-width: 900px) { #cadAbas { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 600px) { #cadAbas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
   /* Cartões e seções */
   .cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px; box-shadow: var(--sombra); margin-bottom: 14px; }
   .cartao-cab { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--borda); }
@@ -537,7 +544,7 @@
         <button class="btn voltar-inicio" data-rota="inicio">&larr; Início</button>
         <button class="btn primario" id="cadNovo" hidden>+ Novo</button>
       </div>
-      <div id="cadAbas" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+      <div id="cadAbas"></div>
       <div class="cartao"><div class="cartao-corpo">
         <div class="grade" style="grid-template-columns: repeat(3, minmax(0,1fr));">
           <div><label for="cadBusca">Pesquisar</label><input type="text" id="cadBusca" placeholder="Digite para filtrar"></div>
@@ -1405,9 +1412,16 @@
     if (f.lista) { const o = listaOpcoes(f.lista).find(([ov]) => String(ov) === String(v)); return o ? o[1] : String(v); }
     return String(v);
   }
+  const abaTitulo = (t) => {
+    const p = t.split(' ');
+    if (p.length < 2) return t;
+    const m = Math.ceil(p.length / 2);
+    return p.slice(0, m).join(' ') + '<br>' + p.slice(m).join(' ');
+  };
   function renderCad() {
     const cfg = CAD[CAD_ATUAL];
-    $('cadAbas').innerHTML = Object.keys(CAD).map((k) => `<button class="btn ${k === CAD_ATUAL ? 'primario' : ''}" data-cad="${k}">${CAD[k].titulo}</button>`).join('');
+    $('cadAbas').innerHTML = Object.keys(CAD).map((k) => `<button class="btn cad-aba ${k === CAD_ATUAL ? 'primario' : ''}" data-cad="${k}">${abaTitulo(CAD[k].titulo)}</button>`).join('')
+      + '<button class="btn cad-aba cad-aba-construcao" data-cad="reserva">Reserva</button>';
     $('cadNovo').hidden = !CADD.podeEditar;
     $('cadBaixaWrap').style.visibility = cfg.baixa ? 'visible' : 'hidden';
     const verBaixados = cfg.baixa && $('cadBaixados').checked;
@@ -1556,6 +1570,7 @@
   $('cadAbas').addEventListener('click', (e) => {
     const b = e.target.closest('[data-cad]');
     if (!b) return;
+    if (b.dataset.cad === 'reserva') { toast('Reserva: em construção.'); return; }
     CAD_ATUAL = b.dataset.cad; CAD_EDITANDO = null; CAD_EXCLUINDO = null; $('cadMsg').textContent = '';
     renderCad();
   });
