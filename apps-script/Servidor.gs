@@ -166,8 +166,10 @@ function detalheRdo(id) {
 }
 
 /**
- * Grava um RDO completo. Valida as regras, substitui o RDO anterior do mesmo
- * dia, obra e local (nada é apagado) e marca "atrasado" após 06h do dia seguinte.
+ * Grava um RDO completo. Valida as regras e marca "atrasado" após 06h do dia seguinte.
+ * Versão anterior é APAGADA (com efetivo, equipamentos, atividades, eventos e fotos):
+ * o RDO que foi aberto para edição (p.rdo_id_anterior), mesmo com data ou local trocados,
+ * e qualquer outro RDO vigente do mesmo dia, obra e local.
  */
 function salvarRdo(p) {
   const usuario = exigirUsuario_(PERFIS_RDO);
@@ -198,12 +200,13 @@ function salvarRdo(p) {
     }
     const local = lerAba_('locais').find((l) => l.id === p.local_id);
 
-    // Substitui o RDO vigente do mesmo dia, obra e local
+    // Apaga a versão anterior: o RDO editado e o vigente do mesmo dia, obra e local
+    const apagar = new Set();
+    if (p.rdo_id_anterior) apagar.add(String(p.rdo_id_anterior));
     lerAba_('rdo').forEach((r) => {
-      if (!r.substituido_por && isoData_(r.data) === p.data && r.projeto_id === p.obra_id && r.local_id === p.local_id) {
-        atualizarCelula_('rdo', r.id, 'substituido_por', idRdo);
-      }
+      if (isoData_(r.data) === p.data && r.projeto_id === p.obra_id && r.local_id === p.local_id) apagar.add(String(r.id));
     });
+    if (apagar.size) apagarRdos_(apagar);
 
     anexarLinhas_('rdo', [{
       id: idRdo,
@@ -767,6 +770,29 @@ function garantirAba_(nome) {
   const aba = ss.insertSheet(nome);
   aba.getRange(1, 1, 1, TABELAS[nome].length).setValues([TABELAS[nome]]);
   aba.setFrozenRows(1);
+}
+
+/** Apaga RDOs e todas as linhas ligadas a eles. */
+function apagarRdos_(ids) {
+  ['rdo_efetivo', 'rdo_equipamentos', 'rdo_atividades', 'rdo_eventos', 'rdo_fotos', 'rdo_paralisacoes']
+    .forEach((aba) => excluirLinhasOnde_(aba, 'rdo_id', ids));
+  excluirLinhasOnde_('rdo', 'id', ids);
+}
+
+/** Remove as linhas cuja coluna está em ids (reescreve o bloco de dados de uma vez). */
+function excluirLinhasOnde_(nome, coluna, ids) {
+  const aba = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nome);
+  if (!aba) return 0;
+  const v = aba.getDataRange().getValues();
+  if (v.length < 2) return 0;
+  const ci = v[0].map(String).indexOf(coluna);
+  if (ci < 0) return 0;
+  const manter = v.slice(1).filter((r) => r[0] !== '' && r[0] !== null && !ids.has(String(r[ci])));
+  const linhasComDados = v.slice(1).filter((r) => r[0] !== '' && r[0] !== null).length;
+  if (manter.length === linhasComDados) return 0;
+  aba.getRange(2, 1, v.length - 1, v[0].length).clearContent();
+  if (manter.length) aba.getRange(2, 1, manter.length, v[0].length).setValues(manter);
+  return linhasComDados - manter.length;
 }
 
 function semDatas_(o) {

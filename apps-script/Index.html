@@ -896,7 +896,9 @@
     $('nav').classList.remove('aberto');
     window.scrollTo(0, 0);
   }
+  let RDO_EDITANDO = '';
   function novoRdo() {
+    RDO_EDITANDO = '';
     $('tituloRdo').textContent = 'Novo RDO';
     $('trilhaNum').textContent = 'Novo RDO';
     $('fNumero').value = '(gerado ao enviar)';
@@ -936,6 +938,7 @@
   function preencheRdo(d) {
     if (!d) { toast('Não foi possível carregar o RDO.'); return; }
     novoRdo();
+    RDO_EDITANDO = d.id;
     const comValor = (lista, v) => (!v || lista.includes(v) ? lista : lista.concat([v]));
     $('tituloRdo').textContent = 'RDO ' + dataBR(d.data) + ' · ' + d.local;
     $('trilhaNum').textContent = dataBR(d.data) + ' · ' + d.local;
@@ -971,7 +974,7 @@
     $('chipStatus').className = 'chip enviado';
     $('chipStatus').textContent = 'Enviado';
     $('auditoria').textContent = `Criado por ${d.criador || '—'} · data ${dataBR(d.data)}`;
-    $('auditoria2').textContent = 'Enviado. Reenviar substitui este RDO (o anterior fica no histórico).';
+    $('auditoria2').textContent = 'Enviado. Ao reenviar, esta versão é apagada e substituída pela nova.';
     $('btnCancelar').hidden = false;
     avaliaPrazo();
     mostra('form');
@@ -1078,6 +1081,7 @@
       tarde: tempo('cTarde'),
       efetivo: efetivo, equipamentos: equipamentos, atividades: atividades, eventos: eventos,
       observacoes: $('fObs').value,
+      rdo_id_anterior: RDO_EDITANDO,
     };
   }
 

@@ -173,7 +173,7 @@ const VALORES_PERMITIDOS = {
  * ------------------------------------------------------------------ */
 const REGRAS = [
   // RDO
-  'RDO: um por obra, local e dia. Lançar de novo no mesmo dia substitui o anterior (campo substituido_por). Nada é apagado.',
+  'RDO: um por obra, local e dia. Editar e reenviar APAGA a versão anterior (com efetivo, equipamentos, atividades, eventos e fotos), mesmo se a data ou o local mudarem. Lançar de novo no mesmo dia e local também apaga o anterior.',
   'RDO atrasado: lançado depois das 06:00 do dia seguinte fica marcado como atrasado. Depois disso o RDO trava.',
   'RDO: local, responsável pelo local e criador são obrigatórios. Criador vem da lista de encarregado, supervisor, coordenador, engenheiro ou apontador.',
   'RDO clima: se o período estiver com chuva, informar mm e início e fim da chuva. Fim não pode ser antes do início.',
@@ -218,7 +218,7 @@ const INSTRUCOES = [
   'Cadastros primeiro: unidades, locais, motivos, setores, funções, efetivo (inclui operadores e motoristas), equipamentos, atividades padrão.',
   'Confirmação diária de equipamentos: por data, local e responsável. Gera o resumo do RDO.',
   'RDO: escolher obra, data, local, responsável e criador. Lançar efetivo, atividades, eventos e fotos.',
-  'Não apagar linhas de tabela de histórico (rdo, rdo_*, equipamento_historico, equipamento_confirmacoes). Usar substituição ou baixa.',
+  'Não apagar à mão linhas de rdo, rdo_*, equipamento_historico e equipamento_confirmacoes: o app cuida da substituição do RDO.',
   'Chaves (id) são geradas pelo sistema. Não editar a coluna id à mão.',
   'Datas no formato AAAA-MM-DD na planilha. Valores decimais com ponto.',
 ];
