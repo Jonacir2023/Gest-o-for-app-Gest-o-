@@ -709,7 +709,16 @@ function carregarCadastros() {
   const r = {};
   Object.keys(CADASTROS).forEach((t) => { r[t] = lerAba_(t).map(semDatas_); });
   const nomes = (aba) => lerAba_(aba).map((x) => String(x.nome || '')).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  r.colaboradores = r.colaboradores.map((c) => Object.assign(c, { _classe: classeFuncao_(c.funcao), _apto: motoristaApto_(c) }));
+  const hojeVencimento = isoData_(new Date());
+  r.colaboradores = r.colaboradores.map((c) => {
+    const cnh = situacaoVencimento_(isoData_(c.cnh_validade), hojeVencimento);
+    const dd = situacaoVencimento_(isoData_(c.direcao_defensiva_validade), hojeVencimento);
+    return Object.assign(c, {
+      _classe: classeFuncao_(c.funcao), _apto: motoristaApto_(c),
+      _cnhSituacao: cnh.situacao, _cnhDias: cnh.dias,
+      _ddSituacao: dd.situacao, _ddDias: dd.dias,
+    });
+  });
   r.categorias = nomes('categorias_efetivo');
   r.funcoes = nomes('funcoes_efetivo');
   r.listas = VALORES_PERMITIDOS;
@@ -1034,6 +1043,15 @@ function motoristaApto_(c) {
   const cnh = isoData_(c.cnh_validade);
   const dd = isoData_(c.direcao_defensiva_validade);
   return !!String(c.cnh_numero || '').trim() && !!cnh && cnh >= hoje && !!dd && dd >= hoje;
+}
+
+/** Situação de vencimento de uma data (mesma régua de motoristaApto_: vencido se < hoje). Sem data, sem alerta. */
+function situacaoVencimento_(dataIso, hoje) {
+  if (!dataIso) return { situacao: '', dias: null };
+  const dias = Math.round((new Date(dataIso + 'T00:00:00') - new Date(hoje + 'T00:00:00')) / 86400000);
+  if (dataIso < hoje) return { situacao: 'vencido', dias };
+  if (dias <= 30) return { situacao: 'alerta', dias };
+  return { situacao: '', dias };
 }
 
 /** Data e hora como texto. A tela não recebe objetos Date (o Google devolve vazio se houver algum). */

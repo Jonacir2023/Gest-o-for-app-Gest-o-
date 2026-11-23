@@ -109,6 +109,10 @@
   .chip.atrasado { color: var(--erro); background: var(--erro-bg); }
   .chip.neutro { color: var(--muted); background: var(--zebra); border: 1px solid var(--borda); }
 
+  /* Vencimento (CNH / direção defensiva) */
+  .venc-vencido { color: var(--erro); background: var(--erro-bg); }
+  .venc-alerta { color: var(--alerta); background: var(--alerta-bg); }
+
   /* Indicadores */
   .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
   .kpi { background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px; padding: 12px 14px; box-shadow: var(--sombra); }
@@ -555,6 +559,20 @@
       </div>
     </section>
 
+    <!-- ============ INÍCIO (alertas de vencimento) ============ -->
+    <section id="vInicio" hidden>
+      <div class="trilha">Início</div>
+      <div class="pagina-cab">
+        <h1>Vencimentos (próximos 30 dias)</h1>
+      </div>
+      <div class="scroll-x">
+        <table class="grade-dados">
+          <thead><tr><th>Nome</th><th>Documento</th><th>Data</th><th>Dias restantes</th></tr></thead>
+          <tbody id="tbInicio"></tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -893,7 +911,7 @@
 
   /* ====================== NAVEGAÇÃO ====================== */
   function mostra(rota) {
-    const vistas = { lista: 'vLista', form: 'vForm', checkin: 'vCheckin', pauta: 'vPauta', cadastros: 'vCadastros' };
+    const vistas = { lista: 'vLista', form: 'vForm', checkin: 'vCheckin', pauta: 'vPauta', cadastros: 'vCadastros', inicio: 'vInicio' };
     Object.keys(vistas).forEach((k) => { $(vistas[k]).hidden = k !== rota; });
     document.querySelectorAll('#nav a[data-rota]').forEach((a) => a.classList.toggle('ativo', a.dataset.rota === (rota === 'form' ? 'lista' : rota)));
     $('nav').classList.remove('aberto');
@@ -999,6 +1017,7 @@
     else if (r === 'equip') abrirCadastros('equipamentos');
     else if (r === 'efetivo') abrirCadastros('colaboradores');
     else if (r === 'atividades') abrirCadastros('atividades_padrao');
+    else if (r === 'inicio') { mostra('inicio'); abrirInicio(); }
     else toast('Módulo ainda não disponível. Em construção.');
   }));
   $('btnMenu').addEventListener('click', () => $('nav').classList.toggle('aberto'));
@@ -1403,7 +1422,8 @@
     }
     if (baixado && cfg.semSituacao) acoes = '<span class="chip neutro">Baixa ' + dataBR(String(x[cfg.baixa]).slice(0, 10)) + '</span>';
     const situacao = comSituacao(cfg) ? `<td>${baixado ? '<span class="chip neutro">Baixa ' + dataBR(String(x[cfg.baixa]).slice(0, 10)) + '</span>' : '<span class="chip enviado">Ativo</span>'}</td>` : '';
-    return `<tr>${cfg.campos.map((f) => `<td>${esc(exibeTexto(f, x[f.c], x))}</td>`).join('')}${situacao}<td class="acoes">${acoes}</td></tr>`;
+    const classeVencimento = (f) => (f.c === 'cnh_validade' ? x._cnhSituacao : f.c === 'direcao_defensiva_validade' ? x._ddSituacao : '') || '';
+    return `<tr>${cfg.campos.map((f) => { const cv = classeVencimento(f); return `<td${cv ? ` class="venc-${cv}"` : ''}>${esc(exibeTexto(f, x[f.c], x))}</td>`; }).join('')}${situacao}<td class="acoes">${acoes}</td></tr>`;
   }
   /** Marca e modelo vindos do catálogo, conforme o tipo (e a marca) da linha. */
   function opcoesCatalogo(f, x) {
@@ -1488,6 +1508,18 @@
     if (CADD) renderCad();
     else $('cadCorpo').innerHTML = '<tr><td class="vazio">Carregando…</td></tr>';
     carregaCadastros(false);
+  }
+  function abrirInicio() {
+    if (!CADD) { carregaCadastros(false); $('tbInicio').innerHTML = '<tr><td class="vazio" colspan="4">Carregando…</td></tr>'; return; }
+    const linhas = [];
+    (CADD.colaboradores || []).filter((c) => !c.inativo_em).forEach((c) => {
+      if (c._cnhSituacao) linhas.push({ nome: c.nome, doc: 'CNH', data: c.cnh_validade, dias: c._cnhDias, situacao: c._cnhSituacao });
+      if (c._ddSituacao) linhas.push({ nome: c.nome, doc: 'Direção defensiva', data: c.direcao_defensiva_validade, dias: c._ddDias, situacao: c._ddSituacao });
+    });
+    linhas.sort((a, b) => String(a.data).slice(0, 10).localeCompare(String(b.data).slice(0, 10)));
+    $('tbInicio').innerHTML = linhas.length
+      ? linhas.map((l) => `<tr class="venc-${l.situacao}"><td>${esc(l.nome)}</td><td>${esc(l.doc)}</td><td>${dataBR(String(l.data).slice(0, 10))}</td><td>${l.dias}</td></tr>`).join('')
+      : '<tr><td class="vazio" colspan="4">Nenhum vencimento nos próximos 30 dias.</td></tr>';
   }
   function salvaCad(tr) {
     const cfg = CAD[CAD_ATUAL];
