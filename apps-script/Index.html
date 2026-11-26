@@ -296,42 +296,48 @@
 
       <!-- 2. Condições do tempo -->
       <div class="cartao">
-        <div class="cartao-cab"><span class="num">2</span><h2>Condições do tempo e operação</h2></div>
+        <div class="cartao-cab"><span class="num">2</span><h2>Condições do Tempo e Operação</h2></div>
         <div class="cartao-corpo">
           <div class="grade">
-            <div><label for="cManhaClima">Manhã · clima</label>
+            <div><label for="cManhaClima">Manhã · Clima</label>
               <select id="cManhaClima"><option value="">Selecione</option><option value="sol">Sol</option><option value="nublado">Nublado</option><option value="chuva">Chuva</option></select>
               <div class="msg-erro" data-erro="cManhaClima"></div></div>
-            <div><label for="cManhaOp">Manhã · operação <span class="obrig">*</span></label>
+            <div><label for="cManhaOp">Manhã · Operação <span class="obrig">*</span></label>
               <select id="cManhaOp"><option value="">Selecione</option><option value="operacao">Com operação</option><option value="sem_operacao">Sem operação</option></select>
               <div class="msg-erro" data-erro="cManhaOp"></div></div>
-            <div class="span2"><label for="cManhaMotivo">Motivo (sem operação)</label>
+            <div class="span2" id="cManhaMotivoLinha"><label for="cManhaMotivo">Motivo (sem Operação)</label>
               <select id="cManhaMotivo"></select><div class="msg-erro" data-erro="cManhaMotivo"></div></div>
 
-            <div><label for="cManhaMm">Chuva na manhã (mm)</label>
-              <input type="number" min="0" step="0.1" id="cManhaMm"><div class="msg-erro" data-erro="cManhaMm"></div></div>
-            <div><label for="cManhaIni">Início da chuva</label>
-              <input type="time" id="cManhaIni"><div class="msg-erro" data-erro="cManhaIni"></div></div>
-            <div><label for="cManhaFim">Fim da chuva</label>
-              <input type="time" id="cManhaFim"><div class="msg-erro" data-erro="cManhaFim"></div></div>
-            <div class="ajuda" style="align-self:end;">Horário 07h–12h. Chuva exige mm, início e fim.</div>
+            <div id="cManhaChuvaLinha" style="display:contents">
+              <div><label for="cManhaMm">Chuva na Manhã (mm)</label>
+                <input type="number" min="0" step="0.1" id="cManhaMm"><div class="msg-erro" data-erro="cManhaMm"></div></div>
+              <div><label for="cManhaIni">Início da Chuva</label>
+                <input type="time" id="cManhaIni"><div class="msg-erro" data-erro="cManhaIni"></div></div>
+              <div><label for="cManhaFim">Fim da Chuva</label>
+                <input type="time" id="cManhaFim"><div class="msg-erro" data-erro="cManhaFim"></div></div>
+              <div class="ajuda" style="align-self:end;">Horário 07h–12h. Chuva exige mm, início e fim.</div>
+              <div class="span4 ajuda" id="cManhaResumo"></div>
+            </div>
 
-            <div><label for="cTardeClima">Tarde · clima</label>
+            <div><label for="cTardeClima">Tarde · Clima</label>
               <select id="cTardeClima"><option value="">Selecione</option><option value="sol">Sol</option><option value="nublado">Nublado</option><option value="chuva">Chuva</option></select>
               <div class="msg-erro" data-erro="cTardeClima"></div></div>
-            <div><label for="cTardeOp">Tarde · operação <span class="obrig">*</span></label>
+            <div><label for="cTardeOp">Tarde · Operação <span class="obrig">*</span></label>
               <select id="cTardeOp"><option value="">Selecione</option><option value="operacao">Com operação</option><option value="sem_operacao">Sem operação</option></select>
               <div class="msg-erro" data-erro="cTardeOp"></div></div>
-            <div class="span2"><label for="cTardeMotivo">Motivo (sem operação)</label>
+            <div class="span2" id="cTardeMotivoLinha"><label for="cTardeMotivo">Motivo (sem Operação)</label>
               <select id="cTardeMotivo"></select><div class="msg-erro" data-erro="cTardeMotivo"></div></div>
 
-            <div><label for="cTardeMm">Chuva na tarde (mm)</label>
-              <input type="number" min="0" step="0.1" id="cTardeMm"><div class="msg-erro" data-erro="cTardeMm"></div></div>
-            <div><label for="cTardeIni">Início da chuva</label>
-              <input type="time" id="cTardeIni"><div class="msg-erro" data-erro="cTardeIni"></div></div>
-            <div><label for="cTardeFim">Fim da chuva</label>
-              <input type="time" id="cTardeFim"><div class="msg-erro" data-erro="cTardeFim"></div></div>
-            <div class="ajuda" style="align-self:end;">Horário 13h–17h.</div>
+            <div id="cTardeChuvaLinha" style="display:contents">
+              <div><label for="cTardeMm">Chuva na Tarde (mm)</label>
+                <input type="number" min="0" step="0.1" id="cTardeMm"><div class="msg-erro" data-erro="cTardeMm"></div></div>
+              <div><label for="cTardeIni">Início da Chuva</label>
+                <input type="time" id="cTardeIni"><div class="msg-erro" data-erro="cTardeIni"></div></div>
+              <div><label for="cTardeFim">Fim da Chuva</label>
+                <input type="time" id="cTardeFim"><div class="msg-erro" data-erro="cTardeFim"></div></div>
+              <div class="ajuda" style="align-self:end;">Horário 13h–17h.</div>
+              <div class="span4 ajuda" id="cTardeResumo"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -659,7 +665,7 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const dataBR = (s) => (s ? s.split('-').reverse().join('/') : '—');
-  const RDO_ANCORA = new Date(2026, 10, 15); // 15/11/2026 = RDO 01
+  const RDO_ANCORA = new Date(2026, 10, 26); // 26/11/2026 = RDO 01
   function numeroRdo(dataIso) {
     if (!dataIso) return '—';
     const [y, m, d] = dataIso.split('-').map(Number);
@@ -852,12 +858,37 @@
   function atualizaSemEvento() { $('semEvento').hidden = $('tbEv').children.length > 0; }
 
   /* ====================== CONDIÇÕES DO TEMPO ====================== */
+  function resumoChuva(p) {
+    const mm = $(p + 'Mm').value;
+    const ini = $(p + 'Ini').value;
+    const fim = $(p + 'Fim').value;
+    if (!mm && !ini && !fim) return '';
+    const partes = [];
+    if (ini || fim) {
+      let faixa = `${ini || '—'}–${fim || '—'}`;
+      if (ini && fim) {
+        const [hi, mi] = ini.split(':').map(Number);
+        const [hf, mf] = fim.split(':').map(Number);
+        let min = (hf * 60 + mf) - (hi * 60 + mi);
+        if (min < 0) min += 24 * 60;
+        faixa += ` (${String(Math.floor(min / 60)).padStart(2, '0')}h${String(min % 60).padStart(2, '0')})`;
+      }
+      partes.push(faixa);
+    }
+    if (mm !== '') partes.push(`${mm} mm`);
+    return partes.length ? `Resumo da chuva: ${partes.join(' · ')}` : '';
+  }
   function aplicaTempo(p) {
     const op = $(p + 'Op').value;
-    $(p + 'Motivo').disabled = op !== 'sem_operacao';
-    if (op !== 'sem_operacao') $(p + 'Motivo').value = '';
+    const semOp = op === 'sem_operacao';
+    $(p + 'Motivo').disabled = !semOp;
+    if (!semOp) $(p + 'Motivo').value = '';
+    $(p + 'MotivoLinha').style.display = semOp ? '' : 'none';
+
     const chuva = $(p + 'Clima').value === 'chuva';
     [p + 'Mm', p + 'Ini', p + 'Fim'].forEach((id) => { $(id).disabled = !chuva; if (!chuva) $(id).value = ''; });
+    $(p + 'ChuvaLinha').style.display = chuva ? 'contents' : 'none';
+    $(p + 'Resumo').textContent = chuva ? resumoChuva(p) : '';
   }
   function preencheTempo() {
     opcoes($('cManhaMotivo'), MOTIVOS_DIA, { vazio: '—' });
@@ -867,6 +898,9 @@
   ['cManha', 'cTarde'].forEach((p) => {
     $(p + 'Clima').addEventListener('change', () => aplicaTempo(p));
     $(p + 'Op').addEventListener('change', () => aplicaTempo(p));
+    [p + 'Mm', p + 'Ini', p + 'Fim'].forEach((id) => {
+      $(id).addEventListener('input', () => { $(p + 'Resumo').textContent = resumoChuva(p); });
+    });
   });
 
   /* ====================== VALIDAÇÃO ====================== */
@@ -1030,9 +1064,9 @@
     [['cManha', d.manha], ['cTarde', d.tarde]].forEach(([p, t]) => {
       $(p + 'Clima').value = t.clima;
       $(p + 'Op').value = t.operacao;
-      aplicaTempo(p);
       $(p + 'Motivo').value = t.motivo;
       if (t.clima === 'chuva') { $(p + 'Mm').value = t.mm; $(p + 'Ini').value = t.ini; $(p + 'Fim').value = t.fim; }
+      aplicaTempo(p);
     });
     $('tbEf').innerHTML = '';
     d.efetivo.forEach((e) => $('tbEf').appendChild(linhaEfetivo({
