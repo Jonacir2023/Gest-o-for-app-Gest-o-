@@ -202,12 +202,12 @@ function salvarRdo(p) {
     }
     const local = lerAba_('locais').find((l) => l.id === p.local_id);
 
-    // Um RDO por data + responsável pelo local + criador: o mais antigo é apagado.
+    // Um RDO por local + data + responsável pelo local + criador: o mais antigo é apagado.
     // O RDO aberto para edição também é apagado (mesmo com data ou pessoas trocadas).
     const apagar = new Set();
     if (p.rdo_id_anterior) apagar.add(String(p.rdo_id_anterior));
     lerAba_('rdo').forEach((r) => {
-      if (isoData_(r.data) === p.data && r.projeto_id === p.obra_id
+      if (String(r.local_id) === String(p.local_id) && isoData_(r.data) === p.data
         && String(r.encarregado) === String(p.responsavel) && String(r.apontador) === String(p.criador)) apagar.add(String(r.id));
     });
     if (apagar.size) apagarRdos_(apagar);
@@ -828,6 +828,21 @@ function excluirCadastro(tabela, id) {
   });
   excluirLinha_(tabela, id);
   return { excluido: true };
+}
+
+/** Lixeira do RDO: exclui o RDO e tudo que depende dele (efetivo, equipamentos, atividades, eventos, fotos). */
+function excluirRdo(id) {
+  exigirUsuario_(PERFIS_GERENCIA);
+  const reg = lerAba_('rdo').find((x) => x.id === id);
+  if (!reg) throw new Error('RDO não encontrado.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    apagarRdos_(new Set([String(id)]));
+    return { excluido: true };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /** Troca um texto antigo pelo novo numa coluna inteira (uma gravação só). */
