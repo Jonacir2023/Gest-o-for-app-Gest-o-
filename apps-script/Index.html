@@ -126,6 +126,11 @@
   .kb-card .kb-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
   .kb-card select { font-size: 11px; padding: 6px; }
   .kb-vazio { color: var(--muted); font-size: 12px; text-align: center; padding: 10px 0; }
+  /* Mesmo procedimento de cores do Kanban, aplicado à lista do Check-in */
+  .ck-status-chip { font-weight: 700; display: inline-block; padding: 3px 8px; border-radius: 6px; }
+  .ck-status-chip[data-status="a_fazer"] { background: var(--erro-bg); color: var(--erro); }
+  .ck-status-chip[data-status="fazendo"] { background: var(--alerta-bg); color: var(--alerta); }
+  .ck-status-chip[data-status="concluido"] { background: var(--ok-bg); color: var(--ok); }
 
   /* Painel de acesso (tela Início) */
   .temas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
@@ -1222,6 +1227,10 @@
     const cls = s === 'concluido' ? 'enviado' : s === 'cancelado' ? 'neutro' : 'rascunho';
     return `<span class="chip ${cls}">${esc(STATUS_LBL[s] || s)}</span>`;
   }
+  function ckStatusChip(s) {
+    if (s !== 'a_fazer' && s !== 'fazendo' && s !== 'concluido') return badgeStatus(s);
+    return `<span class="ck-status-chip" data-status="${s}">${esc(STATUS_LBL[s] || s)}</span>`;
+  }
   function definirUsuario(u) {
     USUARIO = u;
     if (!u) return;
@@ -1247,12 +1256,12 @@
       .filter((x) => (!st || x.status === st) && (!q || semAcento([x.assunto, x.area, x.responsavel, x.descricao].join(' ')).includes(q)))
       .sort((a, b) => (a.prazo || '9999').localeCompare(b.prazo || '9999'));
     $('tbCheckin').innerHTML = lista.length ? lista.map((x) => `<tr>
-      <td>${esc(x.assunto)}${x.atencao ? ' <span class="chip rascunho">Atenção</span>' : ''}</td>
+      <td><span class="ck-status-chip" data-status="${esc(x.status)}">${esc(x.assunto)}</span>${x.atencao ? ' <span class="chip rascunho">Atenção</span>' : ''}</td>
       <td>${esc(x.area)}</td>
       <td>${esc(x.responsavel)}</td>
       <td>${esc(PRIOR_LBL[x.prioridade] || x.prioridade)}</td>
       <td>${dataBR(x.prazo)}</td>
-      <td>${badgeStatus(x.status)} ${situacaoPrazo(x)}</td>
+      <td>${ckStatusChip(x.status)} ${situacaoPrazo(x)}</td>
       <td>${x.origem_pauta ? '<span class="chip neutro">Pauta</span>' : 'Manual'}</td>
       <td class="acoes">${ehGerente() ? `<button class="btn pequeno" data-ck="${esc(x.id)}">Editar</button>` : ''}</td>
     </tr>`).join('') : '<tr><td colspan="8" class="ajuda">Nenhum item.</td></tr>';
