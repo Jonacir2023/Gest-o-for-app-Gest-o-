@@ -118,7 +118,10 @@
   .kb-col h3 .chip { font-size: 10px; }
   .kb-col-body { display: flex; flex-direction: column; gap: 8px; }
   .kb-card { background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px; padding: 10px; box-shadow: var(--sombra); font-size: 12px; }
-  .kb-card .kb-assunto { font-weight: 700; color: var(--azul); display: block; margin-bottom: 4px; }
+  .kb-card .kb-assunto { font-weight: 700; display: inline-block; margin-bottom: 4px; padding: 3px 8px; border-radius: 6px; }
+  .kb-col[data-status="a_fazer"] .kb-assunto { background: var(--erro-bg); color: var(--erro); }
+  .kb-col[data-status="fazendo"] .kb-assunto { background: var(--alerta-bg); color: var(--alerta); }
+  .kb-col[data-status="concluido"] .kb-assunto { background: var(--ok-bg); color: var(--ok); }
   .kb-card .kb-meta { color: var(--muted); margin-bottom: 4px; }
   .kb-card .kb-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
   .kb-card select { font-size: 11px; padding: 6px; }
