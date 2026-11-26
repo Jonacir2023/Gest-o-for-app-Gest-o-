@@ -211,7 +211,7 @@
     <section id="vLista">
       <div class="trilha">Gestão · RDO</div>
       <div class="pagina-cab">
-        <h1>Relatório diário de obra</h1>
+        <h1>Relatório Diário de Obra</h1>
         <div class="espaco"></div>
         <button class="btn voltar-inicio" data-rota="inicio">&larr; Início</button>
         <button class="btn primario" id="btnNovo">+ Novo RDO</button>
@@ -220,7 +220,7 @@
       <div class="kpis">
         <div class="kpi"><div class="rot">RDOs no mês</div><div class="val" id="kTotal">0</div></div>
         <div class="kpi"><div class="rot">Enviados</div><div class="val" id="kEnviados">0</div></div>
-        <div class="kpi"><div class="rot">Rascunhos</div><div class="val" id="kRascunho">0</div></div>
+        <div class="kpi"><div class="rot">Rdos Totais</div><div class="val" id="kTotalRdos">0</div></div>
         <div class="kpi"><div class="rot">Lançados fora do prazo</div><div class="val" id="kAtraso">0</div></div>
       </div>
 
@@ -247,12 +247,6 @@
         </table>
       </div>
 
-      <div class="barra-acao">
-        <input type="date" id="relData" aria-label="Data do relatório" style="max-width:150px;">
-        <button class="btn" id="btnRelDia">Relatório do dia (PDF)</button>
-        <span id="relLink" class="ajuda"></span>
-        <div class="espaco"></div>
-      </div>
     </section>
 
     <!-- ============ FORMULÁRIO DO RDO ============ -->
@@ -432,6 +426,8 @@
         <button class="btn perigo" id="btnCancelar" hidden>Cancelar</button>
         <div class="espaco"></div>
         <span class="auditoria" id="auditoria2"></span>
+        <span id="relLinkForm" class="ajuda"></span>
+        <button class="btn" id="btnRelDia">Relatório do dia (PDF)</button>
         <button class="btn primario" id="btnEnviar">Enviar RDO</button>
       </div>
     </section>
@@ -663,6 +659,13 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const dataBR = (s) => (s ? s.split('-').reverse().join('/') : '—');
+  const RDO_ANCORA = new Date(2026, 10, 15); // 15/11/2026 = RDO 01
+  function numeroRdo(dataIso) {
+    if (!dataIso) return '—';
+    const [y, m, d] = dataIso.split('-').map(Number);
+    const dias = Math.round((new Date(y, m - 1, d) - RDO_ANCORA) / 86400000) + 1;
+    return dias > 0 ? String(dias).padStart(2, '0') : '—';
+  }
   const horasNum = (ini, fim) => { const a = parseFloat(String(ini).replace(',', '.')); const b = parseFloat(String(fim).replace(',', '.')); return !isNaN(a) && !isNaN(b) && b >= a ? b - a : null; };
   const fmtH = (n) => (n == null ? '—' : n.toFixed(1).replace('.', ',') + ' h');
   const moeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -683,10 +686,10 @@
     const st = $('fStatus').value;
     const loc = $('fLocal').value;
     const q = $('fBusca').value.trim().toLowerCase();
-    const lista = RDOS.filter((r) => (!st || r.status === st) && (!loc || r.local === loc) && (!q || [r.id, r.resp, r.local].join(' ').toLowerCase().includes(q)));
+    const lista = RDOS.filter((r) => (!st || r.status === st) && (!loc || r.local === loc) && (!q || [numeroRdo(r.data), r.resp, r.local].join(' ').toLowerCase().includes(q)));
     $('tbLista').innerHTML = lista.length ? lista.map((r) => `
       <tr>
-        <td><strong>${esc(r.id)}</strong></td><td>${dataBR(r.data)}</td><td>${esc(r.local)}</td><td>${esc(r.resp)}</td><td>${esc(r.criador)}</td>
+        <td><strong>${esc(numeroRdo(r.data))}</strong></td><td>${dataBR(r.data)}</td><td>${esc(r.local)}</td><td>${esc(r.resp)}</td><td>${esc(r.criador)}</td>
         <td>${chip(r.status)}</td><td>${r.atrasado ? '<span class="chip atrasado">Fora do prazo</span>' : '<span class="chip neutro">No prazo</span>'}</td>
         <td class="acoes">${RDO_EXCLUINDO === r.id
           ? `<span class="ajuda">Excluir?</span> <button class="btn pequeno perigo" data-sim="${esc(r.id)}">Sim</button> <button class="btn pequeno" data-nao="1">Não</button>`
@@ -694,7 +697,7 @@
       </tr>`).join('') : '<tr><td colspan="8" class="vazio">Nenhum RDO com os filtros atuais.</td></tr>';
     $('kTotal').textContent = RDOS.length;
     $('kEnviados').textContent = RDOS.filter((r) => r.status === 'Enviado').length;
-    $('kRascunho').textContent = RDOS.filter((r) => r.status === 'Rascunho').length;
+    $('kTotalRdos').textContent = RDOS.length;
     $('kAtraso').textContent = RDOS.filter((r) => r.atrasado).length;
   }
 
@@ -975,8 +978,8 @@
     RDO_EDITANDO = '';
     $('tituloRdo').textContent = 'Novo RDO';
     $('trilhaNum').textContent = 'Novo RDO';
-    $('fNumero').value = '(gerado ao enviar)';
     $('fData').value = iso(HOJE);
+    $('fNumero').value = numeroRdo($('fData').value);
     $('fLocal2').innerHTML = ''; opcoes($('fLocal2'), LOCAIS, { valor: LOCAIS[0] });
     opcoes($('fResp'), RESPONSAVEIS, { valor: RESPONSAVEIS[0] });
     opcoes($('fCriador'), CRIADORES, { valor: USUARIO && CRIADORES.includes(USUARIO.nome) ? USUARIO.nome : '' });
@@ -1016,8 +1019,8 @@
     const comValor = (lista, v) => (!v || lista.includes(v) ? lista : lista.concat([v]));
     $('tituloRdo').textContent = 'RDO ' + dataBR(d.data) + ' · ' + d.local;
     $('trilhaNum').textContent = dataBR(d.data) + ' · ' + d.local;
-    $('fNumero').value = d.id;
     $('fData').value = d.data;
+    $('fNumero').value = numeroRdo(d.data);
     opcoes($('fLocal2'), comValor(LOCAIS, d.local), { valor: d.local });
     opcoes($('fResp'), comValor(RESPONSAVEIS, d.responsavel), { valor: d.responsavel });
     opcoes($('fCriador'), comValor(CRIADORES, d.criador), { valor: d.criador });
@@ -1074,16 +1077,15 @@
     else toast('Módulo ainda não disponível. Em construção.');
   }));
   $('btnNovo').addEventListener('click', novoRdo);
-  $('relData').value = iso(HOJE);
   $('btnRelDia').addEventListener('click', () => {
-    const d = $('relData').value;
-    if (!d) { toast('Escolha a data do relatório.'); return; }
+    const d = $('fData').value;
+    if (!d) { toast('Escolha a data do RDO.'); return; }
     const btn = $('btnRelDia');
-    btn.disabled = true; btn.textContent = 'Gerando…'; $('relLink').textContent = '';
+    btn.disabled = true; btn.textContent = 'Gerando…'; $('relLinkForm').textContent = '';
     google.script.run
       .withSuccessHandler((r) => {
         btn.disabled = false; btn.textContent = 'Relatório do dia (PDF)';
-        $('relLink').innerHTML = `<a href="${esc(r.url)}" target="_blank" rel="noopener">Abrir PDF (${r.rdos} RDO${r.rdos > 1 ? 's' : ''})</a>`;
+        $('relLinkForm').innerHTML = `<a href="${esc(r.url)}" target="_blank" rel="noopener">Abrir PDF (${r.rdos} RDO${r.rdos > 1 ? 's' : ''})</a>`;
         try {
           const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
           const a = document.createElement('a');
@@ -1113,7 +1115,7 @@
       .excluirRdo(id);
   }
   document.querySelectorAll('[data-voltar]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); mostra('lista'); }));
-  $('fData').addEventListener('change', avaliaPrazo);
+  $('fData').addEventListener('change', () => { avaliaPrazo(); $('fNumero').value = numeroRdo($('fData').value); });
   $('btnAddEf').addEventListener('click', () => { const usados = [...$('tbEf').querySelectorAll('.ef-nome')].map((s) => s.value); const prox = COLABORADORES.find((c) => !usados.includes(c.nome)); $('tbEf').appendChild(linhaEfetivo({ nome: prox ? prox.nome : '', presente: true })); atualizaEfetivo(); });
   $('btnAddAt').addEventListener('click', () => $('tbAt').appendChild(linhaAtividade()));
   $('btnAddEv').addEventListener('click', () => { $('tbEv').appendChild(linhaEvento()); });
