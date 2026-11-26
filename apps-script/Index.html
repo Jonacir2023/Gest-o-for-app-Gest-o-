@@ -88,6 +88,11 @@
   @media (max-width: 600px) { .grade { grid-template-columns: minmax(0, 1fr); } .grade .span2 { grid-column: 1 / -1; } }
   .linha-chuva { display: flex; gap: 10px; }
   .linha-chuva > div { flex: 1; min-width: 0; }
+  .linha-igual { display: flex; gap: 12px 14px; }
+  .linha-igual > div { flex: 1; min-width: 0; }
+  .linha-local { display: flex; gap: 12px 14px; }
+  .linha-local > div:first-child { flex: 0 0 12.5%; min-width: 0; }
+  .linha-local > div:last-child { flex: 1 1 auto; min-width: 0; }
 
   label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .02em; margin-bottom: 4px; }
   label .obrig { color: var(--erro); }
@@ -272,27 +277,33 @@
       <div class="cartao">
         <div class="cartao-cab"><span class="num">1</span><h2>Identificação</h2></div>
         <div class="cartao-corpo grade">
-          <div class="span2"><label for="fObra">Obra <span class="obrig">*</span></label>
-            <select id="fObra"><option value="GRANSUL · STATKRAFT" selected>GRANSUL · STATKRAFT</option></select>
-            <div class="msg-erro" data-erro="fObra"></div></div>
-          <div><label for="fData">Data do RDO <span class="obrig">*</span></label>
-            <input type="date" id="fData"><div class="msg-erro" data-erro="fData"></div></div>
-          <div><label for="fNumero">Nº RDO</label>
-            <input type="text" id="fNumero" readonly value="(gerado ao enviar)"></div>
+          <div class="span4 linha-igual">
+            <div><label for="fObra">Obra <span class="obrig">*</span></label>
+              <select id="fObra"><option value="GRANSUL · STATKRAFT" selected>GRANSUL · STATKRAFT</option></select>
+              <div class="msg-erro" data-erro="fObra"></div></div>
+            <div><label for="fData">Data do RDO <span class="obrig">*</span></label>
+              <input type="date" id="fData"><div class="msg-erro" data-erro="fData"></div></div>
+            <div><label for="fNumero">Nº RDO</label>
+              <input type="text" id="fNumero" readonly value="(gerado ao enviar)"></div>
+          </div>
 
-          <div><label for="fLocal2">Local <span class="obrig">*</span></label>
-            <select id="fLocal2"></select><div class="msg-erro" data-erro="fLocal2"></div></div>
-          <div class="span2"><label for="fDescLocal">Descrição do local</label>
-            <input type="text" id="fDescLocal" placeholder="Ex.: Filtro 4, eixo 3"></div>
+          <div class="span4 linha-local">
+            <div><label for="fLocal2">Local <span class="obrig">*</span></label>
+              <select id="fLocal2"></select><div class="msg-erro" data-erro="fLocal2"></div></div>
+            <div><label for="fDescLocal">Descrição do local</label>
+              <input type="text" id="fDescLocal" placeholder="Ex.: Filtro 4, eixo 3"></div>
+          </div>
 
-          <div><label for="fResp">Responsável pelo local <span class="obrig">*</span></label>
-            <select id="fResp"></select><div class="msg-erro" data-erro="fResp"></div></div>
-          <div><label for="fCriador">Criador do RDO <span class="obrig">*</span></label>
-            <select id="fCriador"></select><div class="msg-erro" data-erro="fCriador"></div></div>
-          <div><label for="fLancadoPor">Lançado por</label>
-            <input type="text" id="fLancadoPor" readonly value="Jonacir Cazelli"></div>
-          <div><label for="fLancadoEm">Lançado em</label>
-            <input type="text" id="fLancadoEm" readonly value="—"></div>
+          <div class="span4 linha-igual">
+            <div><label for="fResp">Responsável pelo local <span class="obrig">*</span></label>
+              <select id="fResp"></select><div class="msg-erro" data-erro="fResp"></div></div>
+            <div><label for="fCriador">Criador do RDO <span class="obrig">*</span></label>
+              <select id="fCriador"></select><div class="msg-erro" data-erro="fCriador"></div></div>
+            <div><label for="fLancadoPor">Lançado por</label>
+              <input type="text" id="fLancadoPor" readonly value="Jonacir Cazelli"></div>
+            <div><label for="fLancadoEm">Lançado em</label>
+              <input type="text" id="fLancadoEm" readonly value="—"></div>
+          </div>
         </div>
       </div>
 
