@@ -112,8 +112,8 @@
   .grade-dados td.venc-alerta, .grade-dados tr.venc-alerta td { color: var(--alerta); background: var(--alerta-bg); font-weight: 700; }
 
   /* Kanban (Check-in) */
-  .kb-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
-  .kb-col { background: var(--zebra); border: 1px solid var(--borda); border-radius: 8px; padding: 10px; min-height: 80px; }
+  .kb-board { display: flex; gap: 12px; align-items: start; overflow-x: auto; padding-bottom: 4px; }
+  .kb-col { background: var(--zebra); border: 1px solid var(--borda); border-radius: 8px; padding: 10px; min-height: 80px; flex: 1 1 0; min-width: 220px; }
   .kb-col h3 { margin: 0 0 10px; font-size: 13px; color: var(--azul); display: flex; justify-content: space-between; align-items: center; }
   .kb-col h3 .chip { font-size: 10px; }
   .kb-col-body { display: flex; flex-direction: column; gap: 8px; }
@@ -123,7 +123,6 @@
   .kb-card .kb-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
   .kb-card select { font-size: 11px; padding: 6px; }
   .kb-vazio { color: var(--muted); font-size: 12px; text-align: center; padding: 10px 0; }
-  @media (max-width: 900px) { .kb-board { grid-template-columns: 1fr; } }
 
   /* Painel de acesso (tela Início) */
   .temas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
