@@ -86,6 +86,8 @@
   input[type=date], input[type=time] { min-width: 0; }
   @media (max-width: 1100px) { .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grade .span2, .grade .span4 { grid-column: 1 / -1; } }
   @media (max-width: 600px) { .grade { grid-template-columns: minmax(0, 1fr); } .grade .span2 { grid-column: 1 / -1; } }
+  .linha-chuva { display: flex; gap: 10px; }
+  .linha-chuva > div { flex: 1; min-width: 0; }
 
   label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .02em; margin-bottom: 4px; }
   label .obrig { color: var(--erro); }
@@ -309,13 +311,14 @@
               <select id="cManhaMotivo"></select><div class="msg-erro" data-erro="cManhaMotivo"></div></div>
 
             <div id="cManhaChuvaLinha" style="display:contents">
-              <div><label for="cManhaMm">Chuva na Manhã (mm)</label>
-                <input type="number" min="0" step="0.1" id="cManhaMm"><div class="msg-erro" data-erro="cManhaMm"></div></div>
-              <div><label for="cManhaIni">Início da Chuva</label>
-                <input type="time" id="cManhaIni"><div class="msg-erro" data-erro="cManhaIni"></div></div>
-              <div><label for="cManhaFim">Fim da Chuva</label>
-                <input type="time" id="cManhaFim"><div class="msg-erro" data-erro="cManhaFim"></div></div>
-              <div class="ajuda" style="align-self:end;">Horário 07h–12h. Chuva exige mm, início e fim.</div>
+              <div class="span4 linha-chuva">
+                <div><label for="cManhaMm">Chuva na Manhã (mm)</label>
+                  <input type="number" min="0" step="0.1" id="cManhaMm"><div class="msg-erro" data-erro="cManhaMm"></div></div>
+                <div><label for="cManhaIni">Início da Chuva</label>
+                  <input type="time" id="cManhaIni"><div class="msg-erro" data-erro="cManhaIni"></div></div>
+                <div><label for="cManhaFim">Fim da Chuva</label>
+                  <input type="time" id="cManhaFim"><div class="msg-erro" data-erro="cManhaFim"></div></div>
+              </div>
               <div class="span4 ajuda" id="cManhaResumo"></div>
             </div>
 
@@ -329,13 +332,14 @@
               <select id="cTardeMotivo"></select><div class="msg-erro" data-erro="cTardeMotivo"></div></div>
 
             <div id="cTardeChuvaLinha" style="display:contents">
-              <div><label for="cTardeMm">Chuva na Tarde (mm)</label>
-                <input type="number" min="0" step="0.1" id="cTardeMm"><div class="msg-erro" data-erro="cTardeMm"></div></div>
-              <div><label for="cTardeIni">Início da Chuva</label>
-                <input type="time" id="cTardeIni"><div class="msg-erro" data-erro="cTardeIni"></div></div>
-              <div><label for="cTardeFim">Fim da Chuva</label>
-                <input type="time" id="cTardeFim"><div class="msg-erro" data-erro="cTardeFim"></div></div>
-              <div class="ajuda" style="align-self:end;">Horário 13h–17h.</div>
+              <div class="span4 linha-chuva">
+                <div><label for="cTardeMm">Chuva na Tarde (mm)</label>
+                  <input type="number" min="0" step="0.1" id="cTardeMm"><div class="msg-erro" data-erro="cTardeMm"></div></div>
+                <div><label for="cTardeIni">Início da Chuva</label>
+                  <input type="time" id="cTardeIni"><div class="msg-erro" data-erro="cTardeIni"></div></div>
+                <div><label for="cTardeFim">Fim da Chuva</label>
+                  <input type="time" id="cTardeFim"><div class="msg-erro" data-erro="cTardeFim"></div></div>
+              </div>
               <div class="span4 ajuda" id="cTardeResumo"></div>
             </div>
           </div>
@@ -347,13 +351,23 @@
         <div class="cartao-cab"><span class="num">3</span><h2>Efetivo do dia</h2>
           <span class="chip neutro" id="chipEfetivo">0 presentes · 0 ausentes</span>
           <div class="espaco"></div>
+          <button class="btn-link" id="btnVerEfetivo" type="button">Ver lista nominal</button>
           <button class="btn pequeno" id="btnAddEf">+ Incluir colaborador</button></div>
-        <div class="cartao-corpo" style="padding:0;">
-          <div class="scroll-x" style="border:0;border-radius:0;">
+        <div class="cartao-corpo">
+          <div class="scroll-x">
             <table class="grade-dados">
-              <thead><tr><th style="width:34%">Colaborador</th><th>Setor</th><th>Presente</th><th>Motivo da ausência</th><th>Observação</th><th></th></tr></thead>
-              <tbody id="tbEf"></tbody>
+              <thead><tr><th>Função</th><th>Presentes</th><th>Ausentes</th></tr></thead>
+              <tbody id="tbEfResumo"></tbody>
             </table>
+          </div>
+          <div id="tbEfDetalheWrap" style="display:none;">
+            <div class="sub-tit">Lista nominal · presença e motivo da ausência</div>
+            <div class="scroll-x">
+              <table class="grade-dados">
+                <thead><tr><th style="width:34%">Colaborador</th><th>Setor</th><th>Presente</th><th>Motivo da ausência</th><th>Observação</th><th></th></tr></thead>
+                <tbody id="tbEf"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -362,22 +376,32 @@
       <div class="cartao">
         <div class="cartao-cab"><span class="num">4</span><h2>Equipamentos e veículos</h2>
           <div class="espaco"></div>
+          <button class="btn-link" id="btnVerEquip" type="button">Ver detalhes do dia</button>
           <span class="auditoria">Origem: confirmação diária do local e da data</span></div>
         <div class="cartao-corpo">
-          <div class="sub-tit">Trabalharam no dia · horímetro ou km</div>
+          <div class="sub-tit">Resumo do dia · equipamentos e veículos utilizados</div>
           <div class="scroll-x">
             <table class="grade-dados">
-              <thead><tr><th>Equipamento</th><th>Operador ou motorista</th><th>Inicial</th><th>Final</th><th>Horas trabalhadas</th></tr></thead>
-              <tbody id="tbEqOp"></tbody>
-              <tfoot><tr class="total-linha"><td colspan="4" style="text-align:right;">Total de horas trabalhadas</td><td id="totalHoras">0,0 h</td></tr></tfoot>
+              <thead><tr><th>Tipo</th><th>Em operação</th><th>Parado ou em manutenção</th></tr></thead>
+              <tbody id="tbEqResumo"></tbody>
+              <tfoot><tr class="total-linha"><td style="text-align:right;">Total de horas trabalhadas</td><td colspan="2" id="totalHoras">0,0 h</td></tr></tfoot>
             </table>
           </div>
-          <div class="sub-tit">Paradas ou em manutenção · justificativa e efeito na medição</div>
-          <div class="scroll-x">
-            <table class="grade-dados">
-              <thead><tr><th>Equipamento</th><th>Situação</th><th>Motivo / tipo</th><th>Período</th><th>Efeito na medição</th></tr></thead>
-              <tbody id="tbEqPar"></tbody>
-            </table>
+          <div id="tbEqDetalheWrap" style="display:none;">
+            <div class="sub-tit">Trabalharam no dia · horímetro ou km</div>
+            <div class="scroll-x">
+              <table class="grade-dados">
+                <thead><tr><th>Equipamento</th><th>Operador ou motorista</th><th>Inicial</th><th>Final</th><th>Horas trabalhadas</th></tr></thead>
+                <tbody id="tbEqOp"></tbody>
+              </table>
+            </div>
+            <div class="sub-tit">Paradas ou em manutenção · justificativa e efeito na medição</div>
+            <div class="scroll-x">
+              <table class="grade-dados">
+                <thead><tr><th>Equipamento</th><th>Situação</th><th>Motivo / tipo</th><th>Período</th><th>Efeito na medição</th></tr></thead>
+                <tbody id="tbEqPar"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -648,7 +672,7 @@
     BASE = b;
     OBRAS = b.obras.map((o) => o.nome);
     LOCAIS = b.locais.map((l) => l.nome);
-    COLABORADORES = b.colaboradores.map((c) => ({ nome: c.nome, setor: c.categoria || '' }));
+    COLABORADORES = b.colaboradores.map((c) => ({ nome: c.nome, setor: c.categoria || '', funcao: c.funcao || '' }));
     RESPONSAVEIS = b.responsaveis.map((r) => r.nome);
     CRIADORES = b.colaboradores.map((c) => c.nome);
     EQUIPAMENTOS = b.equipamentos.map((e) => ({ codigo: e.codigo, descricao: e.descricao, tipo: e.tipo, operador: e.operador || '' }));
@@ -733,6 +757,17 @@
     const aus = linhas.length - pres;
     $('chipEfetivo').textContent = `${pres} presentes · ${aus} ausentes`;
     linhas.forEach((tr) => { const ausente = tr.querySelector('.ef-pres').value === 'nao'; tr.querySelector('.ef-motivo').disabled = !ausente; if (!ausente) tr.querySelector('.ef-motivo').value = ''; });
+    const grupos = {};
+    linhas.forEach((tr) => {
+      const nome = tr.querySelector('.ef-nome').value;
+      const funcao = (COLABORADORES.find((c) => c.nome === nome) || {}).funcao || 'Sem função';
+      if (!grupos[funcao]) grupos[funcao] = { pres: 0, aus: 0 };
+      if (tr.querySelector('.ef-pres').value === 'sim') grupos[funcao].pres++; else grupos[funcao].aus++;
+    });
+    const funcoes = Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    $('tbEfResumo').innerHTML = funcoes.length
+      ? funcoes.map((f) => `<tr><td>${esc(f)}</td><td>${grupos[f].pres}</td><td>${grupos[f].aus}</td></tr>`).join('')
+      : '<tr><td colspan="3" class="vazio">Nenhum colaborador incluído no dia.</td></tr>';
   }
 
   /** Leve: quem tem CNH e direção defensiva em dia. Pesado: além disso, função de motorista. Equipamento: operadores. */
@@ -784,6 +819,21 @@
     });
     if (!tbPar.children.length) tbPar.innerHTML = '<tr><td colspan="5" class="vazio">Nenhum equipamento parado ou em manutenção.</td></tr>';
     atualizaHoras();
+    atualizaResumoEquip();
+  }
+  function atualizaResumoEquip() {
+    const sits = {};
+    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => { sits[tr.dataset.cod] = tr.querySelector('.eq-sit').value; });
+    const grupos = {};
+    EQUIPAMENTOS.forEach((e) => {
+      const rotulo = e.tipo === 'Equipamento' ? 'Equipamento' : e.tipo === 'Pesado' ? 'Veículo pesado' : 'Veículo leve';
+      const sit = sits[e.codigo] || 'operando';
+      if (!grupos[rotulo]) grupos[rotulo] = { op: 0, par: 0 };
+      if (sit === 'operando') grupos[rotulo].op++; else grupos[rotulo].par++;
+    });
+    const ordem = ['Equipamento', 'Veículo leve', 'Veículo pesado'];
+    $('tbEqResumo').innerHTML = ordem.filter((r) => grupos[r]).map((r) => `<tr><td>${esc(r)}</td><td>${grupos[r].op}</td><td>${grupos[r].par}</td></tr>`).join('')
+      || '<tr><td colspan="3" class="vazio">Nenhum equipamento cadastrado.</td></tr>';
   }
   function lerEquip() {
     const r = {};
@@ -1024,7 +1074,11 @@
     ['cManhaMm', 'cManhaIni', 'cManhaFim', 'cTardeMm', 'cTardeIni', 'cTardeFim'].forEach((id) => ($(id).value = ''));
     preencheTempo();
     $('tbEf').innerHTML = '';
+    $('tbEfDetalheWrap').style.display = 'none';
+    $('btnVerEfetivo').textContent = 'Ver lista nominal';
     atualizaEfetivo();
+    $('tbEqDetalheWrap').style.display = 'none';
+    $('btnVerEquip').textContent = 'Ver detalhes do dia';
     montaEquipamentos({});
     $('tbAt').innerHTML = ''; $('tbAt').appendChild(linhaAtividade());
     $('tbEv').innerHTML = ''; atualizaSemEvento();
@@ -1150,7 +1204,26 @@
   }
   document.querySelectorAll('[data-voltar]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); mostra('lista'); }));
   $('fData').addEventListener('change', () => { avaliaPrazo(); $('fNumero').value = numeroRdo($('fData').value); });
-  $('btnAddEf').addEventListener('click', () => { const usados = [...$('tbEf').querySelectorAll('.ef-nome')].map((s) => s.value); const prox = COLABORADORES.find((c) => !usados.includes(c.nome)); $('tbEf').appendChild(linhaEfetivo({ nome: prox ? prox.nome : '', presente: true })); atualizaEfetivo(); });
+  $('btnAddEf').addEventListener('click', () => {
+    const usados = [...$('tbEf').querySelectorAll('.ef-nome')].map((s) => s.value);
+    const prox = COLABORADORES.find((c) => !usados.includes(c.nome));
+    $('tbEf').appendChild(linhaEfetivo({ nome: prox ? prox.nome : '', presente: true }));
+    $('tbEfDetalheWrap').style.display = '';
+    $('btnVerEfetivo').textContent = 'Ocultar lista nominal';
+    atualizaEfetivo();
+  });
+  $('btnVerEfetivo').addEventListener('click', () => {
+    const wrap = $('tbEfDetalheWrap');
+    const mostrar = wrap.style.display === 'none';
+    wrap.style.display = mostrar ? '' : 'none';
+    $('btnVerEfetivo').textContent = mostrar ? 'Ocultar lista nominal' : 'Ver lista nominal';
+  });
+  $('btnVerEquip').addEventListener('click', () => {
+    const wrap = $('tbEqDetalheWrap');
+    const mostrar = wrap.style.display === 'none';
+    wrap.style.display = mostrar ? '' : 'none';
+    $('btnVerEquip').textContent = mostrar ? 'Ocultar detalhes do dia' : 'Ver detalhes do dia';
+  });
   $('btnAddAt').addEventListener('click', () => $('tbAt').appendChild(linhaAtividade()));
   $('btnAddEv').addEventListener('click', () => { $('tbEv').appendChild(linhaEvento()); });
   $('fFotos').addEventListener('change', (e) => { const f = [...e.target.files].slice(0, 10); $('listaFotos').innerHTML = f.map((x) => `<li>${esc(x.name)}</li>`).join(''); });
