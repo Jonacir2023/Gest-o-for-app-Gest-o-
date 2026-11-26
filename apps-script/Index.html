@@ -426,9 +426,9 @@
         <button class="btn perigo" id="btnCancelar" hidden>Cancelar</button>
         <div class="espaco"></div>
         <span class="auditoria" id="auditoria2"></span>
-        <span id="relLinkForm" class="ajuda"></span>
-        <button class="btn" id="btnRelDia">Relatório do dia (PDF)</button>
         <button class="btn primario" id="btnEnviar">Enviar RDO</button>
+        <span id="relLinkForm" class="ajuda"></span>
+        <button class="btn" id="btnRelDia">Relatório</button>
       </div>
     </section>
 
@@ -1084,7 +1084,7 @@
     btn.disabled = true; btn.textContent = 'Gerando…'; $('relLinkForm').textContent = '';
     google.script.run
       .withSuccessHandler((r) => {
-        btn.disabled = false; btn.textContent = 'Relatório do dia (PDF)';
+        btn.disabled = false; btn.textContent = 'Relatório';
         $('relLinkForm').innerHTML = `<a href="${esc(r.url)}" target="_blank" rel="noopener">Abrir PDF (${r.rdos} RDO${r.rdos > 1 ? 's' : ''})</a>`;
         try {
           const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
@@ -1095,7 +1095,7 @@
         } catch (e) { /* sem download direto: fica o link para o Drive */ }
         toast('Relatório gerado.');
       })
-      .withFailureHandler((e) => { btn.disabled = false; btn.textContent = 'Relatório do dia (PDF)'; toast(e.message); })
+      .withFailureHandler((e) => { btn.disabled = false; btn.textContent = 'Relatório'; toast(e.message); })
       .relatorioDiaPdf(d);
   });
   $('btnLimpar').addEventListener('click', () => { $('fStatus').value = ''; $('fLocal').value = ''; $('fBusca').value = ''; renderLista(); });
