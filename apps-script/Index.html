@@ -166,7 +166,10 @@
   .grade-dados td { padding: 7px 10px; border-bottom: 1px solid var(--borda); vertical-align: middle; background: #fff; }
   .grade-dados tr:hover td { background: #F3FAFD; }
   .grade-dados td input, .grade-dados td select { padding: 6px 8px; font-size: 12px; min-width: 96px; }
+  .grade-dados td input[type=checkbox] { min-width: 0; width: auto; padding: 0; }
   .grade-dados td.acoes { white-space: nowrap; text-align: right; }
+  .grade-dados.compacta th, .grade-dados.compacta td { border-bottom: none; padding: 4px 8px; }
+  .grade-dados.compacta tr.ef-setor-cab td { padding-top: 10px; font-weight: 700; color: var(--azul); text-transform: uppercase; font-size: 11px; letter-spacing: .03em; background: #fff; }
   .scroll-x { overflow-x: auto; border: 1px solid var(--borda); border-radius: 8px; background: #fff; }
   .vazio { text-align: center; color: var(--muted); padding: 18px; }
   .total-linha td { background: var(--zebra) !important; font-weight: 700; }
@@ -363,7 +366,7 @@
           <span class="chip neutro" id="chipEfetivo">0 presentes · 0 ausentes</span>
           <div class="espaco"></div>
           <button class="btn-link" id="btnVerEfetivo" type="button">Ver lista nominal</button>
-          <button class="btn pequeno" id="btnAddEf">+ Incluir colaborador</button></div>
+          <button class="btn pequeno" id="btnAddEf">Apontamento</button></div>
         <div class="cartao-corpo">
           <div class="scroll-x">
             <table class="grade-dados">
@@ -374,8 +377,8 @@
           <div id="tbEfDetalheWrap" style="display:none;">
             <div class="sub-tit">Lista nominal · presença e motivo da ausência</div>
             <div class="scroll-x">
-              <table class="grade-dados">
-                <thead><tr><th style="width:34%">Colaborador</th><th>Setor</th><th>Presente</th><th>Motivo da ausência</th><th>Observação</th><th></th></tr></thead>
+              <table class="grade-dados compacta">
+                <thead><tr><th style="width:36px"></th><th>Colaborador</th><th>Motivo da ausência</th></tr></thead>
                 <tbody id="tbEf"></tbody>
               </table>
             </div>
@@ -745,35 +748,55 @@
   /* ====================== FORMULÁRIO: LINHAS ====================== */
   function linhaEfetivo(v = {}) {
     const tr = document.createElement('tr');
+    tr.className = 'ef-linha';
     tr.innerHTML = `
-      <td><select class="ef-nome"></select></td>
-      <td><input type="text" class="ef-setor" readonly></td>
-      <td><select class="ef-pres"><option value="sim">Sim</option><option value="nao">Não</option></select></td>
-      <td><select class="ef-motivo"></select></td>
-      <td><input type="text" class="ef-obs"></td>
-      <td class="acoes"><button class="btn-link perigo" title="Remover">Remover</button></td>`;
-    opcoes(tr.querySelector('.ef-nome'), COLABORADORES.map((c) => c.nome), { valor: v.nome || '' });
-    tr.querySelector('.ef-setor').value = (COLABORADORES.find((c) => c.nome === v.nome) || {}).setor || '';
-    tr.querySelector('.ef-pres').value = v.presente === false ? 'nao' : 'sim';
+      <td><input type="checkbox" class="ef-pres"></td>
+      <td class="ef-nome-txt"></td>
+      <td><select class="ef-motivo"></select></td>`;
+    const nomeTd = tr.querySelector('.ef-nome-txt');
+    nomeTd.textContent = v.nome || '';
+    nomeTd.dataset.nome = v.nome || '';
+    tr.querySelector('.ef-pres').checked = v.presente !== false;
     opcoes(tr.querySelector('.ef-motivo'), AUSENCIAS, { valor: v.motivo || '' });
-    tr.querySelector('.ef-obs').value = v.obs || '';
-    tr.querySelector('.ef-nome').addEventListener('change', (e) => { tr.querySelector('.ef-setor').value = (COLABORADORES.find((c) => c.nome === e.target.value) || {}).setor || ''; atualizaEfetivo(); });
-    tr.querySelector('.ef-pres').addEventListener('change', () => { atualizaEfetivo(); });
-    tr.querySelector('.btn-link').addEventListener('click', () => { tr.remove(); atualizaEfetivo(); });
+    tr.querySelector('.ef-pres').addEventListener('change', () => atualizaEfetivo());
     return tr;
   }
+  function montaApontamento(presencas) {
+    const mapa = presencas || {};
+    if (!presencas) {
+      [...$('tbEf').querySelectorAll('tr.ef-linha')].forEach((tr) => {
+        const nome = tr.querySelector('.ef-nome-txt').dataset.nome;
+        mapa[nome] = { presente: tr.querySelector('.ef-pres').checked, motivo: tr.querySelector('.ef-motivo').value };
+      });
+    }
+    const porSetor = {};
+    COLABORADORES.forEach((c) => { (porSetor[c.setor || 'Sem setor'] = porSetor[c.setor || 'Sem setor'] || []).push(c); });
+    const setores = Object.keys(porSetor).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    $('tbEf').innerHTML = '';
+    setores.forEach((setor) => {
+      const grupo = porSetor[setor].slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+      const cab = document.createElement('tr');
+      cab.className = 'ef-setor-cab';
+      cab.innerHTML = `<td colspan="3">${esc(setor)}</td>`;
+      $('tbEf').appendChild(cab);
+      grupo.forEach((c) => {
+        const prev = mapa[c.nome];
+        $('tbEf').appendChild(linhaEfetivo({ nome: c.nome, presente: prev ? prev.presente : true, motivo: prev ? prev.motivo : '' }));
+      });
+    });
+  }
   function atualizaEfetivo() {
-    const linhas = [...$('tbEf').querySelectorAll('tr')];
-    const pres = linhas.filter((tr) => tr.querySelector('.ef-pres').value === 'sim').length;
+    const linhas = [...$('tbEf').querySelectorAll('tr.ef-linha')];
+    const pres = linhas.filter((tr) => tr.querySelector('.ef-pres').checked).length;
     const aus = linhas.length - pres;
     $('chipEfetivo').textContent = `${pres} presentes · ${aus} ausentes`;
-    linhas.forEach((tr) => { const ausente = tr.querySelector('.ef-pres').value === 'nao'; tr.querySelector('.ef-motivo').disabled = !ausente; if (!ausente) tr.querySelector('.ef-motivo').value = ''; });
+    linhas.forEach((tr) => { const ausente = !tr.querySelector('.ef-pres').checked; tr.querySelector('.ef-motivo').disabled = !ausente; if (!ausente) tr.querySelector('.ef-motivo').value = ''; });
     const grupos = {};
     linhas.forEach((tr) => {
-      const nome = tr.querySelector('.ef-nome').value;
+      const nome = tr.querySelector('.ef-nome-txt').dataset.nome;
       const funcao = (COLABORADORES.find((c) => c.nome === nome) || {}).funcao || 'Sem função';
       if (!grupos[funcao]) grupos[funcao] = { pres: 0, aus: 0 };
-      if (tr.querySelector('.ef-pres').value === 'sim') grupos[funcao].pres++; else grupos[funcao].aus++;
+      if (tr.querySelector('.ef-pres').checked) grupos[funcao].pres++; else grupos[funcao].aus++;
     });
     const funcoes = Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
     $('tbEfResumo').innerHTML = funcoes.length
@@ -998,8 +1021,8 @@
         }
       }
     });
-    [...$('tbEf').querySelectorAll('tr')].forEach((tr, i) => {
-      if (tr.querySelector('.ef-pres').value === 'nao') {
+    [...$('tbEf').querySelectorAll('tr.ef-linha')].forEach((tr, i) => {
+      if (!tr.querySelector('.ef-pres').checked) {
         const m = tr.querySelector('.ef-motivo');
         if (!m.value) { m.classList.add('campo-erro'); erros.push(`Efetivo, linha ${i + 1}: informe o motivo da ausência.`); }
       }
@@ -1133,10 +1156,9 @@
       if (t.clima === 'chuva') { $(p + 'Mm').value = t.mm; $(p + 'Ini').value = t.ini; $(p + 'Fim').value = t.fim; }
       aplicaTempo(p);
     });
-    $('tbEf').innerHTML = '';
-    d.efetivo.forEach((e) => $('tbEf').appendChild(linhaEfetivo({
-      nome: e.nome, presente: e.presente, motivo: AUSENCIAS.find((a) => semAcento(a) === semAcento(e.motivo)) || '',
-    })));
+    const presencas = {};
+    d.efetivo.forEach((e) => { presencas[e.nome] = { presente: e.presente, motivo: AUSENCIAS.find((a) => semAcento(a) === semAcento(e.motivo)) || '' }; });
+    montaApontamento(presencas);
     atualizaEfetivo();
     const salvos = {};
     d.equipamentos.forEach((q) => { salvos[q.codigo] = { situacao: q.situacao, operador: q.operador, ini: q.ini, fim: q.fim, periodo: q.periodo, motivo: q.motivo }; });
@@ -1216,9 +1238,7 @@
   document.querySelectorAll('[data-voltar]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); mostra('lista'); }));
   $('fData').addEventListener('change', () => { avaliaPrazo(); $('fNumero').value = numeroRdo($('fData').value); });
   $('btnAddEf').addEventListener('click', () => {
-    const usados = [...$('tbEf').querySelectorAll('.ef-nome')].map((s) => s.value);
-    const prox = COLABORADORES.find((c) => !usados.includes(c.nome));
-    $('tbEf').appendChild(linhaEfetivo({ nome: prox ? prox.nome : '', presente: true }));
+    montaApontamento();
     $('tbEfDetalheWrap').style.display = '';
     $('btnVerEfetivo').textContent = 'Ocultar lista nominal';
     atualizaEfetivo();
@@ -1255,12 +1275,12 @@
       ini: $(p + 'Ini').value,
       fim: $(p + 'Fim').value,
     });
-    const efetivo = [...$('tbEf').querySelectorAll('tr')].map((tr) => {
-      const nome = tr.querySelector('.ef-nome').value;
+    const efetivo = [...$('tbEf').querySelectorAll('tr.ef-linha')].map((tr) => {
+      const nome = tr.querySelector('.ef-nome-txt').dataset.nome;
       const c = BASE.colaboradores.find((x) => x.nome === nome) || {};
       return {
         nome: nome, categoria: c.categoria || '', grupo_terceiro: c.grupo_terceiro || '',
-        presente: tr.querySelector('.ef-pres').value === 'sim', motivo: semAcento(tr.querySelector('.ef-motivo').value),
+        presente: tr.querySelector('.ef-pres').checked, motivo: semAcento(tr.querySelector('.ef-motivo').value),
       };
     });
     const parPorCodigo = {};
