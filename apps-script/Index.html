@@ -169,7 +169,7 @@
   .grade-dados td input[type=checkbox] { min-width: 0; width: auto; padding: 0; }
   .grade-dados td.acoes { white-space: nowrap; text-align: right; }
   .grade-dados.compacta th, .grade-dados.compacta td { border-bottom: none; padding: 4px 8px; }
-  .grade-dados.compacta tr.ef-setor-cab td { padding-top: 10px; font-weight: 700; color: var(--azul); text-transform: uppercase; font-size: 11px; letter-spacing: .03em; background: #fff; }
+  .grade-dados tr.ef-setor-cab td { padding-top: 10px; font-weight: 700; color: var(--azul); text-transform: uppercase; font-size: 11px; letter-spacing: .03em; background: #fff; }
   .scroll-x { overflow-x: auto; border: 1px solid var(--borda); border-radius: 8px; background: #fff; }
   .vazio { text-align: center; color: var(--muted); padding: 18px; }
   .total-linha td { background: var(--zebra) !important; font-weight: 700; }
@@ -817,45 +817,62 @@
     const tbPar = $('tbEqPar');
     tbOp.innerHTML = '';
     tbPar.innerHTML = '';
-    EQUIPAMENTOS.forEach((e, i) => {
-      const s = salvos[e.codigo] || { situacao: 'operando', operador: e.operador || '', ini: '', fim: '', periodo: '', motivo: '', obs: '' };
-      const presente = s.situacao === 'operando';
-      const tr = document.createElement('tr');
-      tr.dataset.cod = e.codigo;
-      tr.innerHTML = `
-        <td><input type="checkbox" class="eq-pres"></td>
-        <td><strong>${esc(e.codigo)}</strong> · ${esc(e.descricao)} <span class="chip neutro" style="margin-left:4px;">${esc(e.tipo)}</span>
-          <div class="eq-sit-wrap" style="margin-top:6px;"><select class="eq-sit" style="min-width:150px;"><option value="parado">Parado (quebra)</option><option value="manutencao">Em manutenção</option></select></div></td>
-        <td><select class="eq-op"></select><div class="msg-erro" data-erro="eq-op-${i}"></div></td>
-        <td><input type="number" step="0.1" min="0" class="eq-ini" placeholder="0,0"><div class="msg-erro" data-erro="eq-ini-${i}"></div></td>
-        <td><input type="number" step="0.1" min="0" class="eq-fim" placeholder="0,0"><div class="msg-erro" data-erro="eq-fim-${i}"></div></td>
-        <td class="eq-hrs" style="font-weight:700;color:var(--azul);">—</td>`;
-      tr.querySelector('.eq-pres').checked = presente;
-      tr.querySelector('.eq-sit').value = presente ? 'parado' : s.situacao;
-      tr.querySelector('.eq-sit-wrap').style.display = presente ? 'none' : '';
-      opcoes(tr.querySelector('.eq-op'), operadoresPara(e.tipo, s.operador), { valor: s.operador });
-      tr.querySelector('.eq-ini').value = s.ini;
-      tr.querySelector('.eq-fim').value = s.fim;
-      tr.querySelector('.eq-pres').addEventListener('change', () => { montaEquipamentos(lerEquip()); });
-      tr.querySelector('.eq-sit').addEventListener('change', () => { montaEquipamentos(lerEquip()); });
-      tr.querySelector('.eq-ini').addEventListener('input', atualizaHoras);
-      tr.querySelector('.eq-fim').addEventListener('input', atualizaHoras);
-      tbOp.appendChild(tr);
-      if (!presente) {
-        const p = document.createElement('tr');
-        p.dataset.cod = e.codigo;
-        const motOpts = s.situacao === 'parado' ? MOTIVOS_EQ : MANUT;
-        p.innerHTML = `
-          <td><strong>${esc(e.codigo)}</strong> · ${esc(e.descricao)}</td>
-          <td><span class="chip ${s.situacao === 'parado' ? 'atrasado' : 'neutro'}">${s.situacao === 'parado' ? 'Parado por quebra' : 'Em manutenção'}</span></td>
-          <td><select class="par-mot"></select><div class="msg-erro" data-erro="par-mot-${i}"></div></td>
-          <td>${s.situacao === 'parado' ? `<select class="par-per"><option value="">Selecione</option><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="ambos">Manhã e tarde</option></select><div class="msg-erro" data-erro="par-per-${i}"></div>` : '<span class="ajuda">Não se aplica</span>'}</td>
-          <td class="par-efeito">${s.situacao === 'parado' ? 'Desconta 0,5 diária por meio período' : 'Não desconta do valor integral'}</td>`;
-        opcoes(p.querySelector('.par-mot'), motOpts, { valor: s.motivo });
-        const per = p.querySelector('.par-per');
-        if (per) per.value = s.periodo || '';
-        tbPar.appendChild(p);
-      }
+    const GRUPOS_EQ = [
+      { tipo: 'Equipamento', titulo: 'Equipamentos' },
+      { tipo: 'Pesado', titulo: 'Veículos pesados' },
+      { tipo: 'Leve', titulo: 'Veículos leves' },
+    ];
+    let i = 0;
+    GRUPOS_EQ.forEach((g) => {
+      const itens = EQUIPAMENTOS.filter((e) => e.tipo === g.tipo)
+        .slice().sort((a, b) => a.descricao.localeCompare(b.descricao, 'pt-BR', { sensitivity: 'base' }));
+      if (!itens.length) return;
+      const cab = document.createElement('tr');
+      cab.className = 'ef-setor-cab';
+      cab.innerHTML = `<td colspan="6">${esc(g.titulo)}</td>`;
+      tbOp.appendChild(cab);
+      itens.forEach((e) => {
+        const s = salvos[e.codigo] || { situacao: 'operando', operador: e.operador || '', ini: '', fim: '', periodo: '', motivo: '', obs: '' };
+        const presente = s.situacao === 'operando';
+        const tr = document.createElement('tr');
+        tr.className = 'eq-linha';
+        tr.dataset.cod = e.codigo;
+        tr.innerHTML = `
+          <td><input type="checkbox" class="eq-pres"></td>
+          <td><strong>${esc(e.codigo)}</strong> · ${esc(e.descricao)} <span class="chip neutro" style="margin-left:4px;">${esc(e.tipo)}</span>
+            <div class="eq-sit-wrap" style="margin-top:6px;"><select class="eq-sit" style="min-width:150px;"><option value="parado">Parado (quebra)</option><option value="manutencao">Em manutenção</option></select></div></td>
+          <td><select class="eq-op"></select><div class="msg-erro" data-erro="eq-op-${i}"></div></td>
+          <td><input type="number" step="0.1" min="0" class="eq-ini" placeholder="0,0"><div class="msg-erro" data-erro="eq-ini-${i}"></div></td>
+          <td><input type="number" step="0.1" min="0" class="eq-fim" placeholder="0,0"><div class="msg-erro" data-erro="eq-fim-${i}"></div></td>
+          <td class="eq-hrs" style="font-weight:700;color:var(--azul);">—</td>`;
+        tr.querySelector('.eq-pres').checked = presente;
+        tr.querySelector('.eq-sit').value = presente ? 'parado' : s.situacao;
+        tr.querySelector('.eq-sit-wrap').style.display = presente ? 'none' : '';
+        opcoes(tr.querySelector('.eq-op'), operadoresPara(e.tipo, s.operador), { valor: s.operador });
+        tr.querySelector('.eq-ini').value = s.ini;
+        tr.querySelector('.eq-fim').value = s.fim;
+        tr.querySelector('.eq-pres').addEventListener('change', () => { montaEquipamentos(lerEquip()); });
+        tr.querySelector('.eq-sit').addEventListener('change', () => { montaEquipamentos(lerEquip()); });
+        tr.querySelector('.eq-ini').addEventListener('input', atualizaHoras);
+        tr.querySelector('.eq-fim').addEventListener('input', atualizaHoras);
+        tbOp.appendChild(tr);
+        if (!presente) {
+          const p = document.createElement('tr');
+          p.dataset.cod = e.codigo;
+          const motOpts = s.situacao === 'parado' ? MOTIVOS_EQ : MANUT;
+          p.innerHTML = `
+            <td><strong>${esc(e.codigo)}</strong> · ${esc(e.descricao)}</td>
+            <td><span class="chip ${s.situacao === 'parado' ? 'atrasado' : 'neutro'}">${s.situacao === 'parado' ? 'Parado por quebra' : 'Em manutenção'}</span></td>
+            <td><select class="par-mot"></select><div class="msg-erro" data-erro="par-mot-${i}"></div></td>
+            <td>${s.situacao === 'parado' ? `<select class="par-per"><option value="">Selecione</option><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="ambos">Manhã e tarde</option></select><div class="msg-erro" data-erro="par-per-${i}"></div>` : '<span class="ajuda">Não se aplica</span>'}</td>
+            <td class="par-efeito">${s.situacao === 'parado' ? 'Desconta 0,5 diária por meio período' : 'Não desconta do valor integral'}</td>`;
+          opcoes(p.querySelector('.par-mot'), motOpts, { valor: s.motivo });
+          const per = p.querySelector('.par-per');
+          if (per) per.value = s.periodo || '';
+          tbPar.appendChild(p);
+        }
+        i++;
+      });
     });
     if (!tbPar.children.length) tbPar.innerHTML = '<tr><td colspan="5" class="vazio">Nenhum equipamento parado ou em manutenção.</td></tr>';
     atualizaHoras();
@@ -863,7 +880,7 @@
   }
   function atualizaResumoEquip() {
     const pres = {};
-    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => { pres[tr.dataset.cod] = tr.querySelector('.eq-pres').checked; });
+    [...$('tbEqOp').querySelectorAll('tr.eq-linha')].forEach((tr) => { pres[tr.dataset.cod] = tr.querySelector('.eq-pres').checked; });
     const grupos = {};
     EQUIPAMENTOS.forEach((e) => {
       const rotulo = e.tipo === 'Equipamento' ? 'Equipamento' : e.tipo === 'Pesado' ? 'Veículo pesado' : 'Veículo leve';
@@ -877,7 +894,7 @@
   }
   function lerEquip() {
     const r = {};
-    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => {
+    [...$('tbEqOp').querySelectorAll('tr.eq-linha')].forEach((tr) => {
       const situacao = tr.querySelector('.eq-pres').checked ? 'operando' : tr.querySelector('.eq-sit').value;
       r[tr.dataset.cod] = { situacao: situacao, operador: tr.querySelector('.eq-op').value, ini: tr.querySelector('.eq-ini').value, fim: tr.querySelector('.eq-fim').value };
     });
@@ -891,7 +908,7 @@
   }
   function atualizaHoras() {
     let total = 0;
-    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => {
+    [...$('tbEqOp').querySelectorAll('tr.eq-linha')].forEach((tr) => {
       const operando = tr.querySelector('.eq-pres').checked;
       tr.querySelector('.eq-ini').disabled = !operando;
       tr.querySelector('.eq-fim').disabled = !operando;
@@ -1034,7 +1051,7 @@
         if (!m.value) { m.classList.add('campo-erro'); erros.push(`Efetivo, linha ${i + 1}: informe o motivo da ausência.`); }
       }
     });
-    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => {
+    [...$('tbEqOp').querySelectorAll('tr.eq-linha')].forEach((tr) => {
       const cod = tr.dataset.cod;
       if (tr.querySelector('.eq-pres').checked) {
         const op = tr.querySelector('.eq-op');
@@ -1297,7 +1314,7 @@
     });
     const parPorCodigo = {};
     [...$('tbEqPar').querySelectorAll('tr[data-cod]')].forEach((tr) => { parPorCodigo[tr.dataset.cod] = tr; });
-    const equipamentos = [...$('tbEqOp').querySelectorAll('tr')].map((tr) => {
+    const equipamentos = [...$('tbEqOp').querySelectorAll('tr.eq-linha')].map((tr) => {
       const cod = tr.dataset.cod;
       const eq = BASE.equipamentos.find((e) => e.codigo === cod) || {};
       const sit = tr.querySelector('.eq-pres').checked ? 'operando' : tr.querySelector('.eq-sit').value;
