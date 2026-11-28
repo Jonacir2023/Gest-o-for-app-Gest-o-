@@ -362,7 +362,7 @@
 
       <!-- 3. Efetivo -->
       <div class="cartao">
-        <div class="cartao-cab"><span class="num">3</span><h2>Efetivo do dia</h2>
+        <div class="cartao-cab"><span class="num">3</span><h2>Efetivo do Dia</h2>
           <span class="chip neutro" id="chipEfetivo">0 presentes · 0 ausentes</span>
           <div class="espaco"></div>
           <button class="btn-link" id="btnVerEfetivo" type="button">Ver lista nominal</button>
@@ -388,10 +388,10 @@
 
       <!-- 4. Equipamentos e veículos -->
       <div class="cartao">
-        <div class="cartao-cab"><span class="num">4</span><h2>Equipamentos e veículos</h2>
+        <div class="cartao-cab"><span class="num">4</span><h2>Equipamentos e Veículos do Dia</h2>
           <div class="espaco"></div>
           <button class="btn-link" id="btnVerEquip" type="button">Ver detalhes do dia</button>
-          <span class="auditoria">Origem: confirmação diária do local e da data</span></div>
+          <button class="btn pequeno" id="btnAddEq">Apontamento</button></div>
         <div class="cartao-corpo">
           <div class="sub-tit">Resumo do dia · equipamentos e veículos utilizados</div>
           <div class="scroll-x">
@@ -405,7 +405,7 @@
             <div class="sub-tit">Trabalharam no dia · horímetro ou km</div>
             <div class="scroll-x">
               <table class="grade-dados">
-                <thead><tr><th>Equipamento</th><th>Operador ou motorista</th><th>Inicial</th><th>Final</th><th>Horas trabalhadas</th></tr></thead>
+                <thead><tr><th style="width:36px"></th><th>Equipamento</th><th>Operador ou motorista</th><th>Inicial</th><th>Final</th><th>Horas trabalhadas</th></tr></thead>
                 <tbody id="tbEqOp"></tbody>
               </table>
             </div>
@@ -818,24 +818,29 @@
     tbPar.innerHTML = '';
     EQUIPAMENTOS.forEach((e, i) => {
       const s = salvos[e.codigo] || { situacao: 'operando', operador: e.operador || '', ini: '', fim: '', periodo: '', motivo: '', obs: '' };
+      const presente = s.situacao === 'operando';
       const tr = document.createElement('tr');
       tr.dataset.cod = e.codigo;
       tr.innerHTML = `
+        <td><input type="checkbox" class="eq-pres"></td>
         <td><strong>${esc(e.codigo)}</strong> · ${esc(e.descricao)} <span class="chip neutro" style="margin-left:4px;">${esc(e.tipo)}</span>
-          <div style="margin-top:6px;"><select class="eq-sit" style="min-width:150px;"><option value="operando">Operando</option><option value="parado">Parado (quebra)</option><option value="manutencao">Em manutenção</option></select></div></td>
+          <div class="eq-sit-wrap" style="margin-top:6px;"><select class="eq-sit" style="min-width:150px;"><option value="parado">Parado (quebra)</option><option value="manutencao">Em manutenção</option></select></div></td>
         <td><select class="eq-op"></select><div class="msg-erro" data-erro="eq-op-${i}"></div></td>
         <td><input type="number" step="0.1" min="0" class="eq-ini" placeholder="0,0"><div class="msg-erro" data-erro="eq-ini-${i}"></div></td>
         <td><input type="number" step="0.1" min="0" class="eq-fim" placeholder="0,0"><div class="msg-erro" data-erro="eq-fim-${i}"></div></td>
         <td class="eq-hrs" style="font-weight:700;color:var(--azul);">—</td>`;
-      tr.querySelector('.eq-sit').value = s.situacao;
+      tr.querySelector('.eq-pres').checked = presente;
+      tr.querySelector('.eq-sit').value = presente ? 'parado' : s.situacao;
+      tr.querySelector('.eq-sit-wrap').style.display = presente ? 'none' : '';
       opcoes(tr.querySelector('.eq-op'), operadoresPara(e.tipo, s.operador), { valor: s.operador });
       tr.querySelector('.eq-ini').value = s.ini;
       tr.querySelector('.eq-fim').value = s.fim;
+      tr.querySelector('.eq-pres').addEventListener('change', () => { montaEquipamentos(lerEquip()); });
       tr.querySelector('.eq-sit').addEventListener('change', () => { montaEquipamentos(lerEquip()); });
       tr.querySelector('.eq-ini').addEventListener('input', atualizaHoras);
       tr.querySelector('.eq-fim').addEventListener('input', atualizaHoras);
       tbOp.appendChild(tr);
-      if (s.situacao !== 'operando') {
+      if (!presente) {
         const p = document.createElement('tr');
         p.dataset.cod = e.codigo;
         const motOpts = s.situacao === 'parado' ? MOTIVOS_EQ : MANUT;
@@ -856,14 +861,14 @@
     atualizaResumoEquip();
   }
   function atualizaResumoEquip() {
-    const sits = {};
-    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => { sits[tr.dataset.cod] = tr.querySelector('.eq-sit').value; });
+    const pres = {};
+    [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => { pres[tr.dataset.cod] = tr.querySelector('.eq-pres').checked; });
     const grupos = {};
     EQUIPAMENTOS.forEach((e) => {
       const rotulo = e.tipo === 'Equipamento' ? 'Equipamento' : e.tipo === 'Pesado' ? 'Veículo pesado' : 'Veículo leve';
-      const sit = sits[e.codigo] || 'operando';
+      const presente = pres[e.codigo] !== undefined ? pres[e.codigo] : true;
       if (!grupos[rotulo]) grupos[rotulo] = { op: 0, par: 0 };
-      if (sit === 'operando') grupos[rotulo].op++; else grupos[rotulo].par++;
+      if (presente) grupos[rotulo].op++; else grupos[rotulo].par++;
     });
     const ordem = ['Equipamento', 'Veículo leve', 'Veículo pesado'];
     $('tbEqResumo').innerHTML = ordem.filter((r) => grupos[r]).map((r) => `<tr><td>${esc(r)}</td><td>${grupos[r].op}</td><td>${grupos[r].par}</td></tr>`).join('')
@@ -872,7 +877,8 @@
   function lerEquip() {
     const r = {};
     [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => {
-      r[tr.dataset.cod] = { situacao: tr.querySelector('.eq-sit').value, operador: tr.querySelector('.eq-op').value, ini: tr.querySelector('.eq-ini').value, fim: tr.querySelector('.eq-fim').value };
+      const situacao = tr.querySelector('.eq-pres').checked ? 'operando' : tr.querySelector('.eq-sit').value;
+      r[tr.dataset.cod] = { situacao: situacao, operador: tr.querySelector('.eq-op').value, ini: tr.querySelector('.eq-ini').value, fim: tr.querySelector('.eq-fim').value };
     });
     [...$('tbEqPar').querySelectorAll('tr[data-cod]')].forEach((tr) => {
       const c = r[tr.dataset.cod] || {};
@@ -885,7 +891,7 @@
   function atualizaHoras() {
     let total = 0;
     [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => {
-      const operando = tr.querySelector('.eq-sit').value === 'operando';
+      const operando = tr.querySelector('.eq-pres').checked;
       tr.querySelector('.eq-ini').disabled = !operando;
       tr.querySelector('.eq-fim').disabled = !operando;
       tr.querySelector('.eq-op').disabled = !operando;
@@ -1029,7 +1035,7 @@
     });
     [...$('tbEqOp').querySelectorAll('tr')].forEach((tr) => {
       const cod = tr.dataset.cod;
-      if (tr.querySelector('.eq-sit').value === 'operando') {
+      if (tr.querySelector('.eq-pres').checked) {
         const op = tr.querySelector('.eq-op');
         if (!op.value) { op.classList.add('campo-erro'); erros.push(`${cod}: informe o operador ou motorista.`); }
         const ini = tr.querySelector('.eq-ini');
@@ -1255,6 +1261,11 @@
     wrap.style.display = mostrar ? '' : 'none';
     $('btnVerEquip').textContent = mostrar ? 'Ocultar detalhes do dia' : 'Ver detalhes do dia';
   });
+  $('btnAddEq').addEventListener('click', () => {
+    montaEquipamentos(lerEquip());
+    $('tbEqDetalheWrap').style.display = '';
+    $('btnVerEquip').textContent = 'Ocultar detalhes do dia';
+  });
   $('btnAddAt').addEventListener('click', () => $('tbAt').appendChild(linhaAtividade()));
   $('btnAddEv').addEventListener('click', () => { $('tbEv').appendChild(linhaEvento()); });
   $('fFotos').addEventListener('change', (e) => { const f = [...e.target.files].slice(0, 10); $('listaFotos').innerHTML = f.map((x) => `<li>${esc(x.name)}</li>`).join(''); });
@@ -1288,7 +1299,7 @@
     const equipamentos = [...$('tbEqOp').querySelectorAll('tr')].map((tr) => {
       const cod = tr.dataset.cod;
       const eq = BASE.equipamentos.find((e) => e.codigo === cod) || {};
-      const sit = tr.querySelector('.eq-sit').value;
+      const sit = tr.querySelector('.eq-pres').checked ? 'operando' : tr.querySelector('.eq-sit').value;
       const par = parPorCodigo[cod];
       const motTxt = par ? par.querySelector('.par-mot').value : '';
       const perSel = par ? par.querySelector('.par-per') : null;
