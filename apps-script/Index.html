@@ -373,13 +373,14 @@
             <table class="grade-dados">
               <thead><tr><th>Função</th><th>Presentes</th><th>Ausentes</th></tr></thead>
               <tbody id="tbEfResumo"></tbody>
+              <tfoot><tr class="total-linha"><td colspan="3" style="text-align:right;" id="hhtEfetivo">HHT = 0hs</td></tr></tfoot>
             </table>
           </div>
           <div id="tbEfDetalheWrap" style="display:none;">
             <div class="sub-tit">Lista nominal · presença e motivo da ausência</div>
             <div class="scroll-x">
               <table class="grade-dados compacta">
-                <thead><tr><th style="width:36px"></th><th>Colaborador</th><th>Motivo da ausência</th></tr></thead>
+                <thead><tr><th style="width:36px"></th><th>Colaborador</th><th>Motivo da ausência</th><th style="width:90px">Hora extra</th></tr></thead>
                 <tbody id="tbEf"></tbody>
               </table>
             </div>
@@ -399,7 +400,6 @@
             <table class="grade-dados">
               <thead><tr><th>Tipo</th><th>Em operação</th><th>Parado ou em manutenção</th></tr></thead>
               <tbody id="tbEqResumo"></tbody>
-              <tfoot><tr class="total-linha"><td style="text-align:right;">Total de horas trabalhadas</td><td colspan="2" id="totalHoras">0,0 h</td></tr></tfoot>
             </table>
           </div>
           <div id="tbEqDetalheWrap" style="display:none;">
@@ -425,7 +425,7 @@
       <div class="cartao">
         <div class="cartao-cab"><span class="num">5</span><h2>Atividades executadas</h2>
           <div class="espaco"></div>
-          <button class="btn pequeno" id="btnAddAt">+ Incluir atividade</button></div>
+          <button class="btn pequeno" id="btnAddAt">Apontamento</button></div>
         <div class="cartao-corpo" style="padding:0;">
           <div class="scroll-x" style="border:0;border-radius:0;">
             <table class="grade-dados" style="min-width:1080px;">
@@ -441,7 +441,7 @@
       <div class="cartao">
         <div class="cartao-cab"><span class="num">6</span><h2>Eventos de SST, Meio Ambiente e Qualidade</h2>
           <div class="espaco"></div>
-          <button class="btn pequeno" id="btnAddEv">+ Incluir evento</button></div>
+          <button class="btn pequeno" id="btnAddEv">Apontamento</button></div>
         <div class="cartao-corpo" style="padding:0;">
           <div class="scroll-x" style="border:0;border-radius:0;">
             <table class="grade-dados">
@@ -753,13 +753,16 @@
     tr.innerHTML = `
       <td><input type="checkbox" class="ef-pres"></td>
       <td class="ef-nome-txt"></td>
-      <td><select class="ef-motivo"></select></td>`;
+      <td><select class="ef-motivo"></select></td>
+      <td style="text-align:center;"><input type="checkbox" class="ef-he" title="Hora extra"></td>`;
     const nomeTd = tr.querySelector('.ef-nome-txt');
     nomeTd.textContent = v.nome || '';
     nomeTd.dataset.nome = v.nome || '';
     tr.querySelector('.ef-pres').checked = v.presente !== false;
     opcoes(tr.querySelector('.ef-motivo'), AUSENCIAS, { valor: v.motivo || '' });
+    tr.querySelector('.ef-he').checked = !!v.horaExtra;
     tr.querySelector('.ef-pres').addEventListener('change', () => atualizaEfetivo());
+    tr.querySelector('.ef-he').addEventListener('change', () => atualizaEfetivo());
     return tr;
   }
   function montaApontamento(presencas) {
@@ -767,7 +770,7 @@
     if (!presencas) {
       [...$('tbEf').querySelectorAll('tr.ef-linha')].forEach((tr) => {
         const nome = tr.querySelector('.ef-nome-txt').dataset.nome;
-        mapa[nome] = { presente: tr.querySelector('.ef-pres').checked, motivo: tr.querySelector('.ef-motivo').value };
+        mapa[nome] = { presente: tr.querySelector('.ef-pres').checked, motivo: tr.querySelector('.ef-motivo').value, horaExtra: tr.querySelector('.ef-he').checked };
       });
     }
     const porSetor = {};
@@ -778,11 +781,11 @@
       const grupo = porSetor[setor].slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
       const cab = document.createElement('tr');
       cab.className = 'ef-setor-cab';
-      cab.innerHTML = `<td colspan="3">${esc(setor)}</td>`;
+      cab.innerHTML = `<td colspan="4">${esc(setor)}</td>`;
       $('tbEf').appendChild(cab);
       grupo.forEach((c) => {
         const prev = mapa[c.nome];
-        $('tbEf').appendChild(linhaEfetivo({ nome: c.nome, presente: prev ? prev.presente : true, motivo: prev ? prev.motivo : '' }));
+        $('tbEf').appendChild(linhaEfetivo({ nome: c.nome, presente: prev ? prev.presente : true, motivo: prev ? prev.motivo : '', horaExtra: prev ? prev.horaExtra : false }));
       });
     });
   }
@@ -791,7 +794,18 @@
     const pres = linhas.filter((tr) => tr.querySelector('.ef-pres').checked).length;
     const aus = linhas.length - pres;
     $('chipEfetivo').textContent = `${pres} presentes · ${aus} ausentes`;
-    linhas.forEach((tr) => { const ausente = !tr.querySelector('.ef-pres').checked; tr.querySelector('.ef-motivo').disabled = !ausente; if (!ausente) tr.querySelector('.ef-motivo').value = ''; });
+    let hht = 0;
+    linhas.forEach((tr) => {
+      const presente = tr.querySelector('.ef-pres').checked;
+      const ausente = !presente;
+      tr.querySelector('.ef-motivo').disabled = !ausente;
+      if (!ausente) tr.querySelector('.ef-motivo').value = '';
+      const he = tr.querySelector('.ef-he');
+      he.disabled = ausente;
+      if (ausente) he.checked = false;
+      if (presente) hht += he.checked ? 12 : 10;
+    });
+    $('hhtEfetivo').textContent = `HHT = ${hht}hs`;
     const grupos = {};
     linhas.forEach((tr) => {
       const nome = tr.querySelector('.ef-nome-txt').dataset.nome;
@@ -907,7 +921,6 @@
     return r;
   }
   function atualizaHoras() {
-    let total = 0;
     [...$('tbEqOp').querySelectorAll('tr.eq-linha')].forEach((tr) => {
       const operando = tr.querySelector('.eq-pres').checked;
       tr.querySelector('.eq-ini').disabled = !operando;
@@ -915,9 +928,7 @@
       tr.querySelector('.eq-op').disabled = !operando;
       const h = operando ? horasNum(tr.querySelector('.eq-ini').value, tr.querySelector('.eq-fim').value) : null;
       tr.querySelector('.eq-hrs').textContent = fmtH(h);
-      if (h) total += h;
     });
-    $('totalHoras').textContent = fmtH(total);
   }
 
   function linhaAtividade(v = {}) {
